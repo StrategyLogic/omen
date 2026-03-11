@@ -26,6 +26,7 @@ dist/
 .github/agents/
 .github/prompts/
 .specify/
+specs/
 
 # OS generated files
 .DS_Store
@@ -34,11 +35,18 @@ Thumbs.db
 # Test results
 *.coverage
 htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+# Local Python environments
+.venv/
 
 # Other
 *.pyo
 *.~ 
 solution*.md
+.local.md

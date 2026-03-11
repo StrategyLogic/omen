@@ -1,5 +1,8 @@
 # Omen（爻）
 
+> **Simulate the Signs. Reveal the Chaos.<br/>
+模拟征兆，揭示混沌。**
+
 Omen 是一个开源的战略推演引擎，用多智能体、能力建模与反事实分析，演算技术如何重构市场。
 
 它聚焦的不是“预测一个确定未来”，而是生成**可解释、可回放、可比较**的未来分叉路径，帮助研究者、产品团队、技术战略团队和投资判断者理解：
@@ -8,6 +11,20 @@ Omen 是一个开源的战略推演引擎，用多智能体、能力建模与反
 - 哪些能力会先被侵蚀，哪些能力会长期共存
 - 哪类策略更容易赢得市场、资本与开发者生态
 - 哪个时间窗口适合自研、结盟、并购或收缩
+
+## Positioning & Boundary
+
+Omen 的定位是“现象模拟器”：负责显现征兆与路径，而不直接给出确定性答案。
+
+- Omen（开源）负责 **Reveal**：显现复杂系统中的征兆与分叉
+
+这意味着 Omen 项目对外保持明确边界：
+
+- 展示项目全貌与核心概念
+- 输出条件化判断与可解释路径
+- 不输出“保证命中”的预测结论
+
+Protocol: [Omen Project Protocol](PROTOCOL.md)
 
 ## Why Omen
 
@@ -91,12 +108,29 @@ Omen 的开源版本将围绕“强场景 + 可运行推演内核”展开，优
 - 结果解释与回放面板
 - 示例数据与默认参数
 
+## Development Environment
+
+- Language: **Python**
+- Version: **3.12**
+
 ## Docs
 
 - [Docs Index](docs/README.md)
 - [Core Concepts](docs/concepts.md)
 - [Case Template](docs/case-template.md)
 - [Roadmap](docs/roadmap.md)
+- [Project Protocol](PROTOCOL.md)
+
+## License
+
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
+
+## Ownership
+
+Omen is developed and maintained by **[StrategyLogic®](https://www.strategylogic.ai)**.
+The official project repository is [StrategyLogic/omen](https://github.com/StrategyLogic/omen),
+and the organization profile is [github.com/StrategyLogic](https://github.com/StrategyLogic).
+For trademark and ownership details, see [NOTICE](NOTICE.md).
 
 
 ## Planned Architecture

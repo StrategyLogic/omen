@@ -8,9 +8,14 @@ version = "0.1.0"
 description = "Open-source strategic simulation engine for technology-market evolution"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-authors = [{ name = "Omen Contributors" }]
-license = { text = "MIT" }
-dependencies = []
+authors = [{ name = "StrategyLogic" }]
+license = { text = "AGPL-3.0-or-later" }
+dependencies = [
+  "pydantic>=2.8.0",
+]
+
+[project.scripts]
+omen = "omen.cli.main:main"
 
 [project.optional-dependencies]
 dev = [

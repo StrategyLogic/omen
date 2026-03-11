@@ -1,0 +1,50 @@
+{
+  "scenario_id": "ontology-battle-baseline",
+  "name": "Ontology Battle Baseline",
+  "time_steps": 20,
+  "seed": 42,
+  "user_overlap_threshold": 0.22,
+  "actors": [
+    {
+      "actor_id": "traditional-db",
+      "actor_type": "traditional_db",
+      "budget": 1200,
+      "initial_user_base": 480,
+      "available_actions": ["grow_semantic_layer", "defend_core", "attack_competitor"],
+      "functional_profile": {
+        "semantic": 0.42,
+        "consistency": 0.91,
+        "developer_experience": 0.58
+      }
+    },
+    {
+      "actor_id": "backend-db",
+      "actor_type": "new_backend",
+      "budget": 900,
+      "initial_user_base": 360,
+      "available_actions": ["grow_semantic_layer", "partner_ecosystem", "attack_competitor"],
+      "functional_profile": {
+        "semantic": 0.56,
+        "consistency": 0.66,
+        "developer_experience": 0.82
+      }
+    },
+    {
+      "actor_id": "ai-memory",
+      "actor_type": "ai_memory",
+      "budget": 800,
+      "initial_user_base": 290,
+      "available_actions": ["grow_semantic_layer", "partner_ecosystem", "attack_competitor"],
+      "functional_profile": {
+        "semantic": 0.71,
+        "consistency": 0.52,
+        "developer_experience": 0.79
+      }
+    }
+  ],
+  "capabilities": [
+    {"name": "semantic", "weight": 0.4},
+    {"name": "consistency", "weight": 0.3},
+    {"name": "developer_experience", "weight": 0.3}
+  ]
+}

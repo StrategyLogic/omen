@@ -119,6 +119,7 @@ Omen 的开源版本将围绕“强场景 + 可运行推演内核”展开，优
 - [Core Concepts](docs/concepts.md)
 - [Case Template](docs/case-template.md)
 - [Roadmap](docs/roadmap.md)
+- [Run Example](docs/run-example.md)
 - [Project Protocol](PROTOCOL.md)
 
 ## License

@@ -26,7 +26,6 @@ dist/
 .github/agents/
 .github/prompts/
 .specify/
-specs/
 
 # OS generated files
 .DS_Store

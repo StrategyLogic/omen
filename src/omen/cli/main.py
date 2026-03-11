@@ -12,6 +12,7 @@ from omen.explain.report import build_explanation_report
 from omen.scenario.loader import load_scenario
 from omen.simulation.replay import (
     compare_run_results,
+    create_counterfactual_config,
     load_run_result,
     run_counterfactual,
 )
@@ -45,6 +46,12 @@ def main() -> None:
 
     simulate = sub.add_parser("simulate", help="run one scenario simulation")
     simulate.add_argument("--scenario", required=True, help="Path to scenario JSON")
+    simulate.add_argument(
+        "--seed",
+        required=False,
+        type=int,
+        help="Optional stable seed. If omitted, simulate uses randomized seed each run.",
+    )
     simulate.add_argument("--output", required=False, help="Optional output JSON path")
     simulate.add_argument(
         "--incremental",
@@ -65,11 +72,22 @@ def main() -> None:
     compare.add_argument("--scenario", required=True, help="Path to scenario JSON")
     compare.add_argument(
         "--overrides",
-        required=True,
+        required=False,
         help=(
             "JSON object of dotted-path overrides, "
             'e.g. {"user_overlap_threshold": 0.9}'
         ),
+    )
+    compare.add_argument(
+        "--budget-actor",
+        required=False,
+        help="Actor id for budget shock entry (commercial primary parameter)",
+    )
+    compare.add_argument(
+        "--budget-delta",
+        required=False,
+        type=float,
+        help="Budget delta applied to --budget-actor in variation run",
     )
     compare.add_argument("--output", required=False, help="Optional comparison JSON path")
     compare.add_argument(
@@ -81,6 +99,10 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "simulate":
         config = load_scenario(args.scenario)
+        if args.seed is None:
+            config = create_counterfactual_config(config, {"seed": None})
+        else:
+            config = create_counterfactual_config(config, {"seed": args.seed})
         result = run_simulation(config)
         rendered = json.dumps(result, ensure_ascii=False, indent=2)
         output_path = _write_output(rendered, args.output, "result.json", args.incremental)
@@ -94,19 +116,65 @@ def main() -> None:
     elif args.command == "compare":
         config = load_scenario(args.scenario)
         baseline = run_simulation(config)
+        overrides: dict[str, Any] = {}
+        conditions: list[dict[str, Any]] = []
 
-        try:
-            overrides: dict[str, Any] = json.loads(args.overrides)
-        except json.JSONDecodeError as exc:
-            parser.error(f"invalid --overrides JSON: {exc}")
+        if args.overrides:
+            try:
+                overrides = json.loads(args.overrides)
+            except json.JSONDecodeError as exc:
+                parser.error(f"invalid --overrides JSON: {exc}")
+                return
+
+            if not isinstance(overrides, dict):
+                parser.error("--overrides must be a JSON object")
+                return
+            for key, value in sorted(overrides.items()):
+                conditions.append(
+                    {
+                        "type": "override",
+                        "key": key,
+                        "value": value,
+                        "description": f"override `{key}` -> {value}",
+                    }
+                )
+
+        has_budget_actor = args.budget_actor is not None
+        has_budget_delta = args.budget_delta is not None
+        if has_budget_actor != has_budget_delta:
+            parser.error("--budget-actor and --budget-delta must be provided together")
             return
 
-        if not isinstance(overrides, dict):
-            parser.error("--overrides must be a JSON object")
+        if has_budget_actor and has_budget_delta:
+            actor_index = next(
+                (idx for idx, actor in enumerate(config.actors) if actor.actor_id == args.budget_actor),
+                None,
+            )
+            if actor_index is None:
+                parser.error(f"unknown --budget-actor: {args.budget_actor}")
+                return
+            original_budget = config.actors[actor_index].budget
+            overrides[f"actors.{actor_index}.budget"] = original_budget + args.budget_delta
+            conditions.append(
+                {
+                    "type": "budget_delta",
+                    "actor_id": args.budget_actor,
+                    "delta": args.budget_delta,
+                    "new_budget": original_budget + args.budget_delta,
+                    "description": (
+                        f"budget shock for `{args.budget_actor}`: "
+                        f"{original_budget} -> {original_budget + args.budget_delta} "
+                        f"(delta {args.budget_delta})"
+                    ),
+                }
+            )
+
+        if not overrides:
+            parser.error("provide --overrides and/or --budget-actor with --budget-delta")
             return
 
         _, variation = run_counterfactual(config, overrides)
-        comparison = compare_run_results(baseline, variation)
+        comparison = compare_run_results(baseline, variation, conditions=conditions)
         rendered = json.dumps(comparison, ensure_ascii=False, indent=2)
         output_path = _write_output(rendered, args.output, "comparison.json", args.incremental)
         print(f"Saved comparison to {output_path}")

@@ -59,6 +59,7 @@ def run_counterfactual(
 def compare_run_results(
     baseline_result: dict[str, Any],
     variation_result: dict[str, Any],
+    conditions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     baseline_edges = len(baseline_result.get("final_competition_edges", []))
     variation_edges = len(variation_result.get("final_competition_edges", []))
@@ -92,6 +93,7 @@ def compare_run_results(
         "variation_outcome_class": variation_result.get("outcome_class"),
         "winner_changed": baseline_result.get("winner", {}).get("actor_id")
         != variation_result.get("winner", {}).get("actor_id"),
+        "conditions": conditions or [],
         "deltas": deltas,
     }
     comparison["explanation"] = build_explanation_report(variation_result, comparison=comparison)

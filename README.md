@@ -4,7 +4,7 @@
 
 [**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source **Phenomenon Simulator** and strategic reasoning engine. Leveraging **multi-agent game theory**, **capability space modeling**, and **counterfactual analysis**, it calculates how technological evolution reconstructs market landscapes.
 
-[中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Case Templates](docs/case-template.md) | [Developer Guide](docs/run-example.md) | [Roadmap](docs/roadmap.md)
+[中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) |[Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) |[Roadmap](docs/roadmap.md)
 
 ## 💡 Why Omen?
 
@@ -58,6 +58,16 @@ Accordingly, Omen is architected as a **human-decision-first** AI simulator, wit
 | 🔮 **Counterfactual Analysis** | Answers "What would have happened if event X had not occurred, or if strategy Y had been adopted?" |
 | 📖 **Result Explanation Engine** | Outputs key turning points, causal chain deductions, and strategic implications, rejecting black-box conclusions. |
 
+### 📊 Typical Outputs
+
+A complete reasoning session typically answers the following questions:
+*   **Substitution?** Will the new technology completely replace the old one, or form a complement?
+*   **Time Window?** When is the specific time window for substitution or turning points?
+*   **Key Drivers?** Which variables (e.g., cost reduction speed, API compatibility) are the decisive factors?
+*   **Winners and Losers?** Which entities suffer first, and which benefit unexpectedly?
+*   **Strategy Effectiveness?** Under what circumstances is an "open ecosystem" superior to "vertical integration"?
+*   **Endgame Form?** Does it move towards monopoly, oligarchic balance, or fragmented coexistence?
+
 ## 🛠️ How It Works
 
 Omen adopts a layered architecture to ensure the transparency and intervenability of reasoning:
@@ -80,16 +90,6 @@ graph TD
 *   **Strategist Agent Layer**: Defines clear Action Spaces for various entities, rather than free-form chatting.
 *   **Simulation Kernel**: Combines hard constraint rules, economic/diffusion models, and LLM decision logic to advance multi-round evolution.
 *   **Explanation Layer**: Extracts key branching points and generates human-readable reasoning reports.
-
-## 📊 Typical Outputs
-
-A complete reasoning session typically answers the following questions:
-*   **Substitution?** Will the new technology completely replace the old one, or form a complement?
-*   **Time Window?** When is the specific time window for substitution or turning points?
-*   **Key Drivers?** Which variables (e.g., cost reduction speed, API compatibility) are the decisive factors?
-*   **Winners and Losers?** Which entities suffer first, and which benefit unexpectedly?
-*   **Strategy Effectiveness?** Under what circumstances is an "open ecosystem" superior to "vertical integration"?
-*   **Endgame Form?** Does it move towards monopoly, oligarchic balance, or fragmented coexistence?
 
 ## 🎬 Show Cases
 
@@ -121,14 +121,24 @@ python -m pip install -e ".[dev]"
 # run simulate
 omen simulate --scenario data/scenarios/ontology.json
 
+# run simulate with stable seed (reproducible)
+omen simulate --scenario data/scenarios/ontology.json --seed 42
+
 # explain results
 omen explain --input output/result.json
 
-# compare scenarios with overrides
+# compare scenarios with generic overrides
 omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
+
+# compare with business parameter entrypoint (budget shock)
+omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200
+
+# keep historical outputs
+omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
 ```
 
 By default, generated local files are written to the root-level `output/` directory (for example `output/result.json`, `output/explanation.json`, `output/comparison.json`) to avoid polluting tracked source files.
+By default, `simulate` uses a randomized seed each run; pass `--seed` when you need reproducible trajectories.
 Default behavior is overwrite-by-name; add `--incremental` to any CLI command to append a timestamp suffix and keep historical outputs.
 
 ## 👥 Target Audience

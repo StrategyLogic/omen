@@ -4,7 +4,7 @@
 
 **Omen（中文：爻）**是一个开源的**现象模拟器 (Phenomenon Simulator)**与战略推演引擎。它利用**多智能体博弈论**、**能力空间建模**与**反事实分析**，演算技术演化如何重构市场格局。
 
-[English version](README.md) | [官方仓库](https://github.com/StrategyLogic/omen) | [核心概念](docs/concepts.md) | [案例模板](docs/case-template.md) | [运行指南](docs/run-example.md) | [项目路线图](docs/roadmap.md)
+[English version](README.md) | [官方仓库](https://github.com/StrategyLogic/omen) | [核心概念](docs/concepts.md) | [快速开始](docs/quick-start.md) | [案例模板](docs/case-template.md) | [项目路线图](docs/roadmap.md)
 
 ## 💡 为什么需要 Omen？
 
@@ -121,14 +121,24 @@ python -m pip install -e ".[dev]"
 # 运行模拟
 omen simulate --scenario data/scenarios/ontology.json
 
+# 使用固定 seed 运行（可复现）
+omen simulate --scenario data/scenarios/ontology.json --seed 42
+
 # 生成解释报告
 omen explain --input output/result.json
 
-# 对比不同参数下的结果
+# 使用通用覆盖参数做对比
 omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
+
+# 使用商业主参数入口（资金冲击）做对比
+omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200
+
+# 保留历史输出（时间戳后缀）
+omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
 ```
 
 默认情况下，生成的本地文件会写入根目录下的 `output/` 目录（例如 `output/result.json`、`output/explanation.json`、`output/comparison.json`），以避免污染受跟踪的源文件。默认行为是按名称覆盖；添加 `--incremental` 到任何 CLI 命令将附加时间戳后缀并保留历史输出。
+默认情况下，`simulate` 每次会使用随机 seed；当你需要稳定复现时，请显式传入 `--seed`。
 
 ## 👥 适用人群
 

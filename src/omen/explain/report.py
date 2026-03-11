@@ -97,11 +97,23 @@ def build_explanation_report(result: dict, comparison: dict | None = None) -> di
         narrative_parts.append(f"first user overlap at step {overlap_step}")
     if competition_step is not None:
         narrative_parts.append(f"competition activated at step {competition_step}")
+    if comparison:
+        conditions = comparison.get("conditions", [])
+        if conditions:
+            condition_descriptions = [
+                str(condition.get("description", "")) for condition in conditions
+            ]
+            condition_descriptions = [text for text in condition_descriptions if text]
+            if condition_descriptions:
+                narrative_parts.append(
+                    "counterfactual conditions: " + " | ".join(condition_descriptions)
+                )
 
     explanation = {
         "run_id": result.get("run_id"),
         "branch_points": branch_points,
         "causal_chain": causal_chain,
+        "counterfactual_conditions": comparison.get("conditions", []) if comparison else [],
         "counterfactual_deltas": comparison.get("deltas", []) if comparison else [],
         "narrative_summary": "; ".join(narrative_parts),
     }

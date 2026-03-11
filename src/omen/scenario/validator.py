@@ -42,6 +42,7 @@ class ScenarioConfig(BaseModel):
     name: str = Field(min_length=1)
     time_steps: int = Field(ge=1, le=1000)
     seed: int | None = None
+    random_perturbation: float = Field(default=0.1, ge=0.0, le=1.0)
     user_overlap_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
     actors: list[ActorConfig] = Field(min_length=2)
     capabilities: list[CapabilityDimension] = Field(min_length=1)

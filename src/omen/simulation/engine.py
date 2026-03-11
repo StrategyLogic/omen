@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import uuid
 from dataclasses import asdict
 
@@ -56,12 +57,17 @@ def _pick_actions(state: SimulationState, overlap_threshold: float) -> dict[str,
     return selected
 
 
-def _advance_one_step(state: SimulationState, overlap_threshold: float) -> None:
+def _advance_one_step(
+    state: SimulationState,
+    overlap_threshold: float,
+    rng: random.Random,
+    random_perturbation: float,
+) -> None:
     selected_actions = _pick_actions(state, overlap_threshold=overlap_threshold)
     for actor_id, action in selected_actions.items():
         actor = state.actors[actor_id]
         if can_apply_action(actor, action).allowed:
-            apply_action(actor, action)
+            apply_action(actor, action, rng=rng, random_perturbation=random_perturbation)
         actor.user_edge_count = int(round(actor.user_base))
     update_competition_edges(state, overlap_threshold=overlap_threshold, selected_actions=selected_actions)
     state.step += 1
@@ -80,9 +86,15 @@ def _classify_outcome(final_state: SimulationState) -> str:
 
 def run_simulation(config: ScenarioConfig) -> dict:
     state = initialize_state(config)
+    rng = random.Random(config.seed)
     snapshots: list[dict] = []
     for _ in range(config.time_steps):
-        _advance_one_step(state, overlap_threshold=config.user_overlap_threshold)
+        _advance_one_step(
+            state,
+            overlap_threshold=config.user_overlap_threshold,
+            rng=rng,
+            random_perturbation=config.random_perturbation,
+        )
         snapshots.append(
             {
                 "step": state.step,
@@ -101,6 +113,7 @@ def run_simulation(config: ScenarioConfig) -> dict:
     result = {
         "run_id": state.run_id,
         "status": "completed",
+        "seed": config.seed,
         "outcome_class": _classify_outcome(state),
         "winner": {
             "actor_id": winner.actor_id,

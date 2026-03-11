@@ -123,3 +123,40 @@ def test_incremental_adds_timestamp_suffix_for_all_commands(
 
     compare_files = list((tmp_path / "output").glob("comparison_*.json"))
     assert len(compare_files) == 1
+
+
+def test_simulate_seed_behavior_default_random_and_explicit_stable(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "simulate",
+            "--scenario",
+            str(SCENARIO_PATH),
+        ],
+    )
+    main()
+    default_result = json.loads((tmp_path / "output" / "result.json").read_text(encoding="utf-8"))
+    assert default_result["seed"] is None
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "simulate",
+            "--scenario",
+            str(SCENARIO_PATH),
+            "--seed",
+            "42",
+        ],
+    )
+    main()
+    seeded_result = json.loads((tmp_path / "output" / "result.json").read_text(encoding="utf-8"))
+    assert seeded_result["seed"] == 42

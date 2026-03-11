@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass
 
 from omen.models.state import ActorRuntimeState, SimulationState
@@ -67,7 +68,12 @@ def default_action_for(actor: ActorRuntimeState) -> str:
     return "defend_core"
 
 
-def apply_action(actor: ActorRuntimeState, action_name: str) -> None:
+def apply_action(
+    actor: ActorRuntimeState,
+    action_name: str,
+    rng: random.Random | None = None,
+    random_perturbation: float = 0.0,
+) -> None:
     payload = ACTION_CATALOG[action_name]
     actor.budget -= payload.get("cost", 0.0)
     actor.functional_profile["semantic"] = min(
@@ -82,7 +88,10 @@ def apply_action(actor: ActorRuntimeState, action_name: str) -> None:
         actor.functional_profile.get("developer_experience", 0.0)
         + payload.get("developer_experience_delta", 0.0),
     )
-    actor.user_base = max(0.0, actor.user_base * (1.0 + payload.get("user_growth", 0.0)))
+    growth = payload.get("user_growth", 0.0)
+    if rng is not None and random_perturbation > 0.0:
+        growth = growth * (1.0 + rng.uniform(-random_perturbation, random_perturbation))
+    actor.user_base = max(0.0, actor.user_base * (1.0 + growth))
 
 
 def update_competition_edges(

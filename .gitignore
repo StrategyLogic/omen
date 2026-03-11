@@ -1,0 +1,44 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# IDE/editor files
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+.idea/
+.vscode/
+.github/agents/
+.github/prompts/
+.specify/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test results
+*.coverage
+htmlcov/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Other
+*.pyo
+*.~ 
+solution*.md

@@ -4,13 +4,13 @@
 
 [**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source **Phenomenon Simulator** and strategic reasoning engine. Leveraging **multi-agent game theory**, **capability space modeling**, and **counterfactual analysis**, it calculates how technological evolution reconstructs market landscapes.
 
-[中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) |[Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) |[Roadmap](docs/roadmap.md)
+[中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 
 ## 💡 Why Omen?
 
 Technological competition has never been linear. Real-world technological evolution is a complex system driven by multiple forces:
 *   **Drivers**: Capability enhancement, cost curves, migration friction, organizational inertia, capital flow, ecosystem lock-in, standard promotion, developer behavior.
-*   **Outcomes**: Markets often do not change smoothly; instead, they undergo **accelerated substitution**, **structural reorganization**, or fall into a stalemate of **long-term coexistence** near certain thresholds.
+*   **Impacts**: Markets often do not change smoothly; instead, they undergo **accelerated substitution**, **structural reorganization**, or fall into a stalemate of **long-term coexistence** near certain thresholds.
 
 Omen attempts to upgrade this process from *opinion discussion* to **conditional reasoning**:
 1.  Map technological competition into a **Capability Space**
@@ -23,29 +23,29 @@ Omen attempts to upgrade this process from *opinion discussion* to **conditional
 Unlike traditional predictive models, Omen does not promise to *predict a certain future*. Instead, it generates **interpretable, replayable, and comparable future branching paths**. Its core responsibility is to reveal faint omens, critical branching points, and evolutionary trajectories within complex systems, empowering founders, product strategists, technology leaders, and investment analysts to understand:
 
 *   🔄 **Substitution Logic**: Which technology will replace another under what critical conditions?
-*   🛡️ **Capability Erosion**: Which core capabilities will be dismantled first, and which will coexist long-term?
-*   🏆 **Strategy Win Rate**: Which strategy combinations are more likely to win the market, capital, and developer ecosystem?
+*   🛡️ **Capability Evolution**: Which core capabilities will be enhanced first, and which will coexist long-term?
+*   🏆 **Strategy Wins**: Which strategy combinations are more likely to win the market, capital, and developer ecosystem?
 *   ⏳ **Time Windows**: When is the optimal timing for in-house development, alliances, M&A, or contraction?
 
 ## 📜 Philosophy & Design Principles
 
-Just as **Yao** in the *I Ching* represents change and interaction, Omen is designed only to present the evolution of the **Situation (Xiang)**. Interpreting the deeper meaning behind the Situation and making decisions is the exclusive privilege of human wisdom.
+Just as **Yao** in the *I Ching* represents change and interaction, Omen is designed only to present the evolution of the **Situation (Xiang)**. Interpreting the deeper meaning behind the situation and making decisions is the exclusive privilege of human wisdom.
 
 Accordingly, Omen is architected as a **human-decision-first** AI simulator, with a clear division of labor between machine simulation and human sovereignty:
 
 #### 🤖 The Machine’s Domain (Simulation & Causality)
 *   **Role**: To compute complexity, map multi-path evolutions, and reveal conditional causal chains.
 *   **Output**: Interpretable scenarios, probability distributions, and "What-if" branching maps.
-*   **Constraint**: It strictly avoids deterministic fate pronouncements or claims of "guaranteed accuracy."
+*   **Constraint**: It strictly avoids deterministic fate pronouncements or claims of "guaranteed accuracy".
 
 #### 🧠 The Human’s Domain (Interpretation & Sovereignty)
 *   **Role**: To interpret the "Situation" (Xiang), apply ethical judgment, and make the final strategic call.
 *   **Privilege**: Deciding *which* path to take based on values, risk appetite, and vision remains the exclusive privilege of human leaders.
 *   **Synergy**: Omen expands the horizon of visible possibilities; humans provide the compass for navigation.
 
-> 💡 **Core Mantra**: *The machine simulates the "Situation"; the human decides the "Destiny."*
+> 💡 **Core Mantra**: *The machine simulates the "Situation"; the human decides the "Destiny".*
 
-📜 See Project Protocol: [Omen Project Protocol](PROTOCOL.md)
+📜 See [Omen Project Protocol](PROTOCOL.md)
 
 ## ⚙️ Core Features
 
@@ -93,10 +93,10 @@ graph TD
 
 ## 🎬 Show Cases
 
-We have built-in classic battlefield reasoning:
-*   [🗺️ Ontology Battlefield: Database vs AI Memory](cases/ontology.md)
+We have built-in classic reasoning:
+*   [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
 
-More scenarios are under construction (contributions welcome):
+More scenarios are under development (contributions welcome):
 *   `Agent Infrastructure` vs `Workflow Platforms`
 *   `Vertical AI` vs `General AI Stack`
 *   `Open Source Models` vs `Closed Commercial APIs`
@@ -106,7 +106,7 @@ More scenarios are under construction (contributions welcome):
 
 ### Development Environment
 *   **Language**: Python 3.12+
-*   **Core Stack**: LangGraph (Control Flow), Python Rule Engine, LLM Adapters
+*   **Core Stack**: LangGraph, Python Engine, LLM Adapters
 
 ### Installation
 ```bash

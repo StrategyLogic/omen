@@ -5,11 +5,13 @@ from __future__ import annotations
 import uuid
 from dataclasses import asdict
 
+from omen.explain.report import build_explanation_report
 from omen.models.state import ActorRuntimeState, SimulationState
 from omen.scenario.validator import ScenarioConfig
 from omen.simulation.step import (
     can_apply_action,
     default_action_for,
+    estimate_user_overlap,
     update_competition_edges,
     apply_action,
 )
@@ -30,10 +32,22 @@ def initialize_state(config: ScenarioConfig, run_id: str | None = None) -> Simul
     return SimulationState(run_id=rid, step=0, actors=actors)
 
 
-def _pick_actions(state: SimulationState) -> dict[str, str]:
+def _pick_actions(state: SimulationState, overlap_threshold: float) -> dict[str, str]:
     selected: dict[str, str] = {}
+    actor_ids = list(state.actors)
     for actor_id, actor in state.actors.items():
-        action = default_action_for(actor)
+        max_overlap = 0.0
+        for other_id in actor_ids:
+            if other_id == actor_id:
+                continue
+            other = state.actors[other_id]
+            max_overlap = max(max_overlap, estimate_user_overlap(actor, other))
+
+        if max_overlap >= overlap_threshold:
+            action = "attack_competitor"
+        else:
+            action = default_action_for(actor)
+
         guard = can_apply_action(actor, action)
         if guard.allowed:
             selected[actor_id] = action
@@ -43,7 +57,7 @@ def _pick_actions(state: SimulationState) -> dict[str, str]:
 
 
 def _advance_one_step(state: SimulationState, overlap_threshold: float) -> None:
-    selected_actions = _pick_actions(state)
+    selected_actions = _pick_actions(state, overlap_threshold=overlap_threshold)
     for actor_id, action in selected_actions.items():
         actor = state.actors[actor_id]
         if can_apply_action(actor, action).allowed:
@@ -84,7 +98,7 @@ def run_simulation(config: ScenarioConfig) -> dict:
         "user_overlap",
         "competition_edge_activation",
     ]
-    return {
+    result = {
         "run_id": state.run_id,
         "status": "completed",
         "outcome_class": _classify_outcome(state),
@@ -97,3 +111,5 @@ def run_simulation(config: ScenarioConfig) -> dict:
         "snapshots": snapshots,
         "final_competition_edges": [list(e) for e in state.sorted_edges()],
     }
+    result["explanation"] = build_explanation_report(result)
+    return result

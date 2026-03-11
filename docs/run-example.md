@@ -31,10 +31,12 @@ python -m pip install -e .
 omen simulate --scenario data/scenarios/ontology.json
 ```
 
-如果希望将结果写入文件：
+默认会保存到仓库根目录下的 `output/result.json`。
+
+如需保留历史文件并避免覆盖，可加 `--incremental`，生成时间戳后缀文件（例如 `output/result_20260311_153000_123456.json`）。
 
 ```bash
-omen simulate --scenario data/scenarios/ontology.json --output result.json
+omen simulate --scenario data/scenarios/ontology.json --incremental
 ```
 
 ## What You Will Get
@@ -48,6 +50,48 @@ omen simulate --scenario data/scenarios/ontology.json --output result.json
 - `top_drivers`: 关键驱动因素
 - `snapshots`: 每个时间步的快照
 - `final_competition_edges`: 最终形成的竞争边
+- `explanation`: 关键分叉点、因果链和叙述性总结
+
+## Generate Explanation from Saved Result
+
+对于已保存的运行结果，可以单独生成（或重新生成）解释报告：
+
+```bash
+omen explain --input output/result.json
+```
+
+默认会保存到 `output/explanation.json`。
+
+
+同样可加 `--incremental`：
+
+```bash
+omen explain --input output/result.json --incremental
+```
+
+## Counterfactual Compare
+
+使用 CLI 运行基线与反事实变体并输出对比结果：
+
+```bash
+omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
+```
+
+默认会保存到 `output/comparison.json`。
+
+
+同样可加 `--incremental`：
+
+```bash
+omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}' --incremental
+```
+
+输出会包含：
+
+- `winner_changed`
+- `baseline_outcome_class` / `variation_outcome_class`
+- `deltas`（核心指标变化）
+- `explanation`（变体结果解释）
 
 ## Example Workflow
 
@@ -57,9 +101,16 @@ omen simulate --scenario data/scenarios/ontology.json --output result.json
 conda activate omen
 cd /mnt/ssd/projects/opensource/omen
 python -m pip install -e ".[dev]"
-omen simulate --scenario data/scenarios/ontology.json --output result.json
-cat result.json
+omen simulate --scenario data/scenarios/ontology.json
+omen explain --input output/result.json
+cat output/result.json
 ```
+
+## Output File Hygiene
+
+- 所有本地生成结果建议统一放在仓库根目录 `output/` 下。
+- `output/` 已加入忽略配置，避免将本地运行结果提交到 Git 仓库。
+- 默认文件名采用覆盖策略；需要保留多次运行结果时使用 `--incremental`。
 
 ## Run Tests
 
@@ -78,5 +129,4 @@ pytest tests/integration/test_ontology_baseline.py -q
 ## Notes
 
 - 当前实现是 Ontology Battle MVP 的第一阶段。
-- 结果已经支持基础运行、结构化输出与测试验证。
-- 后续会继续补充 replay、counterfactual compare 和 explainability 相关能力。
+- 结果已经支持基础运行、结构化输出、counterfactual compare 和 explainability。

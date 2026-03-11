@@ -49,3 +49,4 @@ htmlcov/
 *.~ 
 solution*.md
 .local.md
+output/

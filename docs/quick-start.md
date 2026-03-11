@@ -5,6 +5,7 @@
 这不仅仅是运行示例代码，而是体验一次完整的**战略推演工作流**：从设定战场条件，到观察演化终局，再到通过“反事实分析”追问“如果当时...会怎样”。
 
 > 📖 **背景知识**：在开始之前，建议先阅读案例背景文档[本体论之战：数据库 vs AI记忆](../cases/ontology.md)，了解参战双方的能力设定与核心冲突。
+
 ## 🔄 推演工作流                      
 
 在输入命令之前，让我们先理解 Omen 的核心工作流。
@@ -26,7 +27,7 @@ flowchart LR
 作为一个战略家，你将通过以下五个步骤与系统交互：
 
 1.  **🏗️ 设定战场 (Scenario)**：定义市场初始条件、参与方能力与关键阈值。
-2.  **⚔️ 执行推演 (Simulation)**：让多智能体在博弈中演化，生成可能的未来路径。
+2.  **⚔️ 执行模拟 (Simulation)**：让多智能体在博弈中演化，生成可能的未来路径。
 3.  **🔍 生成解释 (Explanation)**：系统自动提取关键分叉点，解释“为什么”会发生这样的结局。
 4.  **💭 提出假设 (Counterfactual)**：注入变量（如：“如果资金增加？”或“如果用户重叠度更高？”）。
 5.  **⚖️ 对比洞察 (Comparison)**：对比基准与假设场景，识别改变结局的关键杠杆。
@@ -80,7 +81,7 @@ omen simulate --scenario data/scenarios/ontology.json --incremental
 
 ### 第二步：生成解释
 
-推演结束后，让 Omen 为你解读结果背后的因果链条。
+模拟结束后，让 Omen 为你解读结果背后的因果链条。
 
 ```bash
 omen explain --input output/result.json
@@ -115,18 +116,18 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 运行完成后，你将得到三个核心文件。以下是如何像战略分析师一样解读它们：
 
 ### 📄 终局形态
-`result.json` 是推演的原始快照。关注以下关键字段：
+`result.json` 是模拟的原始快照。关注以下关键字段：
 
 | 字段 | 示例值 | 战略含义 |
 | :--- | :--- | :--- |
 | `outcome_class` | `"replacement"` | **终局判定**：市场是走向了“替代”、“共存”还是“僵局”？ |
 | `winner.actor_id` | `"traditional-db"` | **胜出者**：在当前条件下，哪一方占据了生态位主导权？ |
 | `winner.user_edge_count` | `609` | **生态规模**：胜出者的用户连接数，反映其护城河深度。 |
-| `seed` | `40` | **实验指纹**：记录此次推演的随机种子，用于后续复盘。 |
+| `seed` | `40` | **实验指纹**：记录此此模拟的随机种子，用于后续复盘。 |
 
 ### 📄 因果链条
 
-`explanation.json` 是推演结果的解释报告，展示了关键的因果链条，确保没有黑盒结论，而是可追踪的逻辑路径：
+`explanation.json` 是模拟结果的解释报告，展示了关键的因果链条，确保没有黑盒结论，而是可追踪的逻辑路径：
 
 *   **`branch_points` (关键分叉点)**: 系统识别出在 `step 1` 就触发了 `user_overlap` (用户重叠) 和 `competition_activation` (竞争激活)。
     *   *洞察*: 这表明该战场属于**“早期高重叠竞争”**，胜负往往在初期就已埋下伏笔。
@@ -158,7 +159,7 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 omen/
 ├── data/
 ├── output/
-│   ├── result.json          # 推演结果
+│   ├── result.json          # 模拟结果
 │   ├── explanation.json     # 解释报告
 │   └── comparison.json      # 对比分析
 ├── ...

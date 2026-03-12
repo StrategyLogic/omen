@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "version": "0.1.0",
+    "case_id": "ontology-battlefield",
+    "domain": "database-vs-ai-memory"
+  },
+  "tbox": {
+    "concepts": [],
+    "relations": [
+      {
+        "name": "has_capability",
+        "source": "DatabaseActor",
+        "target": "semantic",
+        "description": "Actor has capability"
+      }
+    ],
+    "axioms": [
+      {
+        "id": "AX-1",
+        "statement": "sample",
+        "type": "activation"
+      }
+    ]
+  },
+  "abox": {
+    "actors": [
+      {
+        "actor_id": "traditional-db",
+        "actor_type": "DatabaseActor"
+      }
+    ],
+    "capabilities": [
+      {
+        "actor_id": "traditional-db",
+        "name": "semantic",
+        "score": 0.42
+      }
+    ],
+    "constraints": [
+      {
+        "name": "user_overlap_threshold",
+        "value": 0.22
+      }
+    ]
+  },
+  "reasoning_profile": {
+    "activation_rules": [
+      {
+        "rule_id": "AX-1"
+      }
+    ],
+    "propagation_rules": [
+      {
+        "rule_id": "AX-1"
+      }
+    ],
+    "counterfactual_rules": [
+      {
+        "rule_id": "AX-1"
+      }
+    ]
+  }
+}

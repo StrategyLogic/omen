@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from omen.explain.rule_trace import build_rule_trace_references
+
 
 def build_explanation_stub(result: dict) -> dict:
     return {
@@ -51,6 +53,8 @@ def _winner_emergence_step(snapshots: list[dict], winner_actor_id: str | None) -
 def build_explanation_report(result: dict, comparison: dict | None = None) -> dict:
     snapshots = result.get("snapshots", [])
     winner_actor_id = result.get("winner", {}).get("actor_id")
+    ontology_setup = result.get("ontology_setup", {})
+    applied_axioms = ontology_setup.get("applied_axioms", {})
 
     overlap_step = _first_overlap_step(snapshots)
     competition_step = _first_competition_step(snapshots)
@@ -113,6 +117,8 @@ def build_explanation_report(result: dict, comparison: dict | None = None) -> di
         "run_id": result.get("run_id"),
         "branch_points": branch_points,
         "causal_chain": causal_chain,
+        "applied_axioms": applied_axioms,
+        "rule_trace_references": build_rule_trace_references(branch_points, applied_axioms),
         "counterfactual_conditions": comparison.get("conditions", []) if comparison else [],
         "counterfactual_deltas": comparison.get("deltas", []) if comparison else [],
         "narrative_summary": "; ".join(narrative_parts),

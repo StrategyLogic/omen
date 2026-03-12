@@ -36,11 +36,35 @@
 - 一致性、吞吐/延迟、成本效率
 - 开发者体验、迁移摩擦、生态兼容
 
-## 3) Strategist Agent
+## 2.5) Strategy Ontology
 
 **定义**
 
-`Strategist Agent` 是代表战略主体（厂商、应用团队、资本/生态等）的行动单元。
+`Strategy Ontology` 是“设定战场”阶段的结构化输入，嵌入在场景文件中，用于把概念、关系和规则以可验证形式交给推演引擎。
+**最小结构**
+
+- `meta`：案例元数据（`version`、`case_id`、`domain`）
+- `tbox`：概念、语义关系、公理规则
+- `abox`：参与方实例、能力映射、约束与事件
+- `reasoning_profile`：激活/传播/反事实规则引用
+
+**设计约束**
+
+- `Competition` 属于 `game` 类概念
+- 关系名必须是语义谓词（如 `has_capability`、`competes_with`）
+- 本体输入服务于当前 case，不扩展为通用本体平台
+
+**核心交付物（Case by Case）**
+
+| Case | Strategy Ontology 文件 | 状态 | 说明 |
+|---|---|---|---|
+| ontology-battlefield | `data/scenarios/ontology.json` | ✅ 完成 | 内嵌 `meta`/`tbox`/`abox`/`reasoning_profile` |
+
+## 3) Strategic Actor
+
+**定义**
+
+`Strategic Actor` 是代表战略主体（厂商、应用团队、资本/生态等）的行动单元。
 
 **关键属性**
 
@@ -202,7 +226,7 @@ Omen 默认输出多种路径类型：
 - 战略推演（Strategic Simulation）
 - 条件化判断（Conditional Judgment）
 - 能力空间（Capability Space）
-- 战略主体（Strategist Agent）
+- 战略主体（Strategic Actor）
 - 反事实分析（Counterfactual Analysis）
 
 避免使用会误导为确定性预测的表达。

@@ -95,6 +95,7 @@ graph TD
 
 我们已内置了经典推演：
 *   [🗺️ 本体论博弈：数据库 vs AI 记忆](cases/ontology.md)
+*   [⚔️ 向量数据库 vs AI 记忆](cases/vector-memory.md)
 
 更多场景持续构建中（欢迎贡献）：
 *   `智能体基础设施` vs `工作流平台`

@@ -18,6 +18,8 @@ class ActorRuntimeState:
 @dataclass(slots=True)
 class SimulationState:
     run_id: str
+    scenario_id: str
+    case_id: str | None
     step: int
     actors: dict[str, ActorRuntimeState]
     competition_edges: set[tuple[str, str]] = field(default_factory=set)

@@ -1,0 +1,5 @@
+{
+  "required_result_fields": ["scenario_id", "outcome_class", "timeline"],
+  "required_explanation_fields": ["branch_points", "causal_chain"],
+  "required_comparison_fields": ["baseline_outcome_class", "variation_outcome_class", "conditions", "deltas"]
+}

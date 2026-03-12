@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from omen.explain.report import build_explanation_report
-from omen.scenario.loader import load_scenario, load_scenario_with_ontology
+from omen.scenario.loader import load_case_package_from_scenario, load_scenario_with_ontology
 from omen.simulation.replay import (
     compare_run_results,
     create_counterfactual_config,
@@ -108,6 +108,7 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "simulate":
+        load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         if args.seed is None:
             config = create_counterfactual_config(config, {"seed": None})
@@ -124,6 +125,7 @@ def main() -> None:
         output_path = _write_output(rendered, args.output, "explanation.json", args.incremental)
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
+        load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         baseline = run_simulation(config, ontology_setup=ontology_setup)
         overrides: dict[str, Any] = {}

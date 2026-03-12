@@ -95,6 +95,7 @@ graph TD
 
 We have built-in classic reasoning:
 *   [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
+*   [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
 
 More scenarios are under development (contributions welcome):
 *   `Agent Infrastructure` vs `Workflow Platforms`

@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "version": "0.1.0",
+    "case_id": "vector-memory-battlefield",
+    "domain": "vector-database-vs-ai-memory"
+  },
+  "tbox": {
+    "concepts": [
+      {"name": "VectorDatabaseActor", "description": "Vector DB strategic actor", "category": "actor"},
+      {"name": "AIMemoryActor", "description": "AI Memory strategic actor", "category": "actor"},
+      {"name": "AppBuilderActor", "description": "Application builder strategic actor", "category": "actor"},
+      {"name": "semantic_retrieval", "description": "Semantic retrieval capability", "category": "capability"},
+      {"name": "context_memory", "description": "Long-context memory capability", "category": "capability"},
+      {"name": "operational_consistency", "description": "Operational consistency capability", "category": "capability"},
+      {"name": "developer_velocity", "description": "Developer delivery velocity", "category": "capability"}
+    ],
+    "relations": [
+      {"name": "competes_with", "source": "VectorDatabaseActor", "target": "AIMemoryActor", "description": "Compete for semantic infrastructure ownership"},
+      {"name": "influences", "source": "AppBuilderActor", "target": "VectorDatabaseActor", "description": "Builder choices affect vector adoption"},
+      {"name": "influences", "source": "AppBuilderActor", "target": "AIMemoryActor", "description": "Builder choices affect memory adoption"}
+    ],
+    "axioms": [
+      {"id": "AX-vector-overlap-activation", "statement": "high overlap activates direct competition", "type": "activation"},
+      {"id": "AX-memory-context-advantage", "statement": "context memory advantage shifts winner trajectory", "type": "propagation"},
+      {"id": "AX-budget-shock-vector", "statement": "budget shock on vector player changes edge dynamics", "type": "counterfactual"}
+    ]
+  },
+  "abox": {
+    "actors": [
+      {"actor_id": "vector-db-incumbent", "actor_type": "VectorDatabaseActor"},
+      {"actor_id": "ai-memory-platform", "actor_type": "AIMemoryActor"},
+      {"actor_id": "app-builder", "actor_type": "AppBuilderActor"}
+    ],
+    "capabilities": [
+      {"actor_id": "vector-db-incumbent", "name": "semantic_retrieval", "score": 0.78},
+      {"actor_id": "ai-memory-platform", "name": "context_memory", "score": 0.84},
+      {"actor_id": "app-builder", "name": "developer_velocity", "score": 0.70}
+    ],
+    "constraints": [
+      {"name": "user_overlap_threshold", "value": 0.28}
+    ],
+    "events": [
+      {"event_type": "budget_shock", "target": "vector-db-incumbent", "payload": {"delta": 150}}
+    ]
+  },
+  "reasoning_profile": {
+    "activation_rules": [{"rule_id": "AX-vector-overlap-activation"}],
+    "propagation_rules": [{"rule_id": "AX-memory-context-advantage"}],
+    "counterfactual_rules": [{"rule_id": "AX-budget-shock-vector"}]
+  },
+  "case_package": {
+    "manifest": {
+      "case_id": "vector-memory",
+      "case_name": "Vector Database vs AI Memory",
+      "domain": "vector-database-vs-ai-memory",
+      "version": "0.1.0",
+      "scenario_entry": "data/scenarios/vector-memory.json",
+      "narrative_entry": "cases/vector-memory.md",
+      "tags": ["adjacent-case", "strategy-ontology", "spec-003"]
+    },
+    "scenario_file": "data/scenarios/vector-memory.json",
+    "case_doc_file": "cases/vector-memory.md",
+    "required_artifacts": [
+      "specs/003-scenario-system-foundation/contracts/case-package.schema.json",
+      "specs/003-scenario-system-foundation/contracts/cross-case-output.schema.json"
+    ],
+    "ontology_presence": true,
+    "runtime_support": {
+      "simulate_supported": true,
+      "explain_supported": true,
+      "compare_supported": true,
+      "semantic_conditions_supported": true,
+      "rule_trace_supported": true
+    }
+  },
+  "scenario_id": "vector-memory-baseline",
+  "name": "Vector Memory Baseline",
+  "time_steps": 20,
+  "seed": 13,
+  "user_overlap_threshold": 0.28,
+  "actors": [
+    {
+      "actor_id": "vector-db-incumbent",
+      "actor_type": "vector_database",
+      "budget": 980,
+      "initial_user_base": 420,
+      "available_actions": ["grow_semantic_layer", "defend_core", "attack_competitor"],
+      "functional_profile": {
+        "semantic_retrieval": 0.78,
+        "context_memory": 0.52,
+        "operational_consistency": 0.83,
+        "developer_velocity": 0.64
+      }
+    },
+    {
+      "actor_id": "ai-memory-platform",
+      "actor_type": "ai_memory",
+      "budget": 920,
+      "initial_user_base": 360,
+      "available_actions": ["grow_semantic_layer", "partner_ecosystem", "attack_competitor"],
+      "functional_profile": {
+        "semantic_retrieval": 0.74,
+        "context_memory": 0.84,
+        "operational_consistency": 0.61,
+        "developer_velocity": 0.81
+      }
+    },
+    {
+      "actor_id": "app-builder",
+      "actor_type": "application_builder",
+      "budget": 700,
+      "initial_user_base": 240,
+      "available_actions": ["partner_ecosystem", "defend_core", "attack_competitor"],
+      "functional_profile": {
+        "semantic_retrieval": 0.58,
+        "context_memory": 0.65,
+        "operational_consistency": 0.56,
+        "developer_velocity": 0.86
+      }
+    }
+  ],
+  "capabilities": [
+    {"name": "semantic_retrieval", "weight": 0.30},
+    {"name": "context_memory", "weight": 0.30},
+    {"name": "operational_consistency", "weight": 0.20},
+    {"name": "developer_velocity", "weight": 0.20}
+  ]
+}

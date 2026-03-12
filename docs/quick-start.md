@@ -109,21 +109,37 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 
 **输出文件**: `output/comparison.json`
 
-### 🧩 开发者附加说明：本体输入包（Spec 2）
+### 🧩 开发说明：本体输入
 
-如果你在做 Spec 2 的本体输入迭代，`data/scenarios/ontology.json` 已内嵌本体包（`meta`/`tbox`/`abox`/`reasoning_profile`）。通常无需再提供额外输入文件：
+`data/scenarios/ontology.json` 已内嵌本体定义（`meta`/`tbox`/`abox`/`reasoning_profile`），可直接使用：
 
 ```bash
 omen simulate --scenario data/scenarios/ontology.json
 omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
 ```
 
-启用后，输出会额外包含：
+启用后，输出会包含：
 
 - compare 的语义条件对象（例如 `semantic_type`、`category`）
 - explain 的规则追踪引用（例如 `rule_trace_references`）
 
 💡 **提示**：同样支持 `--incremental` 参数来保存多次对比实验的历史记录。
+
+### 🧩 开发说明：本体复用
+
+你也可以直接复用同一工作流运行[第二个案例](cases/vector-memory.md)：
+
+```bash
+omen simulate --scenario data/scenarios/vector-memory.json
+omen explain --input output/result.json
+omen compare --scenario data/scenarios/vector-memory.json --overrides '{"user_overlap_threshold": 0.85}'
+```
+
+预期输出仍保持一致：
+
+- `output/result.json`（含 `scenario_id`、`outcome_class`、`timeline`）
+- `output/explanation.json`（含 `branch_points`、`causal_chain`）
+- `output/comparison.json`（含 `baseline_outcome_class`、`variation_outcome_class`、`conditions`、`deltas`）
 
 ## 📊 推演结果解读
 

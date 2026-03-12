@@ -1,0 +1,24 @@
+{
+  "manifest": {
+    "case_id": "broken-case",
+    "case_name": "Broken Case",
+    "domain": "demo",
+    "version": "0.1.0",
+    "scenario_entry": "data/scenarios/missing.json",
+    "narrative_entry": "cases/missing.md"
+  },
+  "scenario_file": "data/scenarios/missing.json",
+  "case_doc_file": "cases/missing.md",
+  "required_artifacts": [
+    "specs/003-scenario-system-foundation/contracts/case-package.schema.json",
+    "specs/003-scenario-system-foundation/contracts/does-not-exist.schema.json"
+  ],
+  "ontology_presence": true,
+  "runtime_support": {
+    "simulate_supported": true,
+    "explain_supported": true,
+    "compare_supported": true,
+    "semantic_conditions_supported": true,
+    "rule_trace_supported": true
+  }
+}

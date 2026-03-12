@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from omen.explain.report import build_explanation_report
-from omen.scenario.loader import load_scenario
+from omen.scenario.loader import load_scenario, load_scenario_with_ontology
 from omen.simulation.replay import (
     compare_run_results,
     create_counterfactual_config,
@@ -47,6 +47,11 @@ def main() -> None:
     simulate = sub.add_parser("simulate", help="run one scenario simulation")
     simulate.add_argument("--scenario", required=True, help="Path to scenario JSON")
     simulate.add_argument(
+        "--ontology-input",
+        required=False,
+        help="Optional ontology input JSON path for battlefield setup metadata",
+    )
+    simulate.add_argument(
         "--seed",
         required=False,
         type=int,
@@ -70,6 +75,11 @@ def main() -> None:
 
     compare = sub.add_parser("compare", help="run counterfactual and compare with baseline")
     compare.add_argument("--scenario", required=True, help="Path to scenario JSON")
+    compare.add_argument(
+        "--ontology-input",
+        required=False,
+        help="Optional ontology input JSON path for battlefield setup metadata",
+    )
     compare.add_argument(
         "--overrides",
         required=False,
@@ -98,12 +108,12 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "simulate":
-        config = load_scenario(args.scenario)
+        config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         if args.seed is None:
             config = create_counterfactual_config(config, {"seed": None})
         else:
             config = create_counterfactual_config(config, {"seed": args.seed})
-        result = run_simulation(config)
+        result = run_simulation(config, ontology_setup=ontology_setup)
         rendered = json.dumps(result, ensure_ascii=False, indent=2)
         output_path = _write_output(rendered, args.output, "result.json", args.incremental)
         print(f"Saved simulation result to {output_path}")
@@ -114,8 +124,8 @@ def main() -> None:
         output_path = _write_output(rendered, args.output, "explanation.json", args.incremental)
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
-        config = load_scenario(args.scenario)
-        baseline = run_simulation(config)
+        config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
+        baseline = run_simulation(config, ontology_setup=ontology_setup)
         overrides: dict[str, Any] = {}
         conditions: list[dict[str, Any]] = []
 
@@ -173,7 +183,7 @@ def main() -> None:
             parser.error("provide --overrides and/or --budget-actor with --budget-delta")
             return
 
-        _, variation = run_counterfactual(config, overrides)
+        _, variation = run_counterfactual(config, overrides, ontology_setup=ontology_setup)
         comparison = compare_run_results(baseline, variation, conditions=conditions)
         rendered = json.dumps(comparison, ensure_ascii=False, indent=2)
         output_path = _write_output(rendered, args.output, "comparison.json", args.incremental)

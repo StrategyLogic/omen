@@ -1,4 +1,160 @@
 {
+  "meta": {
+    "version": "0.1.0",
+    "case_id": "ontology-battlefield",
+    "domain": "database-vs-ai-memory"
+  },
+  "tbox": {
+    "concepts": [
+      {
+        "name": "DatabaseActor",
+        "description": "Traditional database strategic actor",
+        "category": "actor"
+      },
+      {
+        "name": "BackendDatabaseActor",
+        "description": "Emerging backend database strategic actor",
+        "category": "actor"
+      },
+      {
+        "name": "AIMemoryActor",
+        "description": "AI memory strategic actor",
+        "category": "actor"
+      },
+      {
+        "name": "Competition",
+        "description": "Static competition relationship",
+        "category": "game"
+      },
+      {
+        "name": "semantic",
+        "description": "Semantic capability dimension",
+        "category": "capability"
+      },
+      {
+        "name": "consistency",
+        "description": "Consistency capability dimension",
+        "category": "capability"
+      },
+      {
+        "name": "developer_experience",
+        "description": "Developer experience capability dimension",
+        "category": "capability"
+      }
+    ],
+    "relations": [
+      {
+        "name": "has_capability",
+        "source": "DatabaseActor",
+        "target": "semantic",
+        "description": "Actor holds capability"
+      },
+      {
+        "name": "has_capability",
+        "source": "BackendDatabaseActor",
+        "target": "semantic",
+        "description": "Actor holds capability"
+      },
+      {
+        "name": "has_capability",
+        "source": "AIMemoryActor",
+        "target": "semantic",
+        "description": "Actor holds capability"
+      },
+      {
+        "name": "competes_with",
+        "source": "DatabaseActor",
+        "target": "AIMemoryActor",
+        "description": "Actors compete in ontology battlefield"
+      }
+    ],
+    "axioms": [
+      {
+        "id": "AX-activation-overlap",
+        "statement": "high overlap can activate competition",
+        "type": "activation"
+      },
+      {
+        "id": "AX-propagation-migration-friction",
+        "statement": "migration friction suppresses replacement velocity",
+        "type": "propagation"
+      },
+      {
+        "id": "AX-counterfactual-budget-shock",
+        "statement": "budget shock shifts actor capability window",
+        "type": "counterfactual"
+      }
+    ]
+  },
+  "abox": {
+    "actors": [
+      {
+        "actor_id": "traditional-db",
+        "actor_type": "DatabaseActor"
+      },
+      {
+        "actor_id": "backend-db",
+        "actor_type": "BackendDatabaseActor"
+      },
+      {
+        "actor_id": "ai-memory",
+        "actor_type": "AIMemoryActor"
+      }
+    ],
+    "capabilities": [
+      {
+        "actor_id": "traditional-db",
+        "name": "semantic",
+        "score": 0.42
+      },
+      {
+        "actor_id": "backend-db",
+        "name": "semantic",
+        "score": 0.56
+      },
+      {
+        "actor_id": "ai-memory",
+        "name": "semantic",
+        "score": 0.71
+      }
+    ],
+    "constraints": [
+      {
+        "name": "user_overlap_threshold",
+        "value": 0.22
+      },
+      {
+        "name": "migration_friction",
+        "value": 0.5
+      }
+    ],
+    "events": [
+      {
+        "event_type": "budget_shock",
+        "target": "ai-memory",
+        "payload": {
+          "delta": 200
+        }
+      }
+    ]
+  },
+  "reasoning_profile": {
+    "activation_rules": [
+      {
+        "rule_id": "AX-activation-overlap"
+      }
+    ],
+    "propagation_rules": [
+      {
+        "rule_id": "AX-propagation-migration-friction"
+      }
+    ],
+    "counterfactual_rules": [
+      {
+        "rule_id": "AX-counterfactual-budget-shock"
+      }
+    ]
+  },
   "scenario_id": "ontology-battle-baseline",
   "name": "Ontology Battle Baseline",
   "time_steps": 20,

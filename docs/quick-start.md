@@ -109,6 +109,20 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 
 **输出文件**: `output/comparison.json`
 
+### 🧩 开发者附加说明：本体输入包（Spec 2）
+
+如果你在做 Spec 2 的本体输入迭代，`data/scenarios/ontology.json` 已内嵌本体包（`meta`/`tbox`/`abox`/`reasoning_profile`）。通常无需再提供额外输入文件：
+
+```bash
+omen simulate --scenario data/scenarios/ontology.json
+omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
+```
+
+启用后，输出会额外包含：
+
+- compare 的语义条件对象（例如 `semantic_type`、`category`）
+- explain 的规则追踪引用（例如 `rule_trace_references`）
+
 💡 **提示**：同样支持 `--incremental` 参数来保存多次对比实验的历史记录。
 
 ## 📊 推演结果解读
@@ -173,6 +187,6 @@ omen/
 
 **下一步？**
 
-尝试修改 `data/scenarios/ontology.json` 中的参数，或者阅读 [核心概念文档](docs/concepts.md) 学习如何构建你自己的战略场景。
+尝试修改 `data/scenarios/ontology.json` 中的参数，阅读 [本体输入快速验证指南](ontology.md) 进行 Spec 2 验收，或查看 [核心概念文档](concepts.md) 学习如何构建你自己的战略场景。
 
 *Simulate the Signs. Reveal the Chaos.*

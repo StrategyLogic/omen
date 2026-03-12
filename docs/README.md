@@ -14,7 +14,8 @@
 后续建议围绕以下概念持续扩展文档：
 
 - **Capability Space**：将技术竞争拆解为可比较、可演化的能力维度
-- **Strategist Agent**：在资源约束下做有限动作选择的战略主体
+- **Strategic Actor**：在资源约束下做有限动作选择的战略主体
+- **Strategy Ontology**：case-by-case 的战场设定输入（`meta`/`tbox`/`abox`/`reasoning_profile`）
 - **Simulation Kernel**：结合规则、计算模型与 LLM 决策推进多轮演化
 - **Counterfactual Analysis**：通过反事实回放解释关键分叉和策略影响
 - **Show Case**：用单一强场景验证推演能力与解释能力

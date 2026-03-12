@@ -9,6 +9,7 @@ from typing import Any
 
 from omen.explain.report import build_explanation_report
 from omen.scenario.validator import ScenarioConfig, validate_scenario_or_raise
+from omen.simulation.condition_types import normalize_semantic_conditions
 from omen.simulation.engine import run_simulation
 
 
@@ -51,9 +52,10 @@ def create_counterfactual_config(
 def run_counterfactual(
     baseline_config: ScenarioConfig,
     overrides: dict[str, Any],
+    ontology_setup: dict[str, Any] | None = None,
 ) -> tuple[ScenarioConfig, dict[str, Any]]:
     variation = create_counterfactual_config(baseline_config, overrides)
-    return variation, run_simulation(variation)
+    return variation, run_simulation(variation, ontology_setup=ontology_setup)
 
 
 def compare_run_results(
@@ -86,6 +88,7 @@ def compare_run_results(
             - len(baseline_result.get("snapshots", [])),
         },
     ]
+    semantic_conditions = normalize_semantic_conditions(conditions or [])
     comparison = {
         "baseline_run_id": baseline_result.get("run_id"),
         "variation_run_id": variation_result.get("run_id"),
@@ -93,7 +96,7 @@ def compare_run_results(
         "variation_outcome_class": variation_result.get("outcome_class"),
         "winner_changed": baseline_result.get("winner", {}).get("actor_id")
         != variation_result.get("winner", {}).get("actor_id"),
-        "conditions": conditions or [],
+        "conditions": semantic_conditions,
         "deltas": deltas,
     }
     comparison["explanation"] = build_explanation_report(variation_result, comparison=comparison)

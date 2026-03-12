@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
+from omen.scenario.ontology_loader import bind_ontology_to_scenario, load_ontology_input
+from omen.scenario.ontology_validator import validate_ontology_input_or_raise
 from omen.scenario.validator import ScenarioConfig, validate_scenario_or_raise
 
 
@@ -13,3 +16,28 @@ def load_scenario(path: str | Path) -> ScenarioConfig:
     with scenario_path.open("r", encoding="utf-8") as f:
         payload = json.load(f)
     return validate_scenario_or_raise(payload)
+
+
+def load_scenario_with_ontology(
+    scenario_path: str | Path,
+    ontology_path: str | Path | None = None,
+) -> tuple[ScenarioConfig, dict[str, Any] | None]:
+    scenario_path = Path(scenario_path)
+    with scenario_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    scenario = validate_scenario_or_raise(payload)
+
+    ontology = None
+    if ontology_path is not None:
+        ontology = load_ontology_input(ontology_path)
+    elif isinstance(payload, dict) and all(
+        key in payload for key in ("meta", "tbox", "abox", "reasoning_profile")
+    ):
+        ontology = validate_ontology_input_or_raise(payload)
+
+    if ontology is None:
+        return scenario, None
+
+    ontology_metadata = bind_ontology_to_scenario(ontology, scenario)
+    return scenario, ontology_metadata

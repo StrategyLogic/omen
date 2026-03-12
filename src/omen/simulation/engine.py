@@ -84,7 +84,10 @@ def _classify_outcome(final_state: SimulationState) -> str:
     return "convergence"
 
 
-def run_simulation(config: ScenarioConfig) -> dict:
+def run_simulation(
+    config: ScenarioConfig,
+    ontology_setup: dict | None = None,
+) -> dict:
     state = initialize_state(config)
     rng = random.Random(config.seed)
     snapshots: list[dict] = []
@@ -124,5 +127,7 @@ def run_simulation(config: ScenarioConfig) -> dict:
         "snapshots": snapshots,
         "final_competition_edges": [list(e) for e in state.sorted_edges()],
     }
+    if ontology_setup is not None:
+        result["ontology_setup"] = ontology_setup
     result["explanation"] = build_explanation_report(result)
     return result

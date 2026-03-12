@@ -8,7 +8,12 @@ from typing import Any
 
 from omen.scenario.ontology_loader import bind_ontology_to_scenario, load_ontology_input
 from omen.scenario.ontology_validator import validate_ontology_input_or_raise
-from omen.scenario.validator import ScenarioConfig, validate_scenario_or_raise
+from omen.scenario.validator import (
+    ScenarioConfig,
+    validate_case_package_or_raise,
+    validate_scenario_or_raise,
+)
+from omen.types import CasePackage
 
 
 def load_scenario(path: str | Path) -> ScenarioConfig:
@@ -16,6 +21,25 @@ def load_scenario(path: str | Path) -> ScenarioConfig:
     with scenario_path.open("r", encoding="utf-8") as f:
         payload = json.load(f)
     return validate_scenario_or_raise(payload)
+
+
+def load_case_package(path: str | Path) -> CasePackage:
+    package_path = Path(path)
+    with package_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    return validate_case_package_or_raise(payload, base_dir=package_path.parent.parent)
+
+
+def load_case_package_from_scenario(path: str | Path) -> CasePackage:
+    scenario_path = Path(path)
+    with scenario_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    case_package_payload = payload.get("case_package")
+    if not isinstance(case_package_payload, dict):
+        raise ValueError("scenario missing `case_package` object")
+
+    return validate_case_package_or_raise(case_package_payload, base_dir=scenario_path.parent.parent.parent)
 
 
 def load_scenario_with_ontology(

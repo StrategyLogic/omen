@@ -40,7 +40,7 @@
 
 **定义**
 
-`Strategy Ontology` 是“设定战场”阶段的结构化输入，嵌入在场景文件中，用于把概念、关系和规则以可验证形式交给推演引擎。
+[Strategy Ontology](docs/ontology.md) 是“设定战场”阶段的结构化输入，嵌入在场景文件中，用于把概念、关系和规则以可验证形式交给推演引擎。
 **最小结构**
 
 - `meta`：案例元数据（`version`、`case_id`、`domain`）
@@ -54,7 +54,7 @@
 - 关系名必须是语义谓词（如 `has_capability`、`competes_with`）
 - 本体输入服务于当前 case，不扩展为通用本体平台
 
-**核心交付物（Case by Case）**
+**交付物**
 
 | Case | Strategy Ontology 文件 | 状态 | 说明 |
 |---|---|---|---|

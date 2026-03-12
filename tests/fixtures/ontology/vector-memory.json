@@ -1,0 +1,5 @@
+{
+  "scenario_path": "data/scenarios/vector-memory.json",
+  "expected_case_id": "vector-memory",
+  "expected_scenario_id": "vector-memory-baseline"
+}

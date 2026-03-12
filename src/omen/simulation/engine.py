@@ -30,7 +30,13 @@ def initialize_state(config: ScenarioConfig, run_id: str | None = None) -> Simul
             functional_profile=dict(actor.functional_profile),
             user_edge_count=actor.initial_user_base,
         )
-    return SimulationState(run_id=rid, step=0, actors=actors)
+    return SimulationState(
+        run_id=rid,
+        scenario_id=config.scenario_id,
+        case_id=None,
+        step=0,
+        actors=actors,
+    )
 
 
 def _pick_actions(state: SimulationState, overlap_threshold: float) -> dict[str, str]:
@@ -115,6 +121,7 @@ def run_simulation(
     ]
     result = {
         "run_id": state.run_id,
+        "scenario_id": state.scenario_id,
         "status": "completed",
         "seed": config.seed,
         "outcome_class": _classify_outcome(state),
@@ -124,6 +131,7 @@ def run_simulation(
         },
         "top_drivers": top_drivers,
         "steps": config.time_steps,
+        "timeline": snapshots,
         "snapshots": snapshots,
         "final_competition_edges": [list(e) for e in state.sorted_edges()],
     }

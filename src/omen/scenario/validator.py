@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
+from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 
 
@@ -64,3 +67,82 @@ def validate_scenario_or_raise(payload: dict) -> ScenarioConfig:
         return validate_scenario(payload)
     except ValidationError:
         raise
+
+
+class ResultArtifactContract(BaseModel):
+    scenario_id: str = Field(min_length=1)
+    outcome_class: str = Field(min_length=1)
+    winner: dict | None = None
+    timeline: list
+    ontology_setup: dict | None = None
+    explanation: dict | None = None
+
+
+class ExplanationArtifactContract(BaseModel):
+    branch_points: list
+    causal_chain: list
+    narrative_summary: str | None = None
+    applied_axioms: dict | None = None
+    rule_trace_references: list | None = None
+
+
+class SemanticConditionObject(BaseModel):
+    description: str = Field(min_length=1)
+    type: str | None = None
+    semantic_type: str | None = None
+    category: str | None = None
+
+
+class ComparisonArtifactContract(BaseModel):
+    baseline_outcome_class: str = Field(min_length=1)
+    variation_outcome_class: str = Field(min_length=1)
+    conditions: list[SemanticConditionObject] = Field(default_factory=list)
+    deltas: list
+
+
+class CrossCaseOutputContract(BaseModel):
+    result_artifact: ResultArtifactContract
+    explanation_artifact: ExplanationArtifactContract
+    comparison_artifact: ComparisonArtifactContract
+
+
+def validate_runtime_support_or_raise(payload: dict) -> RuntimeSupportDeclaration:
+    return RuntimeSupportDeclaration.model_validate(payload)
+
+
+def _resolve_existing_path(base_dir: Path, relative_or_abs: str) -> Path:
+    path = Path(relative_or_abs)
+    candidate = path if path.is_absolute() else base_dir / path
+    return candidate.resolve()
+
+
+def validate_case_package_or_raise(
+    payload: dict,
+    *,
+    base_dir: str | Path | None = None,
+) -> CasePackage:
+    package = CasePackage.model_validate(payload)
+    if base_dir is None:
+        return package
+
+    base = Path(base_dir).resolve()
+    required_paths = [
+        package.scenario_file,
+        package.case_doc_file,
+        package.manifest.scenario_entry,
+        package.manifest.narrative_entry,
+        *package.required_artifacts,
+    ]
+    missing = [
+        rel
+        for rel in required_paths
+        if not _resolve_existing_path(base, rel).exists()
+    ]
+    if missing:
+        raise ValueError(f"case package references missing artifact(s): {missing}")
+
+    return package
+
+
+def validate_cross_case_output_contract_or_raise(payload: dict) -> CrossCaseOutputContract:
+    return CrossCaseOutputContract.model_validate(payload)

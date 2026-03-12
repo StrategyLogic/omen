@@ -155,6 +155,31 @@
       }
     ]
   },
+  "case_package": {
+    "manifest": {
+      "case_id": "ontology",
+      "case_name": "Ontology Battle: Database vs AI Memory",
+      "domain": "database-vs-ai-memory",
+      "version": "0.1.0",
+      "scenario_entry": "data/scenarios/ontology.json",
+      "narrative_entry": "cases/ontology.md",
+      "tags": ["baseline-case", "strategy-ontology", "spec-003"]
+    },
+    "scenario_file": "data/scenarios/ontology.json",
+    "case_doc_file": "cases/ontology.md",
+    "required_artifacts": [
+      "specs/003-scenario-system-foundation/contracts/case-package.schema.json",
+      "specs/003-scenario-system-foundation/contracts/cross-case-output.schema.json"
+    ],
+    "ontology_presence": true,
+    "runtime_support": {
+      "simulate_supported": true,
+      "explain_supported": true,
+      "compare_supported": true,
+      "semantic_conditions_supported": true,
+      "rule_trace_supported": true
+    }
+  },
   "scenario_id": "ontology-battle-baseline",
   "name": "Ontology Battle Baseline",
   "time_steps": 20,

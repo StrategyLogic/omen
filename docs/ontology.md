@@ -41,10 +41,13 @@ Strategy Ontology Schema 包含 TBox/ABox + 推理配置：
 - `tbox`：概念、关系、公理
 - `abox`：案例实例（actors、capabilities、constraints、events）
 - `reasoning_profile`：激活/传播/反事实规则引用
+- `case_package`：用于声明可复用案例包（manifest、运行能力声明、必需工件）。
 
-## Ontology 案例战略本体
+## 战略本体案例
 
-当前案例文件：`data/scenarios/ontology.json`
+[Ontology之战](cases/ontology.md)：`data/scenarios/ontology.json`
+
+[向量 vs. 记忆](cases/vector-memory.md)：`data/scenarios/vector-memory.json`
 
 ### TBox 概念体系
 

@@ -29,6 +29,8 @@ Unlike traditional predictive models, Omen does not promise to *predict a certai
 
 ## 📜 Philosophy & Design Principles
 
+> 💡 **Core Mantra**: *The machine simulates the "Situation"; the human decides the "Destiny".*
+
 Just as **Yao** in the *I Ching* represents change and interaction, Omen is designed only to present the evolution of the **Situation (Xiang)**. Interpreting the deeper meaning behind the situation and making decisions is the exclusive privilege of human wisdom.
 
 Accordingly, Omen is architected as a **human-decision-first** AI simulator, with a clear division of labor between machine simulation and human sovereignty:
@@ -43,9 +45,7 @@ Accordingly, Omen is architected as a **human-decision-first** AI simulator, wit
 *   **Privilege**: Deciding *which* path to take based on values, risk appetite, and vision remains the exclusive privilege of human leaders.
 *   **Synergy**: Omen expands the horizon of visible possibilities; humans provide the compass for navigation.
 
-> 💡 **Core Mantra**: *The machine simulates the "Situation"; the human decides the "Destiny".*
-
-📜 See [Omen Project Protocol](PROTOCOL.md)
+📜 See [Omen Project Protocol](PROTOCOL.md) to get detailed guidelines.
 
 ## ⚙️ Core Features
 
@@ -104,11 +104,10 @@ More scenarios are under development (contributions welcome):
 
 ## 🚀 Quick Start
 
-### Development Environment
-*   **Language**: Python 3.12+
-*   **Core Stack**: LangGraph, Python Engine, LLM Adapters
-
 ### Installation
+
+Environment requirements: Python 3.12+ with `pip` package manager.
+
 ```bash
 git clone https://github.com/StrategyLogic/omen.git
 cd omen
@@ -137,9 +136,27 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
 ```
 
-By default, generated local files are written to the root-level `output/` directory (for example `output/result.json`, `output/explanation.json`, `output/comparison.json`) to avoid polluting tracked source files.
-By default, `simulate` uses a randomized seed each run; pass `--seed` when you need reproducible trajectories.
-Default behavior is overwrite-by-name; add `--incremental` to any CLI command to append a timestamp suffix and keep historical outputs.
+### View Results
+
+**Local File Protection**: Output files are written to the root-level `output/` directory, which is excluded in `.gitignore` to avoid being tracked or accidentally uploaded, protecting your data from leakage.
+
+Example: `output/result.json`, `output/explanation.json`, `output/comparison.json`
+
+By default, each run of the simulation will overwrite the previous results; you can add the `--incremental` to generate new files with a timestamp suffix, which applies to all `omen CLI` commands.
+
+```bash
+# This will not overwrite the previous output (output file will automatically have a timestamp suffix)
+omen simulate --scenario data/scenarios/ontology.json --incremental
+```
+
+By default, `simulate` use random seed to generate non-deterministic results; you can set a fixed `--seed` for reproducibility, it is recommended to compare different scenarios with the same seed to see the pure impact of parameter changes without random noise.
+
+```bash
+# Run simulate with a fixed seed (results will be reproducible)
+omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --seed 42
+# Run another scenario with the same seed to compare results
+omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 300 --seed 42
+```
 
 ## 👥 Target Audience
 

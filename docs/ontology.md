@@ -181,7 +181,39 @@ python -m pytest -q
 
 预期：全部测试通过。
 
-## 案例扩展指南
+## 🧩 开发说明
+
+### 本体输入
+
+`data/scenarios/ontology.json` 已内嵌本体定义（`meta`/`tbox`/`abox`/`reasoning_profile`），可直接使用：
+
+```bash
+omen simulate --scenario data/scenarios/ontology.json
+omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
+```
+
+启用后，输出会包含：
+
+- compare 的语义条件对象（例如 `semantic_type`、`category`）
+- explain 的规则追踪引用（例如 `rule_trace_references`）
+
+### 本体复用
+
+你也可以直接复用同一工作流运行[第二个案例](cases/vector-memory.md)：
+
+```bash
+omen simulate --scenario data/scenarios/vector-memory.json
+omen explain --input output/result.json
+omen compare --scenario data/scenarios/vector-memory.json --overrides '{"user_overlap_threshold": 0.85}'
+```
+
+预期输出仍保持一致：
+
+- `output/result.json`（含 `scenario_id`、`outcome_class`、`timeline`）
+- `output/explanation.json`（含 `branch_points`、`causal_chain`）
+- `output/comparison.json`（含 `baseline_outcome_class`、`variation_outcome_class`、`conditions`、`deltas`）
+
+## 案例扩展
 
 基于现有案例创建新场景的推荐步骤：
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from omen.explain.evidence_linker import build_outcome_evidence_links
 from omen.explain.rule_trace import build_rule_trace_references
 
 
@@ -113,12 +114,20 @@ def build_explanation_report(result: dict, comparison: dict | None = None) -> di
                     "counterfactual conditions: " + " | ".join(condition_descriptions)
                 )
 
+    rule_trace_references = build_rule_trace_references(branch_points, applied_axioms)
+    outcome_evidence_links = build_outcome_evidence_links(
+        result,
+        comparison,
+        rule_trace_references=rule_trace_references,
+    )
+
     explanation = {
         "run_id": result.get("run_id"),
         "branch_points": branch_points,
         "causal_chain": causal_chain,
         "applied_axioms": applied_axioms,
-        "rule_trace_references": build_rule_trace_references(branch_points, applied_axioms),
+        "rule_trace_references": rule_trace_references,
+        "outcome_evidence_links": outcome_evidence_links,
         "counterfactual_conditions": comparison.get("conditions", []) if comparison else [],
         "counterfactual_deltas": comparison.get("deltas", []) if comparison else [],
         "narrative_summary": "; ".join(narrative_parts),

@@ -159,6 +159,8 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 300 --seed 42
 ```
 
+想了解更多？阅读[精度评估](docs/precision.md)文档。
+
 ## 👥 适用人群
 
 Omen 专为以下角色打造：

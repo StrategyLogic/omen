@@ -1,0 +1,16 @@
+{
+  "scenario_id": "ontology-battle-baseline",
+  "runs": 3,
+  "seed": 42,
+  "repeatability": {
+    "run_count": 3,
+    "outcome_consistency": 1.0,
+    "top_driver_consistency": 1.0,
+    "dominant_outcome_class": "replacement",
+    "dominant_top_drivers": [
+      "functional_similarity",
+      "user_overlap",
+      "competition_edge_activation"
+    ]
+  }
+}

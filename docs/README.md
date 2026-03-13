@@ -2,12 +2,23 @@
 
 这个目录用于沉淀 Omen 的核心概念、方法论和项目演进计划。
 
+## 推荐阅读路径
+
+1. 从 [Quick Start](quick-start.md) 跑通最小推演闭环
+2. 阅读 [Core Concepts](concepts.md) 理解术语与边界
+3. 阅读 [Ontology Input](ontology.md) 理解战场输入结构
+4. 阅读 [Precision Guide](precision.md) 理解精度评估与门禁
+5. 阅读 [Ingest Workspace](ingest.md) 理解数据摄取目录与流程
+6. 参考 [Roadmap](roadmap.md) 查看阶段演进
+
 ## Documents
 
 - [Core Concepts](concepts.md)
 - [Case Template](case-template.md)
 - [Roadmap](roadmap.md)
 - [Quick Start](quick-start.md)
+- [Precision Guide](precision.md)
+- [Ingest Workspace](ingest.md)
 
 ## Core Concepts
 

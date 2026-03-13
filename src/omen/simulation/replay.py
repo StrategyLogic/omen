@@ -11,6 +11,10 @@ from omen.explain.report import build_explanation_report
 from omen.scenario.validator import ScenarioConfig, validate_scenario_or_raise
 from omen.simulation.condition_types import normalize_semantic_conditions
 from omen.simulation.engine import run_simulation
+from omen.simulation.precision_metrics import (
+    evaluate_directional_correctness,
+    evaluate_trace_completeness,
+)
 
 
 def save_run_result(result: dict[str, Any], path: str | Path) -> Path:
@@ -100,4 +104,15 @@ def compare_run_results(
         "deltas": deltas,
     }
     comparison["explanation"] = build_explanation_report(variation_result, comparison=comparison)
+    directional = evaluate_directional_correctness(
+        comparison,
+        conditions=semantic_conditions,
+    )
+    trace = evaluate_trace_completeness(
+        comparison["explanation"].get("outcome_evidence_links", [])
+    )
+    comparison["precision_summary"] = {
+        "directional_correctness": directional,
+        "trace_completeness": trace,
+    }
     return comparison

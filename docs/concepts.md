@@ -1,8 +1,8 @@
-# Core Concepts
+# 核心概念
 
-本文档定义 Omen 的核心概念，用于统一术语、约束实现边界，并支撑场景扩展。
+本文档阐述 Omen 的核心概念，用于统一术语、约束实现边界，并支撑场景扩展。
 
-## 1) Strategic Simulation
+## 1 Strategic Simulation
 
 **定义**
 
@@ -19,7 +19,7 @@
 - 条件触发点
 - 可解释结论
 
-## 2) Capability Space
+## 2 Capability Space
 
 **定义**
 
@@ -36,11 +36,11 @@
 - 一致性、吞吐/延迟、成本效率
 - 开发者体验、迁移摩擦、生态兼容
 
-## 2.5) Strategy Ontology
+## 3 Strategy Ontology
 
 **定义**
 
-[Strategy Ontology](docs/ontology.md) 是“设定战场”阶段的结构化输入，嵌入在场景文件中，用于把概念、关系和规则以可验证形式交给推演引擎。
+[战略本体](ontology.md) 是“设定战场”阶段的结构化输入，嵌入在场景文件中，用于把概念、关系和规则以可验证形式交给推演引擎。
 **最小结构**
 
 - `meta`：案例元数据（`version`、`case_id`、`domain`）
@@ -60,7 +60,7 @@
 |---|---|---|---|
 | ontology-battlefield | `data/scenarios/ontology.json` | ✅ 完成 | 内嵌 `meta`/`tbox`/`abox`/`reasoning_profile` |
 
-## 3) Strategic Actor
+### 3.1 Strategic Actor
 
 **定义**
 
@@ -78,7 +78,7 @@
 - 不是自由聊天体
 - 必须在有限动作空间内行动
 
-## 4) State
+## 4 State
 
 **定义**
 
@@ -97,7 +97,7 @@
 - 可比较
 - 可回放
 
-## 5) Action Space
+## 5 Action Space
 
 **定义**
 
@@ -116,7 +116,7 @@
 - `acquire_capability`
 - `open_source_module`
 
-## 6) Simulation Kernel
+## 6 Simulation Kernel
 
 **定义**
 
@@ -133,7 +133,7 @@
 - 先规则与计算，再策略解释
 - 避免让关键数值完全由自然语言生成
 
-## 7) Emergence (Constrained)
+## 7 Emergence (Constrained)
 
 **定义**
 
@@ -149,7 +149,7 @@
 - 用随机叙事替代机制解释
 - 仅依赖角色对话推动关键结论
 
-## 8) Counterfactual Analysis
+## 8 Counterfactual Analysis
 
 **定义**
 
@@ -166,7 +166,7 @@
 - 提高解释可信度
 - 识别真正关键驱动因子
 
-## 9) Explainability
+## 9 Explainability
 
 **定义**
 
@@ -179,7 +179,7 @@
 - 关键动作影响
 - 路径分叉原因
 
-## 10) Show Case
+## 10 Show Case
 
 **定义**
 
@@ -191,7 +191,7 @@
 - 文件名必须是场景名（如 `ontology.md`）
 - 不使用 `case.md` 这类泛名
 
-## 11) Path Types
+## 11 Path Types
 
 Omen 默认输出多种路径类型：
 
@@ -200,7 +200,7 @@ Omen 默认输出多种路径类型：
 - **High Upside Path**：高收益路径
 - **Black Swan Path**：低概率高影响路径
 
-## 12) Decision Output
+## 12 Decision Output
 
 推演输出应是可执行的“条件化判断”，而非绝对预测。
 
@@ -211,7 +211,7 @@ Omen 默认输出多种路径类型：
 - 哪种策略组合更优
 - 下一步动作建议是什么
 
-## 13) Non-goals
+## 13 Non-goals
 
 当前阶段不追求：
 
@@ -219,7 +219,7 @@ Omen 默认输出多种路径类型：
 - 全行业统一模型
 - 无约束自由对话驱动模拟
 
-## 14) Terminology Policy
+## 14 Terminology Policy
 
 项目文档统一使用以下术语：
 
@@ -230,3 +230,16 @@ Omen 默认输出多种路径类型：
 - 反事实分析（Counterfactual Analysis）
 
 避免使用会误导为确定性预测的表达。
+
+## 15 Precision & Ingest Terms
+
+为保持外部文档一致性，新增以下统一术语：
+
+- **Precision Evaluation**：用于度量重复性、方向正确性、证据链完整性
+- **Precision Gate**：基于阈值的通过/未通过判定
+- **Ingest Workspace**：`data/ingest/` 下的标准目录（`sources/extracted/knowledge/graph`）
+
+相关文档：
+
+- [精度评估](precision.md)
+- [数据摄取](ingest.md)

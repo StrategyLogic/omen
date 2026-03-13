@@ -12,6 +12,8 @@ authors = [{ name = "StrategyLogic" }]
 license = { text = "AGPL-3.0-or-later" }
 dependencies = [
   "pydantic>=2.8.0",
+  # used by src/omen/ingest/pdf_extract.py
+  "pypdf>=4.2.0",
 ]
 
 [project.scripts]

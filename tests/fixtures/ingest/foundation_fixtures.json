@@ -1,0 +1,34 @@
+{
+  "precision_profile": {
+    "profile_id": "p-ontology",
+    "case_id": "ontology",
+    "repeatability_threshold": 0.9,
+    "directional_correctness_threshold": 0.85,
+    "trace_completeness_threshold": 0.95,
+    "status": "active"
+  },
+  "extracted_entity_candidate": {
+    "candidate_id": "c-1",
+    "document_id": "d-1",
+    "entity_text": "AIMemoryActor",
+    "entity_type": "strategic_signal",
+    "confidence": 0.92,
+    "evidence_span": {
+      "page": 1,
+      "start": 0,
+      "end": 12
+    },
+    "mapping_status": "mapped",
+    "proposed_concept_id": "AIMemoryActor"
+  },
+  "ontology_assertion_candidate": {
+    "assertion_id": "assert-c-1",
+    "subject_concept": "d-1",
+    "predicate": "mentions_concept",
+    "object_concept": "AIMemoryActor",
+    "source_candidates": [
+      "c-1"
+    ],
+    "review_state": "pending"
+  }
+}

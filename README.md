@@ -135,7 +135,25 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 
 # keep historical outputs
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
+
+# precision repeatability evaluation (Spec 4)
+omen precision-eval --scenario data/scenarios/ontology.json --runs 5 --seed 42
+
+# ingest dry run from project workspace sources (Spec 4)
+omen ingest-dry-run --scenario data/scenarios/ontology.json --text-file data/ingest/sources/sample.txt --build-assertions
+
+# precision release gate evaluation (Spec 4)
+omen precision-gate --profile-json path/to/profile.json --precision-json output/precision.json --comparison-json output/comparison.json
 ```
+
+### Ingest Workspace (Spec 4)
+
+Omen uses a project-native ingest workspace:
+
+- `data/ingest/sources/`
+- `data/ingest/extracted/`
+- `data/ingest/knowledge/`
+- `data/ingest/graph/`
 
 ### View Results
 

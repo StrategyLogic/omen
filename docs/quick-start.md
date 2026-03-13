@@ -109,6 +109,56 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 
 **输出文件**: `output/comparison.json`
 
+### 第四步（Spec 4）：精准度评估
+
+对同一场景执行多次运行并评估重复性：
+
+```bash
+omen precision-eval --scenario data/scenarios/ontology.json --runs 5 --seed 42
+```
+
+**输出文件**: `output/precision.json`
+
+你将获得：
+- `outcome_consistency`
+- `top_driver_consistency`
+
+### 第五步（Spec 4）：数据摄取干运行
+
+将源文档放入：`data/ingest/sources/`，并按流程在工作目录中产出：
+
+- `data/ingest/extracted/`（抽取文本）
+- `data/ingest/knowledge/`（知识文档 *.md）
+- `data/ingest/graph/`（图文件 *.json）
+
+然后执行干运行：
+
+```bash
+omen ingest-dry-run --scenario data/scenarios/ontology.json --text-file path/to/sample.txt --build-assertions
+```
+
+**输出文件**: `output/ingest_candidates.json`
+
+输出包含：
+- 候选实体 (`candidates`)
+- 本体断言候选 (`assertions`)
+- 审核状态汇总 (`assertion_review_summary`)
+
+### 第六步（Spec 4）：精准度门禁
+
+当你已有 `precision.json` 与 `comparison.json` 后，执行门禁评估：
+
+```bash
+omen precision-gate --profile-json path/to/profile.json --precision-json output/precision.json --comparison-json output/comparison.json
+```
+
+**输出文件**: `output/precision_gate_report.json`
+
+报告会给出：
+- 门禁是否通过
+- 每项门禁观测值 vs 阈值
+- 未通过项的修复目标
+
 ### 🧩 开发说明：本体输入
 
 `data/scenarios/ontology.json` 已内嵌本体定义（`meta`/`tbox`/`abox`/`reasoning_profile`），可直接使用：

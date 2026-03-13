@@ -135,25 +135,7 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 
 # 保留历史输出（时间戳后缀）
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
-
-# 精准度重复性评估（Spec 4）
-omen precision-eval --scenario data/scenarios/ontology.json --runs 5 --seed 42
-
-# 数据摄取干运行（Spec 4）
-omen ingest-dry-run --scenario data/scenarios/ontology.json --text-file data/ingest/sources/sample.txt --build-assertions
-
-# 精准度发布门禁评估（Spec 4）
-omen precision-gate --profile-json path/to/profile.json --precision-json output/precision.json --comparison-json output/comparison.json
 ```
-
-### Ingest 工作目录（Spec 4）
-
-Omen 使用统一的数据摄取工作目录：
-
-- `data/ingest/sources/`
-- `data/ingest/extracted/`
-- `data/ingest/knowledge/`
-- `data/ingest/graph/`
 
 ### 查看运行结果
 
@@ -176,6 +158,8 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 # 两次不同的参数运行在同一次模拟结果上，以实现控制变量和可比性
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 300 --seed 42
 ```
+
+想了解更多？阅读[精度评估](docs/precision.md)文档。
 
 ## 👥 适用人群
 

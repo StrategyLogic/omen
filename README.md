@@ -14,7 +14,7 @@ Technological competition has never been linear. Real-world technological evolut
 
 Omen attempts to upgrade this process from *opinion discussion* to **conditional reasoning**:
 1.  Map technological competition into a **Capability Space**
-2.  Instantiate market entities as **Strategist Agents**
+2.  Instantiate market entities as **Strategic Actors**
 3.  Quantify external shocks as **Injectable Events**
 4.  Present results as **Multi-path Evolution** and **Counterfactual Explanations**
 
@@ -75,7 +75,7 @@ Omen adopts a layered architecture to ensure the transparency and intervenabilit
 ```mermaid
 graph TD
     A[Signal Layer] -->|Tech/Market/Capital/Standard Signals | B(Tech Space Layer)
-    B -->|Capability Dimensions/Substitution Relations/Risk Factors | C(Strategist Agent Layer)
+    B -->|Capability Dimensions/Substitution Relations/Risk Factors | C(Strategic Actor Layer)
     C -->|Goals/Resources/Action Space | D(Simulation Kernel)
     D -->|Rules+Math Models+LLM Decisions | E(Explanation Layer)
     E -->|Branching Paths/Counterfactuals/Causal Chains | F[User Insights]
@@ -87,7 +87,7 @@ graph TD
 
 *   **Signal Layer**: Accesses multi-dimensional macro and micro signals.
 *   **Tech Space Layer**: Transforms signals into structured technical objects and relationship graphs.
-*   **Strategist Agent Layer**: Defines clear Action Spaces for various entities, rather than free-form chatting.
+*   **Strategic Actor Layer**: Defines clear Action Spaces for various entities, rather than free-form chatting.
 *   **Simulation Kernel**: Combines hard constraint rules, economic/diffusion models, and LLM decision logic to advance multi-round evolution.
 *   **Explanation Layer**: Extracts key branching points and generates human-readable reasoning reports.
 
@@ -135,25 +135,7 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 
 # keep historical outputs
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
-
-# precision repeatability evaluation (Spec 4)
-omen precision-eval --scenario data/scenarios/ontology.json --runs 5 --seed 42
-
-# ingest dry run from project workspace sources (Spec 4)
-omen ingest-dry-run --scenario data/scenarios/ontology.json --text-file data/ingest/sources/sample.txt --build-assertions
-
-# precision release gate evaluation (Spec 4)
-omen precision-gate --profile-json path/to/profile.json --precision-json output/precision.json --comparison-json output/comparison.json
 ```
-
-### Ingest Workspace (Spec 4)
-
-Omen uses a project-native ingest workspace:
-
-- `data/ingest/sources/`
-- `data/ingest/extracted/`
-- `data/ingest/knowledge/`
-- `data/ingest/graph/`
 
 ### View Results
 
@@ -176,6 +158,8 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 # Run another scenario with the same seed to compare results
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 300 --seed 42
 ```
+
+Want to learn more? Read the [precision evaluation](docs/precision.md) document.
 
 ## 👥 Target Audience
 

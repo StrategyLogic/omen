@@ -48,7 +48,7 @@ htmlcov/
 *.pyo
 *.~ 
 .env*
-solution*.md
+solution/
 .local.md
 output/
 *legacy*

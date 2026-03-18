@@ -1,0 +1,19 @@
+# Copy this file to config/llm.toml and replace placeholders with your own values.
+
+[provider]
+name = "deepseek"
+base_url = "https://api.deepseek.com"
+chat_model = "deepseek-chat"
+embedding_model = "voyage-4-lite"
+
+[auth]
+# Preferred: set env vars in .env and keep values as ${ENV_VAR}
+deepseek_api_key = "${DEEPSEEK_API_KEY}"
+voyage_api_key = "${VOYAGE_API_KEY}"
+
+[runtime]
+timeout_seconds = 120
+temperature = 0.1
+max_chunks = 12
+chunk_size = 1800
+chunk_overlap = 200

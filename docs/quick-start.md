@@ -179,3 +179,57 @@ omen/
 - 数据摄取工作区： [ingest.md](ingest.md)
 
 *Simulate the Signs. Reveal the Chaos.*
+
+## Spec 6（案例复盘）快速验证
+
+### 1) 安装 Spec 6 依赖
+
+```bash
+python -m pip install -e .
+python -m pip install -e ".[spec6]"
+```
+
+### 2) 准备本地配置
+
+```bash
+mkdir -p config
+cp config/llm.example.toml config/llm.toml
+```
+
+在 `.env` 中设置 `DEEPSEEK_API_KEY` 与 `VOYAGE_API_KEY`。
+
+### 3) 生成案例 Ontology
+
+```bash
+omen case-replay-generate \
+  --document solution/case-xd.md \
+  --case-id x-developer-replay \
+  --title "X-Developer Replay" \
+  --known-outcome "project failed in market expansion" \
+  --config config/llm.toml
+```
+
+### 3.5) LLM 链路连通性小测试（带实时步骤日志）
+
+```bash
+omen case-replay-check-llm --config config/llm.toml
+```
+
+该命令会实时输出：
+- `STARTED`：已启动步骤
+- `RUNNING`：正在执行请求
+- `PASSED/FAILED`：当前步骤结果
+
+### 4) 运行基线复盘
+
+```bash
+omen case-replay-baseline \
+  --case-id x-developer-replay \
+  --ontology output/case_replay/x-developer-replay/strategy_ontology.json
+```
+
+### 5) 启动可视化界面
+
+```bash
+streamlit run app/spec6_case_replay.py
+```

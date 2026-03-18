@@ -25,6 +25,15 @@ dev = [
   "ruff>=0.6.0",
   "mypy>=1.10",
 ]
+spec6 = [
+  "langchain>=0.3.0",
+  "langchain-openai>=0.2.0",
+  "voyageai>=0.3.2",
+  "streamlit>=1.37.0",
+  "plotly>=5.23.0",
+  "networkx>=3.3",
+  "python-dotenv>=1.0.1",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

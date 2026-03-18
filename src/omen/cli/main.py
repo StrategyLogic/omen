@@ -207,6 +207,77 @@ def main() -> None:
         help="Add timestamp suffix to output filename to avoid overwrite",
     )
 
+    case_replay_generate = sub.add_parser(
+        "case-replay-generate",
+        help="generate Strategy Ontology from case document using local LLM config",
+    )
+    case_replay_generate.add_argument("--document", required=True, help="Path to case document")
+    case_replay_generate.add_argument("--case-id", required=True, help="Case identifier")
+    case_replay_generate.add_argument("--title", required=True, help="Case title")
+    case_replay_generate.add_argument(
+        "--known-outcome",
+        required=True,
+        help="Known historical outcome for replay anchoring",
+    )
+    case_replay_generate.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
+    )
+    case_replay_generate.add_argument("--output", required=False, help="Optional output ontology JSON")
+    case_replay_generate.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Add timestamp suffix to output filename to avoid overwrite",
+    )
+
+    case_replay_baseline = sub.add_parser(
+        "case-replay-baseline",
+        help="run baseline replay from generated ontology JSON",
+    )
+    case_replay_baseline.add_argument("--case-id", required=True, help="Case identifier")
+    case_replay_baseline.add_argument(
+        "--ontology",
+        required=True,
+        help="Path to generated Strategy Ontology JSON",
+    )
+    case_replay_baseline.add_argument(
+        "--output-dir",
+        required=False,
+        default="output/case_replay",
+        help="Root output directory",
+    )
+    case_replay_baseline.add_argument("--output", required=False, help="Optional output summary JSON")
+    case_replay_baseline.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Add timestamp suffix to output filename to avoid overwrite",
+    )
+
+    case_replay_check_llm = sub.add_parser(
+        "case-replay-check-llm",
+        help="run step-by-step LLM connectivity check for DeepSeek and Voyage",
+    )
+    case_replay_check_llm.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
+    )
+    case_replay_check_llm.add_argument(
+        "--sample-text",
+        required=False,
+        default="omen case replay probe",
+        help="Sample text used for embedding probe",
+    )
+    case_replay_check_llm.add_argument("--output", required=False, help="Optional output JSON path")
+    case_replay_check_llm.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Add timestamp suffix to output filename to avoid overwrite",
+    )
+
     args = parser.parse_args()
     if args.command == "simulate":
         load_case_package_from_scenario(args.scenario)
@@ -431,6 +502,92 @@ def main() -> None:
         rendered = json.dumps(report, ensure_ascii=False, indent=2)
         output_path = _write_output(rendered, args.output, "precision_gate_report.json", args.incremental)
         print(f"Saved precision gate report to {output_path}")
+    elif args.command == "case-replay-generate":
+        from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
+        from omen.scenario.case_replay_loader import save_strategy_ontology
+        from omen.ui.artifacts import ensure_case_output_dir
+
+        def _step_logger(step: str, status: str, message: str) -> None:
+            print(f"[CASE-REPLAY-GEN][{step}][{status}] {message}", flush=True)
+
+        _step_logger("generation", "STARTED", "starting document -> ontology workflow")
+        generation = generate_strategy_ontology_from_document(
+            document_path=args.document,
+            case_id=args.case_id,
+            title=args.title,
+            known_outcome=args.known_outcome,
+            config_path=args.config,
+            logger=_step_logger,
+        )
+
+        _step_logger("artifact", "RUNNING", "persisting ontology artifact")
+        case_dir = ensure_case_output_dir(args.case_id)
+        output_path = args.output
+        if not output_path:
+            output_path = str(case_dir / "strategy_ontology.json")
+
+        ontology_path = save_strategy_ontology(generation.strategy_ontology, output_path)
+        _step_logger("artifact", "PASSED", f"saved ontology to {ontology_path}")
+        payload = generation.model_dump(mode="python")
+        payload["ontology_path"] = str(ontology_path)
+        payload["validation_passed"] = bool(payload.get("validation_passed"))
+
+        _step_logger("report", "RUNNING", "writing generation summary report")
+        rendered = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+        report_output_path = _write_output(
+            rendered,
+            None,
+            "case_replay_generation.json",
+            args.incremental,
+        )
+        _step_logger("report", "PASSED", f"saved generation report to {report_output_path}")
+
+        if payload["validation_passed"]:
+            _step_logger("generation", "DONE", "workflow completed successfully")
+        else:
+            _step_logger("generation", "DONE", "workflow completed with validation issues")
+        print(f"Saved ontology to {ontology_path}")
+        print(f"Saved generation report to {report_output_path}")
+        if not payload["validation_passed"]:
+            raise SystemExit(2)
+    elif args.command == "case-replay-baseline":
+        from omen.simulation.case_replay import run_case_replay_baseline
+
+        payload = run_case_replay_baseline(
+            case_id=args.case_id,
+            ontology_path=args.ontology,
+            output_root=args.output_dir,
+        )
+        rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+        output_path = _write_output(
+            rendered,
+            args.output,
+            "case_replay_baseline_summary.json",
+            args.incremental,
+        )
+        print(f"Saved baseline summary to {output_path}")
+    elif args.command == "case-replay-check-llm":
+        from omen.ingest.llm_ontology.healthcheck import run_llm_healthcheck
+
+        def _step_logger(step: str, status: str, message: str) -> None:
+            print(f"[LLM-CHECK][{step}][{status}] {message}", flush=True)
+
+        report = run_llm_healthcheck(
+            config_path=args.config,
+            sample_text=args.sample_text,
+            logger=_step_logger,
+        )
+
+        rendered = json.dumps(report, ensure_ascii=False, indent=2)
+        output_path = _write_output(
+            rendered,
+            args.output,
+            "case_replay_llm_check.json",
+            args.incremental,
+        )
+        print(f"Saved llm check report to {output_path}")
+        if not report.get("ok", False):
+            raise SystemExit(2)
 
 
 if __name__ == "__main__":

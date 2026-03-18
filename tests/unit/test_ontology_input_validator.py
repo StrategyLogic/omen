@@ -169,3 +169,95 @@ def test_validate_ontology_input_accepts_custom_relation_names() -> None:
     relation_names = [relation.name for relation in package.tbox.relations]
     assert "addresses" in relation_names
     assert "leads_to" in relation_names
+
+
+def test_validate_ontology_input_accepts_dual_space_ontology() -> None:
+    payload = {
+        "meta": {
+            "version": "1.0",
+            "case_id": "dual-space",
+            "domain": "strategy",
+        },
+        "tbox": {
+            "concepts": [
+                {"name": "StartupActor", "description": "", "category": "actor"},
+                {"name": "tech_capability", "description": "", "category": "capability"},
+            ],
+            "relations": [
+                {
+                    "name": "has_capability",
+                    "source": "StartupActor",
+                    "target": "tech_capability",
+                    "description": "",
+                }
+            ],
+            "axioms": [{"id": "ax-1", "statement": "sample", "type": "activation"}],
+        },
+        "abox": {
+            "actors": [{"actor_id": "startup", "actor_type": "StartupActor"}],
+            "capabilities": [{"actor_id": "startup", "name": "tech_capability", "score": 0.8}],
+            "constraints": [],
+        },
+        "reasoning_profile": {"activation_rules": [{"rule_id": "ax-1"}]},
+        "tech_space_ontology": {
+            "actors": [{"actor_id": "startup"}],
+            "capabilities": [{"name": "tech_capability", "score": 0.8}],
+            "axioms": [{"id": "tax-1", "statement": "tech evolves"}],
+        },
+        "market_space_ontology": {
+            "actors": [{"actor_id": "startup"}],
+            "market_attributes": {"adoption_resistance": 0.7},
+            "axioms": [{"id": "max-1", "statement": "resistance slows adoption"}],
+        },
+        "shared_actors": ["startup"],
+    }
+
+    package = validate_ontology_input_or_raise(payload)
+
+    assert package.shared_actors == ["startup"]
+
+
+def test_validate_ontology_input_rejects_missing_market_adoption_resistance() -> None:
+    payload = {
+        "meta": {
+            "version": "1.0",
+            "case_id": "dual-space-missing-attr",
+            "domain": "strategy",
+        },
+        "tbox": {
+            "concepts": [
+                {"name": "StartupActor", "description": "", "category": "actor"},
+                {"name": "tech_capability", "description": "", "category": "capability"},
+            ],
+            "relations": [
+                {
+                    "name": "has_capability",
+                    "source": "StartupActor",
+                    "target": "tech_capability",
+                    "description": "",
+                }
+            ],
+            "axioms": [{"id": "ax-1", "statement": "sample", "type": "activation"}],
+        },
+        "abox": {
+            "actors": [{"actor_id": "startup", "actor_type": "StartupActor"}],
+            "capabilities": [{"actor_id": "startup", "name": "tech_capability", "score": 0.8}],
+            "constraints": [],
+        },
+        "reasoning_profile": {"activation_rules": [{"rule_id": "ax-1"}]},
+        "tech_space_ontology": {
+            "actors": [{"actor_id": "startup"}],
+            "capabilities": [{"name": "tech_capability", "score": 0.8}],
+            "axioms": [{"id": "tax-1", "statement": "tech evolves"}],
+        },
+        "market_space_ontology": {
+            "actors": [{"actor_id": "startup"}],
+            "axioms": [{"id": "max-1", "statement": "resistance slows adoption"}],
+        },
+        "shared_actors": ["startup"],
+    }
+
+    with pytest.raises(OntologyValidationError) as exc:
+        validate_ontology_input_or_raise(payload)
+
+    assert any(issue.code == "missing_market_adoption_resistance" for issue in exc.value.issues)

@@ -300,7 +300,48 @@ def _normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["abox"] = abox
 
     normalized["reasoning_profile"] = reasoning_profile
+
+    if isinstance(payload.get("tech_space_ontology"), dict):
+        normalized["tech_space_ontology"] = dict(payload["tech_space_ontology"])
+    if isinstance(payload.get("market_space_ontology"), dict):
+        normalized["market_space_ontology"] = dict(payload["market_space_ontology"])
+    if isinstance(payload.get("shared_actors"), list):
+        normalized["shared_actors"] = list(payload["shared_actors"])
     return normalized
+
+
+def _extract_actor_ids(actor_items: Any) -> set[str]:
+    if not isinstance(actor_items, list):
+        return set()
+    actor_ids: set[str] = set()
+    for item in actor_items:
+        if isinstance(item, str):
+            value = item.strip()
+            if value:
+                actor_ids.add(value)
+            continue
+        if isinstance(item, dict):
+            actor_id = str(item.get("actor_id") or item.get("id") or item.get("name") or "").strip()
+            if actor_id:
+                actor_ids.add(actor_id)
+    return actor_ids
+
+
+def _has_adoption_resistance_attribute(market_space: dict[str, Any]) -> bool:
+    for key in ("market_attributes", "attributes", "properties"):
+        value = market_space.get(key)
+        if isinstance(value, dict) and "adoption_resistance" in value:
+            return True
+
+    constraints = market_space.get("constraints")
+    if isinstance(constraints, list):
+        for item in constraints:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or item.get("id") or "").strip().lower()
+            if "adoption_resistance" in name:
+                return True
+    return False
 
 
 def _check_unique(values: list[str], path: str, code: str, label: str) -> list[OntologyValidationIssue]:
@@ -322,7 +363,10 @@ def _check_unique(values: list[str], path: str, code: str, label: str) -> list[O
     return issues
 
 
-def _semantic_checks(package: OntologyInputPackage) -> list[OntologyValidationIssue]:
+def _semantic_checks(
+    package: OntologyInputPackage,
+    normalized_payload: dict[str, Any],
+) -> list[OntologyValidationIssue]:
     issues: list[OntologyValidationIssue] = []
 
     concepts = package.tbox.concepts
@@ -424,6 +468,69 @@ def _semantic_checks(package: OntologyInputPackage) -> list[OntologyValidationIs
         )
     )
 
+    tech_space = normalized_payload.get("tech_space_ontology")
+    market_space = normalized_payload.get("market_space_ontology")
+    shared_actors_raw = normalized_payload.get("shared_actors")
+
+    tech_actor_ids = _extract_actor_ids(tech_space.get("actors") if isinstance(tech_space, dict) else None)
+    market_actor_ids = _extract_actor_ids(
+        market_space.get("actors") if isinstance(market_space, dict) else None
+    )
+    shared_actor_ids = _extract_actor_ids(shared_actors_raw)
+
+    if isinstance(market_space, dict) and not _has_adoption_resistance_attribute(market_space):
+        issues.append(
+            OntologyValidationIssue(
+                code="missing_market_adoption_resistance",
+                message="market_space_ontology must declare adoption_resistance attribute or constraint",
+                path="market_space_ontology",
+            )
+        )
+
+    if isinstance(tech_space, dict) and isinstance(market_space, dict):
+        shared_between_spaces = tech_actor_ids & market_actor_ids
+        if not shared_between_spaces:
+            issues.append(
+                OntologyValidationIssue(
+                    code="dual_space_actor_disconnected",
+                    message="tech_space_ontology and market_space_ontology share no actor ids",
+                    path="shared_actors",
+                )
+            )
+
+    if shared_actor_ids:
+        unknown_in_abox = sorted(shared_actor_ids - actor_id_set)
+        for actor_id in unknown_in_abox:
+            issues.append(
+                OntologyValidationIssue(
+                    code="shared_actor_not_in_abox",
+                    message=f"shared actor '{actor_id}' is not declared in abox.actors",
+                    path="shared_actors",
+                )
+            )
+
+        if isinstance(tech_space, dict):
+            unknown_in_tech = sorted(shared_actor_ids - tech_actor_ids)
+            for actor_id in unknown_in_tech:
+                issues.append(
+                    OntologyValidationIssue(
+                        code="shared_actor_not_in_tech_space",
+                        message=f"shared actor '{actor_id}' is not declared in tech_space_ontology.actors",
+                        path="shared_actors",
+                    )
+                )
+
+        if isinstance(market_space, dict):
+            unknown_in_market = sorted(shared_actor_ids - market_actor_ids)
+            for actor_id in unknown_in_market:
+                issues.append(
+                    OntologyValidationIssue(
+                        code="shared_actor_not_in_market_space",
+                        message=f"shared actor '{actor_id}' is not declared in market_space_ontology.actors",
+                        path="shared_actors",
+                    )
+                )
+
     return issues
 
 
@@ -442,7 +549,7 @@ def validate_ontology_input(payload: dict[str, Any]) -> OntologyInputPackage:
         ]
         raise OntologyValidationError(issues) from exc
 
-    issues = _semantic_checks(package)
+    issues = _semantic_checks(package, normalized_payload)
     if issues:
         raise OntologyValidationError(issues)
     return package

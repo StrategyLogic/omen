@@ -87,3 +87,6 @@ class OntologyInputPackage(BaseModel):
     tbox: TBoxDefinition
     abox: ABoxDefinition
     reasoning_profile: ReasoningProfile = Field(default_factory=ReasoningProfile)
+    tech_space_ontology: dict[str, Any] | None = None
+    market_space_ontology: dict[str, Any] | None = None
+    shared_actors: list[str] = Field(default_factory=list)

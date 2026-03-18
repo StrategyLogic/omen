@@ -5,8 +5,27 @@ from __future__ import annotations
 from typing import Any
 
 
+def _build_market_signal(adoption_resistance: Any) -> str | None:
+    if isinstance(adoption_resistance, (int, float)):
+        value = float(adoption_resistance)
+        if value >= 0.75:
+            return f"Adoption resistance high ({value:.2f})"
+        if value >= 0.5:
+            return f"Adoption resistance active ({value:.2f})"
+        if value > 0:
+            return f"Adoption resistance low ({value:.2f})"
+        return None
+    if adoption_resistance is None:
+        return None
+    text = str(adoption_resistance).strip()
+    return f"Adoption resistance: {text}" if text else None
+
+
 def _build_graph_nodes(result: dict[str, Any]) -> list[dict[str, Any]]:
     timeline = result.get("timeline", [])
+    ontology_setup = result.get("ontology_setup") or {}
+    space_summary = ontology_setup.get("space_summary") or {}
+    market_signal = _build_market_signal(space_summary.get("adoption_resistance"))
     nodes: list[dict[str, Any]] = []
     previous_max_overlap = 0.0
     previous_competition_edges = 0
@@ -41,17 +60,22 @@ def _build_graph_nodes(result: dict[str, Any]) -> list[dict[str, Any]]:
         elif max_overlap > previous_max_overlap:
             event = "Overlap intensifies"
 
+        label_event = event
+        if market_signal:
+            label_event = market_signal if event == "Stable progression" else f"{event} | {market_signal}"
+
         summary = (
-            f"{event} · leader={leader_actor_id}({leader_user_edges}) · "
+            f"{label_event} · leader={leader_actor_id}({leader_user_edges}) · "
             f"max_overlap={max_overlap:.2f} · competition_edges={competition_edge_count}"
         )
         nodes.append(
             {
                 "id": f"step-{step}",
-                "label": f"Step {step}: {event}",
+                "label": f"Step {step}: {label_event}",
                 "kind": "phase",
                 "evidence_level": "medium",
                 "event": event,
+                "market_signal": market_signal,
                 "summary": summary,
                 "leader_actor_id": leader_actor_id,
                 "max_overlap": round(max_overlap, 4),
@@ -86,6 +110,8 @@ def build_case_replay_view_model(
 ) -> dict[str, Any]:
     nodes = _build_graph_nodes(result)
     edges = _build_graph_edges(result)
+    ontology_setup = result.get("ontology_setup") or {}
+    space_summary = ontology_setup.get("space_summary") or {}
 
     branch_points = explanation.get("branch_points", [])
     causal_options: list[dict[str, Any]] = []
@@ -131,6 +157,7 @@ def build_case_replay_view_model(
             "node_count": len(nodes),
             "summary_text": explanation.get("narrative_summary", ""),
         },
+        "space_summary": space_summary,
         "graph_nodes": nodes,
         "graph_edges": edges,
         "causal_trace_options": causal_options,

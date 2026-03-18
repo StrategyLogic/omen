@@ -4,6 +4,14 @@ from omen.ui.view_model import build_case_replay_view_model
 def test_view_model_nodes_include_business_events() -> None:
     result = {
         "outcome_class": "convergence",
+        "ontology_setup": {
+            "space_summary": {
+                "tech_space_actor_count": 3,
+                "market_space_actor_count": 2,
+                "shared_actor_count": 2,
+                "adoption_resistance": 0.7,
+            }
+        },
         "timeline": [
             {
                 "step": 1,
@@ -42,4 +50,6 @@ def test_view_model_nodes_include_business_events() -> None:
 
     assert any("User overlap emerges" in label for label in labels)
     assert any("Competition activated" in label for label in labels)
+    assert any("Adoption resistance" in label for label in labels)
     assert all("leader=" in summary for summary in summaries)
+    assert view_model["space_summary"]["adoption_resistance"] == 0.7

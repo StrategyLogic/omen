@@ -8,16 +8,61 @@ from typing import Any
 def _build_graph_nodes(result: dict[str, Any]) -> list[dict[str, Any]]:
     timeline = result.get("timeline", [])
     nodes: list[dict[str, Any]] = []
-    for snapshot in timeline:
-        step = snapshot.get("step")
+    previous_max_overlap = 0.0
+    previous_competition_edges = 0
+    previous_leader_actor_id: str | None = None
+
+    for index, snapshot in enumerate(timeline, start=1):
+        step = snapshot.get("step") or index
+        overlap_values = [float(v) for v in (snapshot.get("user_overlap") or {}).values()]
+        max_overlap = max(overlap_values) if overlap_values else 0.0
+        competition_edges = snapshot.get("competition_edges") or []
+        competition_edge_count = len(competition_edges)
+
+        actor_states = snapshot.get("actors") or {}
+        leader_actor_id = "unknown"
+        leader_user_edges = 0
+        if isinstance(actor_states, dict) and actor_states:
+            leader_actor_id, leader_payload = max(
+                actor_states.items(),
+                key=lambda item: int((item[1] or {}).get("user_edge_count") or 0),
+            )
+            leader_user_edges = int((leader_payload or {}).get("user_edge_count") or 0)
+
+        event = "Stable progression"
+        if previous_max_overlap <= 0.0 and max_overlap > 0.0:
+            event = "User overlap emerges"
+        elif competition_edge_count > 0 and previous_competition_edges == 0:
+            event = "Competition activated"
+        elif previous_leader_actor_id and leader_actor_id != previous_leader_actor_id:
+            event = "Leader shift"
+        elif competition_edge_count > previous_competition_edges:
+            event = "Competition expands"
+        elif max_overlap > previous_max_overlap:
+            event = "Overlap intensifies"
+
+        summary = (
+            f"{event} · leader={leader_actor_id}({leader_user_edges}) · "
+            f"max_overlap={max_overlap:.2f} · competition_edges={competition_edge_count}"
+        )
         nodes.append(
             {
                 "id": f"step-{step}",
-                "label": f"Step {step}",
+                "label": f"Step {step}: {event}",
                 "kind": "phase",
                 "evidence_level": "medium",
+                "event": event,
+                "summary": summary,
+                "leader_actor_id": leader_actor_id,
+                "max_overlap": round(max_overlap, 4),
+                "competition_edge_count": competition_edge_count,
             }
         )
+
+        previous_max_overlap = max_overlap
+        previous_competition_edges = competition_edge_count
+        previous_leader_actor_id = leader_actor_id
+
     return nodes
 
 

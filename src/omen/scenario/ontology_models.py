@@ -15,8 +15,10 @@ class OntologyMeta(BaseModel):
 
 class ConceptDef(BaseModel):
     name: str = Field(min_length=1)
-    description: str = Field(min_length=1)
-    category: Literal["actor", "capability", "constraint", "event", "outcome", "game", "other"]
+    description: str = ""
+    category: Literal["actor", "capability", "constraint", "event", "outcome", "game", "other"] = (
+        "other"
+    )
 
 
 class RelationDef(BaseModel):
@@ -28,8 +30,8 @@ class RelationDef(BaseModel):
 
 class AxiomDef(BaseModel):
     id: str = Field(min_length=1)
-    statement: str = Field(min_length=1)
-    type: Literal["activation", "propagation", "counterfactual"]
+    statement: str | None = None
+    type: str | None = None
 
 
 class TBoxDefinition(BaseModel):
@@ -40,7 +42,7 @@ class TBoxDefinition(BaseModel):
 
 class ActorInstance(BaseModel):
     actor_id: str = Field(min_length=1)
-    actor_type: str = Field(min_length=1)
+    actor_type: str = "actor"
     labels: list[str] = Field(default_factory=list)
 
 
@@ -64,8 +66,8 @@ class EventInstance(BaseModel):
 
 class ABoxDefinition(BaseModel):
     actors: list[ActorInstance] = Field(min_length=1)
-    capabilities: list[CapabilityInstance] = Field(min_length=1)
-    constraints: list[ConstraintInstance] = Field(min_length=1)
+    capabilities: list[CapabilityInstance] = Field(default_factory=list)
+    constraints: list[ConstraintInstance] = Field(default_factory=list)
     events: list[EventInstance] = Field(default_factory=list)
 
 
@@ -75,13 +77,13 @@ class RuleRef(BaseModel):
 
 
 class ReasoningProfile(BaseModel):
-    activation_rules: list[RuleRef] = Field(min_length=1)
-    propagation_rules: list[RuleRef] = Field(min_length=1)
-    counterfactual_rules: list[RuleRef] = Field(min_length=1)
+    activation_rules: list[RuleRef] = Field(default_factory=list)
+    propagation_rules: list[RuleRef] = Field(default_factory=list)
+    counterfactual_rules: list[RuleRef] = Field(default_factory=list)
 
 
 class OntologyInputPackage(BaseModel):
     meta: OntologyMeta
     tbox: TBoxDefinition
     abox: ABoxDefinition
-    reasoning_profile: ReasoningProfile
+    reasoning_profile: ReasoningProfile = Field(default_factory=ReasoningProfile)

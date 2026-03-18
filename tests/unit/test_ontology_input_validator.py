@@ -37,3 +37,135 @@ def test_validate_ontology_input_rejects_unresolved_rule_ref() -> None:
         validate_ontology_input_or_raise(payload)
 
     assert any(issue.code == "unresolved_rule_ref" for issue in exc.value.issues)
+
+
+def test_validate_ontology_input_accepts_flexible_case_shape() -> None:
+    payload = {
+        "meta": {
+            "version": "1.0",
+            "case_id": "x-developer-replay",
+            "domain": "management_ontology",
+        },
+        "tbox": {
+            "concepts": [
+                {
+                    "concept": [
+                        {"id": "c1", "name": "DataDrivenManagementActor"},
+                        {"id": "c2", "name": "decision_support"},
+                    ]
+                }
+            ],
+            "relations": [
+                {
+                    "name": "has_capability",
+                    "source": "DataDrivenManagementActor",
+                    "target": "decision_support",
+                    "description": "Actor has capability",
+                }
+            ],
+            "axioms": [
+                {"id": "rule_1"},
+                {"id": "rule_custom", "type": "domain_specific"},
+            ],
+        },
+        "abox": {
+            "actors": [
+                {
+                    "actor": [
+                        {
+                            "id": "xd_platform",
+                            "name": "X-Developer Platform",
+                            "concept": "DataDrivenManagementActor",
+                        }
+                    ]
+                }
+            ],
+            "capabilities": [
+                {"actor_id": "xd_platform", "name": "decision_support", "score": 0.85}
+            ],
+        },
+        "reasoning_profile": {
+            "activation_rules": [{"id": "rule_1"}],
+        },
+    }
+
+    package = validate_ontology_input_or_raise(payload)
+
+    assert package.tbox.concepts[0].name == "DataDrivenManagementActor"
+    assert package.abox.actors[0].actor_id == "xd_platform"
+    assert package.reasoning_profile.activation_rules[0].rule_id == "rule_1"
+
+
+def test_validate_ontology_input_accepts_raw_llm_style_payload() -> None:
+    payload = {
+        "meta": {
+            "case_id": "x-developer-replay",
+            "case_title": "X-Developer Replay",
+            "ontology_version": "1.0",
+        },
+        "tbox": {
+            "concepts": ["DataDrivenManagementActor", "decision_support"],
+            "relations": ["has_capability", "competes_with"],
+            "axioms": [{"id": "axiom_1", "statement": "A competes_with B"}],
+        },
+        "abox": {
+            "actors": [
+                {
+                    "actor_id": "xd_platform",
+                    "concept": "DataDrivenManagementActor",
+                }
+            ],
+        },
+        "reasoning_profile": {
+            "rules": [{"id": "axiom_1"}],
+        },
+    }
+
+    package = validate_ontology_input_or_raise(payload)
+
+    assert package.meta.version == "1.0"
+    assert package.meta.domain == "X-Developer Replay"
+    assert len(package.tbox.concepts) == 2
+    assert len(package.tbox.relations) >= 1
+
+
+def test_validate_ontology_input_accepts_custom_relation_names() -> None:
+    payload = {
+        "meta": {
+            "version": "1.0",
+            "case_id": "custom-relations",
+            "domain": "management_ontology",
+        },
+        "tbox": {
+            "concepts": [
+                {"name": "StartupActor", "description": "", "category": "actor"},
+                {"name": "MarketProblem", "description": "", "category": "other"},
+                {"name": "GrowthOutcome", "description": "", "category": "outcome"},
+            ],
+            "relations": [
+                {
+                    "name": "addresses",
+                    "source": "StartupActor",
+                    "target": "MarketProblem",
+                    "description": "startup addresses a market problem",
+                },
+                {
+                    "name": "leads_to",
+                    "source": "MarketProblem",
+                    "target": "GrowthOutcome",
+                    "description": "problem resolution leads to growth",
+                },
+            ],
+            "axioms": [{"id": "ax-1", "statement": "sample", "type": "activation"}],
+        },
+        "abox": {
+            "actors": [{"actor_id": "startup", "actor_type": "StartupActor"}],
+        },
+        "reasoning_profile": {"activation_rules": [{"rule_id": "ax-1"}]},
+    }
+
+    package = validate_ontology_input_or_raise(payload)
+
+    relation_names = [relation.name for relation in package.tbox.relations]
+    assert "addresses" in relation_names
+    assert "leads_to" in relation_names

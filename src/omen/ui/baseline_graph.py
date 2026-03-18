@@ -11,9 +11,23 @@ import networkx as nx
 def build_baseline_path_figure(view_model: dict) -> Any:
     go = importlib.import_module("plotly.graph_objects")
 
+    event_color_map = {
+        "User overlap emerges": "#EA580C",
+        "Competition activated": "#DC2626",
+        "Leader shift": "#7C3AED",
+        "Competition expands": "#D97706",
+        "Overlap intensifies": "#2563EB",
+        "Stable progression": "#2563EB",
+    }
+
     graph = nx.DiGraph()
     for node in view_model.get("graph_nodes", []):
-        graph.add_node(node["id"], label=node.get("label", node["id"]))
+        graph.add_node(
+            node["id"],
+            label=node.get("label", node["id"]),
+            summary=node.get("summary", node.get("label", node["id"])),
+            event=node.get("event", "Stable progression"),
+        )
     for edge in view_model.get("graph_edges", []):
         graph.add_edge(edge["source"], edge["target"])
 
@@ -35,11 +49,17 @@ def build_baseline_path_figure(view_model: dict) -> Any:
     node_x: list[float] = []
     node_y: list[float] = []
     labels: list[str] = []
+    hover_texts: list[str] = []
+    marker_colors: list[str] = []
     for node_id in graph.nodes():
         x, y = positions[node_id]
         node_x.append(x)
         node_y.append(y)
         labels.append(graph.nodes[node_id].get("label", node_id))
+        summary = graph.nodes[node_id].get("summary", node_id)
+        event = graph.nodes[node_id].get("event", "Stable progression")
+        hover_texts.append(summary)
+        marker_colors.append(event_color_map.get(event, "#2563EB"))
 
     edge_trace = go.Scatter(
         x=edge_x,
@@ -56,8 +76,9 @@ def build_baseline_path_figure(view_model: dict) -> Any:
         mode="markers+text",
         text=labels,
         textposition="top center",
+        hovertext=hover_texts,
         hoverinfo="text",
-        marker={"size": 16, "color": "#2563EB", "line": {"width": 1, "color": "#1E3A8A"}},
+        marker={"size": 16, "color": marker_colors, "line": {"width": 1, "color": "#1E3A8A"}},
         name="steps",
     )
 

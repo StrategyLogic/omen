@@ -8,16 +8,16 @@ from pathlib import Path
 import streamlit as st
 
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
-from omen.scenario.case_replay_loader import save_strategy_ontology
+from omen.scenario.case_replay_loader import save_strategy_ontology, validate_strategy_ontology
 from omen.simulation.case_replay import run_case_replay_baseline
 from omen.ui.artifacts import ensure_case_output_dir
 from omen.ui.baseline_graph import build_baseline_path_figure
 from omen.ui.generation_panel import render_generation_status
 
 
-st.set_page_config(page_title="Omen Spec6 Case Replay", layout="wide")
-st.title("Omen Spec6 · Case Replay")
-st.caption("Document -> Strategy Ontology -> Baseline Replay Path")
+st.set_page_config(page_title="Omen Case Retro", layout="wide")
+st.title("Omen · Case Retro")
+st.caption("Document -> Strategy Ontology -> Baseline Simulation")
 
 with st.sidebar:
     st.header("Inputs")
@@ -33,6 +33,27 @@ if "spec6_generation_result" not in st.session_state:
     st.session_state.spec6_generation_result = None
 if "spec6_baseline_payload" not in st.session_state:
     st.session_state.spec6_baseline_payload = None
+
+
+def _resolve_ontology_for_baseline(case_id: str) -> tuple[str | None, str | None]:
+    generation_payload = st.session_state.spec6_generation_result
+    if generation_payload and generation_payload.get("validation_passed"):
+        ontology_path = generation_payload.get("ontology_path")
+        if ontology_path and Path(ontology_path).exists():
+            return str(ontology_path), None
+
+    case_dir = ensure_case_output_dir(case_id)
+    ontology_path = case_dir / "strategy_ontology.json"
+    if not ontology_path.exists():
+        return None, f"Ontology file not found: {ontology_path}"
+
+    try:
+        payload = json.loads(ontology_path.read_text(encoding="utf-8"))
+        validate_strategy_ontology(payload)
+    except Exception as exc:
+        return None, f"Existing ontology is invalid: {exc}"
+
+    return str(ontology_path), None
 
 with col_gen:
     if st.button("Generate Ontology", type="primary", use_container_width=True):
@@ -59,18 +80,17 @@ with col_gen:
 
 with col_run:
     if st.button("Run Baseline", use_container_width=True):
-        generation_payload = st.session_state.spec6_generation_result
-        if not generation_payload:
-            st.warning("Generate Ontology first.")
-        elif not generation_payload.get("validation_passed"):
-            st.warning("Ontology validation failed. Fix issues before baseline run.")
+        ontology_path, resolve_error = _resolve_ontology_for_baseline(case_id)
+        if resolve_error or ontology_path is None:
+            st.warning(resolve_error or "Ontology path resolution failed.")
         else:
             try:
                 baseline = run_case_replay_baseline(
                     case_id=case_id,
-                    ontology_path=generation_payload["ontology_path"],
+                    ontology_path=ontology_path,
                 )
                 st.session_state.spec6_baseline_payload = baseline
+                st.info(f"Baseline used ontology: {ontology_path}")
             except Exception as exc:  # pragma: no cover - UI surfaced exception
                 st.error(f"Baseline run failed: {exc}")
 

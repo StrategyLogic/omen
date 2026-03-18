@@ -227,6 +227,11 @@ def main() -> None:
     )
     case_replay_generate.add_argument("--output", required=False, help="Optional output ontology JSON")
     case_replay_generate.add_argument(
+        "--reuse-if-valid",
+        action="store_true",
+        help="Reuse existing ontology artifact if it already exists and passes validation",
+    )
+    case_replay_generate.add_argument(
         "--incremental",
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
@@ -505,10 +510,44 @@ def main() -> None:
     elif args.command == "case-replay-generate":
         from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
         from omen.scenario.case_replay_loader import save_strategy_ontology
+        from omen.scenario.ontology_validator import validate_ontology_input_or_raise
         from omen.ui.artifacts import ensure_case_output_dir
 
         def _step_logger(step: str, status: str, message: str) -> None:
             print(f"[CASE-REPLAY-GEN][{step}][{status}] {message}", flush=True)
+
+        case_dir = ensure_case_output_dir(args.case_id)
+        output_path = args.output
+        if not output_path:
+            output_path = str(case_dir / "strategy_ontology.json")
+
+        if args.reuse_if_valid:
+            existing_path = Path(output_path)
+            if existing_path.exists():
+                try:
+                    existing_payload = json.loads(existing_path.read_text(encoding="utf-8"))
+                    validate_ontology_input_or_raise(existing_payload)
+                    _step_logger("reuse", "PASSED", f"reusing valid ontology at {existing_path}")
+                    payload = {
+                        "case_id": args.case_id,
+                        "strategy_ontology": existing_payload,
+                        "validation_passed": True,
+                        "validation_issues": [],
+                        "ontology_path": str(existing_path),
+                        "reused_existing": True,
+                    }
+                    rendered = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+                    report_output_path = _write_output(
+                        rendered,
+                        None,
+                        "case_replay_generation.json",
+                        args.incremental,
+                    )
+                    print(f"Reused ontology at {existing_path}")
+                    print(f"Saved generation report to {report_output_path}")
+                    return
+                except Exception as exc:
+                    _step_logger("reuse", "FAILED", f"existing ontology invalid, regenerating: {exc}")
 
         _step_logger("generation", "STARTED", "starting document -> ontology workflow")
         generation = generate_strategy_ontology_from_document(
@@ -521,11 +560,6 @@ def main() -> None:
         )
 
         _step_logger("artifact", "RUNNING", "persisting ontology artifact")
-        case_dir = ensure_case_output_dir(args.case_id)
-        output_path = args.output
-        if not output_path:
-            output_path = str(case_dir / "strategy_ontology.json")
-
         ontology_path = save_strategy_ontology(generation.strategy_ontology, output_path)
         _step_logger("artifact", "PASSED", f"saved ontology to {ontology_path}")
         payload = generation.model_dump(mode="python")

@@ -41,10 +41,11 @@ def generate_ontology_payload(
     case_doc: CaseDocument,
     chunks: list[str],
     config: LLMConfig,
+    strategy: str | None = None,
 ) -> dict[str, Any]:
     selected_chunks = _select_chunks_with_embeddings(chunks, config)
     chat = create_chat_client(config)
-    prompt = f"{build_system_prompt()}\n\n{build_user_prompt(case_doc, selected_chunks)}"
+    prompt = f"{build_system_prompt()}\n\n{build_user_prompt(case_doc, selected_chunks, strategy=strategy)}"
     response = chat.invoke(prompt)
     content = response.content if isinstance(response.content, str) else json.dumps(response.content)
     return _extract_json_object(content)

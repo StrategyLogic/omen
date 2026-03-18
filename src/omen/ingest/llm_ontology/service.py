@@ -21,6 +21,7 @@ def generate_strategy_ontology_from_document(
     case_id: str,
     title: str,
     known_outcome: str,
+    strategy: str | None = None,
     config_path: str = "config/llm.toml",
     logger: LogFn | None = None,
 ) -> OntologyGenerationResult:
@@ -54,7 +55,15 @@ def generate_strategy_ontology_from_document(
     emit("chunking", "PASSED", f"chunks={len(chunks)}")
 
     emit("ontology_generation", "RUNNING", "calling llm to generate ontology payload")
-    payload = generate_ontology_payload(case_doc=case_doc, chunks=chunks, config=llm_config)
+    payload = generate_ontology_payload(
+        case_doc=case_doc,
+        chunks=chunks,
+        config=llm_config,
+        strategy=strategy,
+    )
+    payload.setdefault("meta", {})
+    if strategy:
+        payload["meta"]["strategy"] = strategy
     emit("ontology_generation", "PASSED", f"top_level_keys={len(payload.keys())}")
 
     try:

@@ -32,7 +32,9 @@ def build_system_prompt() -> str:
         - capabilities
 
         Constraints:
-        - meta MUST include: version, case_id, domain.
+        - meta MUST include: version, case_id, domain, strategy.
+        - meta.strategy MUST be a reusable strategy-family slug in snake_case, not a case-specific title.
+        - If the caller provides a preferred strategy label, use it exactly.
         - Use actor concepts ending with Actor.
         - tbox.concepts MUST be a list of objects, not strings. Each concept item requires: name, description, category.
         - concept.category MUST be one of: actor, capability, constraint, event, outcome, game, other.
@@ -61,7 +63,7 @@ def build_system_prompt() -> str:
 
                 Minimal structural example (shape only):
                 {
-                    "meta": {"version": "1.0", "case_id": "...", "domain": "..."},
+                    "meta": {"version": "1.0", "case_id": "...", "domain": "...", "strategy": "new_tech_market_entry"},
                     "tbox": {
                         "concepts": [{"name": "ExampleActor", "description": "...", "category": "actor"}],
                         "relations": [{"name": "has_capability", "source": "ExampleActor", "target": "example_capability", "description": "..."}],
@@ -93,16 +95,23 @@ def build_system_prompt() -> str:
     ).strip()
 
 
-def build_user_prompt(doc: CaseDocument, chunks: list[str]) -> str:
+def build_user_prompt(
+    doc: CaseDocument,
+    chunks: list[str],
+    strategy: str | None = None,
+) -> str:
     chunk_text = "\n\n---\n\n".join(chunks)
+    preferred_strategy = strategy or "infer from the case evidence"
     return dedent(
         f"""
         Case ID: {doc.case_id}
         Case title: {doc.title}
         Known outcome: {doc.known_outcome}
         Source path: {doc.source_path}
+        Preferred strategy label: {preferred_strategy}
 
         Build a StrategyOntology JSON for this case.
+        The ontology must classify the case into a reusable strategy family under meta.strategy.
         Preserve meaningful narrative signals, but convert them into explicit concepts, axioms, actors, capabilities, constraints, and scenario fields.
 
         Case content:

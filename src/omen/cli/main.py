@@ -215,6 +215,11 @@ def main() -> None:
     case_replay_generate.add_argument("--case-id", required=True, help="Case identifier")
     case_replay_generate.add_argument("--title", required=True, help="Case title")
     case_replay_generate.add_argument(
+        "--strategy",
+        required=False,
+        help="Optional reusable strategy family label, e.g. new_tech_market_entry",
+    )
+    case_replay_generate.add_argument(
         "--known-outcome",
         required=True,
         help="Known historical outcome for replay anchoring",
@@ -554,6 +559,7 @@ def main() -> None:
             document_path=args.document,
             case_id=args.case_id,
             title=args.title,
+            strategy=args.strategy,
             known_outcome=args.known_outcome,
             config_path=args.config,
             logger=_step_logger,

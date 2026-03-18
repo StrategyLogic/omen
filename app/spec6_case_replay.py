@@ -15,20 +15,18 @@ from omen.ui.artifacts import ensure_case_output_dir
 from omen.ui.baseline_graph import build_baseline_path_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
 
-
-st.set_page_config(page_title="Omen Case Replay", layout="wide")
-st.title("Omen · Case Replay")
-st.caption("Document -> Strategy Ontology -> Baseline Replay Path")
-
-with st.sidebar:
-    st.header("Inputs")
-    document_path = st.text_input("Case document path", value="solution/case-xd.md")
-    case_id = st.text_input("Case ID", value="x-developer-replay")
-    title = st.text_input("Case Title", value="X-Developer Startup Replay")
-    known_outcome = st.text_input("Known Outcome", value="project failed in market expansion")
-    config_path = st.text_input("LLM Config", value="config/llm.toml")
-
-col_gen, col_graph, col_run = st.columns(3)
+STRATEGY_LIBRARY: dict[str, dict[str, str]] = {
+    "new_tech_market_entry": {
+        "label": "New Tech Market Entry",
+        "summary": "For cases where a new product enters an existing market and must overcome incumbent habits, trust gaps, and switching friction.",
+        "fit": "Use when the replay depends on adoption resistance, channel education, ecosystem leverage, and timing of market entry.",
+    },
+    "database_paradigm_competition": {
+        "label": "Database Paradigm Competition",
+        "summary": "For cases where a new data architecture challenges the incumbent database mental model and developer workflow.",
+        "fit": "Use when the replay hinges on paradigm shift, compatibility pressure, migration cost, and developer belief change.",
+    },
+}
 
 if "spec6_generation_result" not in st.session_state:
     st.session_state.spec6_generation_result = None
@@ -40,6 +38,67 @@ if "spec6_loaded_case_id" not in st.session_state:
     st.session_state.spec6_loaded_case_id = None
 if "spec6_output_note" not in st.session_state:
     st.session_state.spec6_output_note = ""
+
+
+def _normalize_strategy_name(value: str | None) -> str:
+    if not value:
+        return "case_specific_strategy"
+    normalized = "_".join(value.strip().lower().replace("-", "_").split())
+    return normalized or "case_specific_strategy"
+
+
+def _active_ontology_payload() -> dict[str, Any] | None:
+    graph_payload = st.session_state.spec6_ontology_graph_payload
+    if isinstance(graph_payload, dict):
+        return graph_payload
+    generation_payload = st.session_state.spec6_generation_result
+    if isinstance(generation_payload, dict):
+        ontology_payload = generation_payload.get("strategy_ontology")
+        if isinstance(ontology_payload, dict):
+            return ontology_payload
+    return None
+
+
+def _extract_strategy_name(ontology_payload: dict[str, Any] | None, fallback: str) -> str:
+    if isinstance(ontology_payload, dict):
+        meta = ontology_payload.get("meta")
+        if isinstance(meta, dict):
+            strategy_name = str(meta.get("strategy") or "").strip()
+            if strategy_name:
+                return _normalize_strategy_name(strategy_name)
+    return _normalize_strategy_name(fallback)
+
+
+def _strategy_profile(strategy_name: str) -> dict[str, str]:
+    profile = STRATEGY_LIBRARY.get(_normalize_strategy_name(strategy_name))
+    if profile:
+        return profile
+    normalized = _normalize_strategy_name(strategy_name)
+    title_case = normalized.replace("_", " ").title()
+    return {
+        "label": title_case,
+        "summary": "Reusable strategy family for organizing cases, space ontologies, capability patterns, and axioms.",
+        "fit": "Use when this case should become a repeatable strategic template instead of a one-off replay artifact.",
+    }
+
+with st.sidebar:
+    st.header("Inputs")
+    document_path = st.text_input("Case document path", value="solution/case-xd.md")
+    case_id = st.text_input("Case ID", value="x-developer-replay")
+    strategy = st.text_input("Strategy", value="new_tech_market_entry")
+    known_outcome = st.text_input("Known Outcome", value="project failed in market expansion")
+    config_path = st.text_input("LLM Config", value="config/llm.toml")
+
+active_ontology_payload = _active_ontology_payload()
+active_strategy = _extract_strategy_name(active_ontology_payload, strategy)
+strategy_profile = _strategy_profile(active_strategy)
+title = "X-Developer Startup Case"
+
+st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
+st.title(f"Omen · {title}")
+st.caption(f"This case is framed as **{strategy_profile['label']}**. {strategy_profile['summary']} {strategy_profile['fit']}")
+
+col_gen, col_graph, col_run = st.columns(3)
 
 
 def _artifact_paths(case_id: str) -> dict[str, Path]:
@@ -208,10 +267,13 @@ with col_gen:
                 document_path=document_path,
                 case_id=case_id,
                 title=title,
+                strategy=strategy,
                 known_outcome=known_outcome,
                 config_path=config_path,
             )
             payload = generation.model_dump(mode="python")
+            generation.strategy_ontology.setdefault("meta", {})
+            generation.strategy_ontology["meta"]["strategy"] = _normalize_strategy_name(strategy)
             st.session_state.spec6_generation_result = payload
 
             case_dir = ensure_case_output_dir(case_id)
@@ -292,7 +354,7 @@ st.divider()
 if st.session_state.spec6_baseline_payload:
     payload = st.session_state.spec6_baseline_payload
     view_model = payload.get("view_model", {})
-    st.subheader("Baseline Replay")
+    st.subheader("Baseline Replay Path")
     summary = view_model.get("baseline_summary", {})
 
     metric_col1, metric_col2, metric_col3 = st.columns(3)

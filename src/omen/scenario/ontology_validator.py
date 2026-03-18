@@ -32,6 +32,34 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
 
 
+def _infer_strategy_name(meta: dict[str, Any]) -> str:
+    explicit = str(meta.get("strategy") or "").strip()
+    if explicit:
+        slug = _slugify(explicit)
+        if slug:
+            return slug
+
+    haystack = " ".join(
+        str(meta.get(key) or "") for key in ("domain", "case_title", "case_id")
+    ).lower()
+    strategy_hints = (
+        ("x developer", "new_tech_market_entry"),
+        ("x-developer", "new_tech_market_entry"),
+        ("market expansion", "new_tech_market_entry"),
+        ("new tech", "new_tech_market_entry"),
+        ("database-vs-ai-memory", "database_paradigm_competition"),
+        ("database vs ai memory", "database_paradigm_competition"),
+        ("database paradigm", "database_paradigm_competition"),
+        ("ontology-battlefield", "database_paradigm_competition"),
+    )
+    for token, strategy in strategy_hints:
+        if token in haystack:
+            return strategy
+
+    fallback = _slugify(str(meta.get("domain") or meta.get("case_id") or ""))
+    return fallback or "case_specific_strategy"
+
+
 def _infer_concept_category(name: str, declared_key: str | None = None) -> str:
     if declared_key and declared_key in {
         "actor",
@@ -251,6 +279,7 @@ def _normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     meta = dict(payload.get("meta") or {})
     meta.setdefault("version", meta.get("ontology_version") or "1.0")
     meta.setdefault("domain", meta.get("case_title") or "case-domain")
+    meta["strategy"] = _infer_strategy_name(meta)
     normalized["meta"] = meta
 
     tbox = dict(payload.get("tbox") or {})

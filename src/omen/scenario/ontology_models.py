@@ -11,6 +11,7 @@ class OntologyMeta(BaseModel):
     version: str = Field(min_length=1)
     case_id: str = Field(min_length=1)
     domain: str = Field(min_length=1)
+    strategy: str = Field(min_length=1, default="case_specific_strategy")
 
 
 class ConceptDef(BaseModel):

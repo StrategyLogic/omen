@@ -2,7 +2,8 @@
   "meta": {
     "version": "0.1.0",
     "case_id": "ontology-battlefield",
-    "domain": "database-vs-ai-memory"
+    "domain": "database-vs-ai-memory",
+    "strategy": "database_paradigm_competition"
   },
   "tbox": {
     "concepts": [

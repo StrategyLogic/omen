@@ -372,7 +372,12 @@ if st.session_state.spec6_ontology_graph_payload:
     st.plotly_chart(ontology_fig, use_container_width=True)
 
     space_summary = _build_space_summary(ontology_payload)
-    col1, col2, col3, col4, reset_col = st.columns(5)
+    reset_col, col1, col2, col3, col4 = st.columns(5)
+    with reset_col:
+        st.caption("Show")
+        if st.button("All", key="ontology_scope_all"):
+            st.session_state.spec6_ontology_scope = "all"
+            st.rerun()
     with col1:
         st.caption("Tech Actors")
         if st.button(str(space_summary.get("tech_space_actor_count", 0)), key="tech_actor_scope_count"):
@@ -386,12 +391,6 @@ if st.session_state.spec6_ontology_graph_payload:
     col3.metric("Shared Actors", space_summary.get("shared_actor_count", 0))
     adoption_resistance = space_summary.get("adoption_resistance")
     col4.metric("Adoption Resistance", "n/a" if adoption_resistance is None else str(adoption_resistance))
-
-    with reset_col:
-        st.caption("Show All")
-        if st.button("All", key="ontology_scope_all"):
-            st.session_state.spec6_ontology_scope = "all"
-            st.rerun()
 
     current_scope_label = {
         "all": "All nodes",

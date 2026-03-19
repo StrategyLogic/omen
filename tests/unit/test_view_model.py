@@ -95,3 +95,23 @@ def test_view_model_nodes_include_business_events() -> None:
     assert view_model["control_overlays"]
     assert {item["overlay_type"] for item in view_model["control_overlays"]} == {"control"}
     assert len(view_model["control_overlays"]) == len(view_model["editable_controls"])
+
+    assert view_model["hypothesis_steps"]
+    assert len(view_model["hypothesis_steps"]) == len(view_model["graph_nodes"])
+    first_step = view_model["hypothesis_steps"][0]
+    assert "state_vector" in first_step
+    assert "hypotheses" in first_step
+
+    transitions = view_model["weighted_transitions"]
+    assert transitions
+    assert len(transitions) == len(view_model["graph_edges"])
+    for transition in transitions:
+        assert 0.0 <= transition["baseline_weight"] <= 1.0
+        assert 0.0 <= transition["adjusted_weight"] <= 1.0
+        assert transition["driver_formula"]
+        assert transition["prior_beta"]
+        assert transition["calibrated_beta"]
+        assert transition["sensitivity_analysis"]
+
+    assert "edge_overrides" in view_model
+    assert isinstance(view_model["edge_overrides"], list)

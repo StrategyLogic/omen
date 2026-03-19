@@ -17,12 +17,16 @@ def run_case_replay_baseline(
     *,
     case_id: str,
     ontology_path: str | Path,
+    known_outcome: str | None = None,
     output_root: str | Path = "output/case_replay",
 ) -> dict[str, Any]:
     scenario, ontology_setup = load_case_replay_scenario(ontology_path=ontology_path)
     ontology_warnings = list(ontology_setup.get("ontology_warnings") or [])
     result = run_simulation(scenario, ontology_setup=ontology_setup)
-    explanation = build_explanation_report(result)
+    explanation_input = dict(result)
+    if known_outcome:
+        explanation_input["known_outcome"] = known_outcome
+    explanation = build_explanation_report(explanation_input)
 
     case_dir = ensure_case_output_dir(case_id=case_id, output_root=output_root)
     result_path = save_run_result(result, case_dir / "baseline_result.json")

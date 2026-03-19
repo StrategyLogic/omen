@@ -37,7 +37,11 @@ def test_bind_ontology_to_scenario_includes_space_summary() -> None:
         },
         "market_space_ontology": {
             "actors": [{"actor_id": "startup"}],
-            "market_attributes": {"adoption_resistance": 0.72},
+            "market_attributes": {
+                "adoption_resistance": 0.72,
+                "incumbent_response_speed": 0.65,
+                "value_perception_gap": 0.55,
+            },
             "axioms": [{"id": "max-1", "statement": "resistance slows adoption"}],
         },
         "shared_actors": ["startup"],
@@ -78,3 +82,5 @@ def test_bind_ontology_to_scenario_includes_space_summary() -> None:
     assert setup["space_summary"]["market_space_actor_count"] == 1
     assert setup["space_summary"]["shared_actor_count"] == 1
     assert setup["space_summary"]["adoption_resistance"] == 0.72
+    assert setup["space_summary"]["incumbent_response_speed"] == 0.65
+    assert setup["space_summary"]["value_perception_gap"] == 0.55

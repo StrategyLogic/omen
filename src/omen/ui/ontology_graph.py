@@ -39,9 +39,25 @@ def _extract_concepts(tbox: dict[str, Any]) -> list[dict[str, str]]:
     return extracted
 
 
-def build_ontology_graph_figure(payload: dict[str, Any]) -> Any:
-    go = importlib.import_module("plotly.graph_objects")
+def _extract_actor_ids(actor_items: Any) -> set[str]:
+    if not isinstance(actor_items, list):
+        return set()
 
+    actor_ids: set[str] = set()
+    for item in actor_items:
+        if isinstance(item, str):
+            value = item.strip()
+            if value:
+                actor_ids.add(value)
+            continue
+        if isinstance(item, dict):
+            actor_id = str(item.get("actor_id") or item.get("id") or item.get("name") or "").strip()
+            if actor_id:
+                actor_ids.add(actor_id)
+    return actor_ids
+
+
+def _build_graph(payload: dict[str, Any]) -> nx.DiGraph:
     graph = nx.DiGraph()
 
     tbox = payload.get("tbox") if isinstance(payload.get("tbox"), dict) else {}
@@ -103,9 +119,62 @@ def build_ontology_graph_figure(payload: dict[str, Any]) -> Any:
             graph.add_node(capability_node_id, label=capability_name, node_type="capability", category="capability")
         graph.add_edge(actor_node_id, capability_node_id, label="has_capability")
 
+    return graph
+
+
+def _seed_actor_nodes(payload: dict[str, Any], actor_scope: str) -> set[str]:
+    if actor_scope not in {"tech", "market"}:
+        return set()
+
+    scope_key = "tech_space_ontology" if actor_scope == "tech" else "market_space_ontology"
+    scope_payload = payload.get(scope_key) if isinstance(payload.get(scope_key), dict) else {}
+    actor_ids = _extract_actor_ids(scope_payload.get("actors"))
+    return {f"actor:{actor_id}" for actor_id in actor_ids if actor_id}
+
+
+def _filter_graph_by_actor_scope(graph: nx.DiGraph, payload: dict[str, Any], actor_scope: str) -> nx.DiGraph:
+    if actor_scope == "all":
+        return graph.copy()
+
+    seed_nodes = {node for node in _seed_actor_nodes(payload, actor_scope) if node in graph}
+    if not seed_nodes:
+        return graph.copy()
+
+    undirected = graph.to_undirected()
+    reachable_nodes: set[str] = set(seed_nodes)
+    queue: list[str] = list(seed_nodes)
+
+    while queue:
+        node = queue.pop(0)
+        is_actor = node.startswith("actor:")
+        is_selected_actor = node in seed_nodes
+
+        if is_actor and not is_selected_actor:
+            continue
+
+        for neighbor in undirected.neighbors(node):
+            if neighbor in reachable_nodes:
+                continue
+            reachable_nodes.add(neighbor)
+            queue.append(neighbor)
+
+    filtered = graph.subgraph(reachable_nodes).copy()
+
+    no_relation_nodes = [node for node in filtered.nodes() if filtered.degree(node) == 0]
+    if no_relation_nodes:
+        filtered.remove_nodes_from(no_relation_nodes)
+    return filtered
+
+
+def build_ontology_graph_figure(payload: dict[str, Any], actor_scope: str = "all") -> Any:
+    go = importlib.import_module("plotly.graph_objects")
+
+    graph = _build_graph(payload)
+    graph = _filter_graph_by_actor_scope(graph, payload, actor_scope)
+
     if not graph.nodes:
         fig = go.Figure()
-        fig.update_layout(title="Ontology Graph (empty)")
+        fig.update_layout(title="Ontology Graph (empty after filter)")
         return fig
 
     positions = nx.spring_layout(graph, seed=42)
@@ -172,8 +241,13 @@ def build_ontology_graph_figure(payload: dict[str, Any]) -> Any:
     )
 
     fig = go.Figure(data=[edge_trace, edge_label_trace, node_trace])
+    scope_title = {
+        "all": "All",
+        "tech": "Tech Actor Reachable",
+        "market": "Market Actor Reachable",
+    }.get(actor_scope, "All")
     fig.update_layout(
-        title="Strategy Ontology Graph",
+        title=f"Strategy Ontology Graph · {scope_title}",
         showlegend=False,
         xaxis={"visible": False},
         yaxis={"visible": False},

@@ -57,6 +57,22 @@ def _extract_adoption_resistance(market_space: Any) -> Any:
     return None
 
 
+def _extract_market_attribute(market_space: Any, key: str) -> Any:
+    if not isinstance(market_space, dict):
+        return None
+
+    market_attributes = market_space.get("market_attributes")
+    if isinstance(market_attributes, dict) and key in market_attributes:
+        return market_attributes.get(key)
+
+    for bucket in ("attributes", "properties"):
+        value = market_space.get(bucket)
+        if isinstance(value, dict) and key in value:
+            return value.get(key)
+
+    return None
+
+
 def load_ontology_input(path: str | Path) -> OntologyInputPackage:
     ontology_path = Path(path)
     payload = json.loads(ontology_path.read_text(encoding="utf-8"))
@@ -111,5 +127,13 @@ def bind_ontology_to_scenario(
             "shared_actor_count": len(shared_actor_ids),
             "shared_actor_overlap_count": len(tech_actor_ids & market_actor_ids),
             "adoption_resistance": _extract_adoption_resistance(market_space),
+            "incumbent_response_speed": _extract_market_attribute(
+                market_space,
+                "incumbent_response_speed",
+            ),
+            "value_perception_gap": _extract_market_attribute(
+                market_space,
+                "value_perception_gap",
+            ),
         },
     }

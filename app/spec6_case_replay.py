@@ -38,6 +38,8 @@ if "spec6_loaded_case_id" not in st.session_state:
     st.session_state.spec6_loaded_case_id = None
 if "spec6_output_note" not in st.session_state:
     st.session_state.spec6_output_note = ""
+if "spec6_ontology_scope" not in st.session_state:
+    st.session_state.spec6_ontology_scope = "all"
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -307,6 +309,7 @@ with col_run:
                 baseline = run_case_replay_baseline(
                     case_id=case_id,
                     ontology_path=ontology_path,
+                    known_outcome=known_outcome,
                 )
                 st.session_state.spec6_baseline_payload = baseline
                 ontology_warnings = list(baseline.get("ontology_warnings") or [])
@@ -347,22 +350,62 @@ st.divider()
 if st.session_state.spec6_ontology_graph_payload:
     ontology_payload = st.session_state.spec6_ontology_graph_payload
     st.subheader("Ontology Graph")
-    ontology_fig = build_ontology_graph_figure(ontology_payload)
+
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stButton"] button[kind="secondary"] {
+            border-radius: 999px;
+            min-width: 2.75rem;
+            min-height: 2.75rem;
+            padding: 0 0.8rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    ontology_fig = build_ontology_graph_figure(
+        ontology_payload,
+        actor_scope=st.session_state.spec6_ontology_scope,
+    )
     st.plotly_chart(ontology_fig, use_container_width=True)
 
     space_summary = _build_space_summary(ontology_payload)
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Tech Actors", space_summary.get("tech_space_actor_count", 0))
-    col2.metric("Market Actors", space_summary.get("market_space_actor_count", 0))
+    with col1:
+        st.caption("Tech Actors")
+        if st.button(str(space_summary.get("tech_space_actor_count", 0)), key="tech_actor_scope_count"):
+            st.session_state.spec6_ontology_scope = "tech"
+            st.rerun()
+    with col2:
+        st.caption("Market Actors")
+        if st.button(str(space_summary.get("market_space_actor_count", 0)), key="market_actor_scope_count"):
+            st.session_state.spec6_ontology_scope = "market"
+            st.rerun()
     col3.metric("Shared Actors", space_summary.get("shared_actor_count", 0))
     adoption_resistance = space_summary.get("adoption_resistance")
     col4.metric("Adoption Resistance", "n/a" if adoption_resistance is None else str(adoption_resistance))
+
+    reset_col, _ = st.columns([1, 5])
+    with reset_col:
+        if st.button("All", key="ontology_scope_all"):
+            st.session_state.spec6_ontology_scope = "all"
+            st.rerun()
+
+    current_scope_label = {
+        "all": "All nodes",
+        "tech": "Tech actor reachable closure",
+        "market": "Market actor reachable closure",
+    }.get(st.session_state.spec6_ontology_scope, "All nodes")
+    st.caption(f"Current ontology filter: {current_scope_label}")
 
 st.divider()
 
 if st.session_state.spec6_baseline_payload:
     payload = st.session_state.spec6_baseline_payload
     view_model = payload.get("view_model", {})
+    explanation = payload.get("explanation", {})
     st.subheader("Baseline Replay Path")
     summary = view_model.get("baseline_summary", {})
 
@@ -373,6 +416,32 @@ if st.session_state.spec6_baseline_payload:
 
     fig = build_baseline_path_figure(view_model)
     st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Simulated vs Real Outcome")
+    outcome_col1, outcome_col2 = st.columns(2)
+    outcome_col1.metric("Simulated outcome", str(summary.get("outcome", "unknown")))
+    outcome_col2.metric("Known real outcome", str(known_outcome))
+
+    reality_gaps = list(explanation.get("reality_gap_analysis") or [])
+    if reality_gaps:
+        st.markdown("**Reality Gap Analysis**")
+        for gap in reality_gaps:
+            st.warning(
+                (
+                    f"{gap.get('factor', 'gap')}: {gap.get('reality_observation', '')} "
+                    f"| calibration: {gap.get('suggested_calibration', '')}"
+                )
+            )
+
+    causal_gap_links = list(view_model.get("causal_gap_links") or [])
+    if causal_gap_links:
+        st.markdown("**Causal-Gap Links**")
+        st.json(causal_gap_links)
+
+    editable_controls = list(view_model.get("editable_controls") or [])
+    if editable_controls:
+        st.markdown("**Key Calibration Controls**")
+        st.json(editable_controls)
 
     st.subheader("Artifact Paths")
     st.code(json.dumps(payload.get("paths", {}), ensure_ascii=False, indent=2), language="json")

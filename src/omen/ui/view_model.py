@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from omen.ui.causal_trace import build_causal_gap_links
+from omen.ui.editable_controls import build_editable_controls
+
 
 def _build_market_signal(adoption_resistance: Any) -> str | None:
     if isinstance(adoption_resistance, (int, float)):
@@ -102,6 +105,43 @@ def _build_graph_edges(result: dict[str, Any]) -> list[dict[str, Any]]:
     return edges
 
 
+def _step_index(node_id: str) -> int:
+    try:
+        return int(str(node_id).split("-")[-1])
+    except ValueError:
+        return 0
+
+
+def _build_reality_graph_edges(
+    nodes: list[dict[str, Any]],
+    causal_gap_links: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    node_ids = [str(node.get("id") or "") for node in nodes if node.get("id")]
+    node_id_set = set(node_ids)
+
+    target_nodes = [
+        str(link.get("target_node_id") or "")
+        for link in causal_gap_links
+        if str(link.get("target_node_id") or "") in node_id_set
+    ]
+
+    unique_targets = sorted(set(target_nodes), key=_step_index)
+
+    if len(unique_targets) < 2 and len(node_ids) >= 2 and causal_gap_links:
+        unique_targets = [node_ids[0], node_ids[min(1, len(node_ids) - 1)]]
+
+    reality_edges: list[dict[str, Any]] = []
+    for source, target in zip(unique_targets, unique_targets[1:], strict=False):
+        reality_edges.append(
+            {
+                "id": f"reality:{source}->{target}",
+                "source": source,
+                "target": target,
+            }
+        )
+    return reality_edges
+
+
 def build_case_replay_view_model(
     *,
     result: dict[str, Any],
@@ -114,6 +154,7 @@ def build_case_replay_view_model(
     space_summary = ontology_setup.get("space_summary") or {}
 
     branch_points = explanation.get("branch_points", [])
+    reality_gaps = explanation.get("reality_gap_analysis", [])
     causal_options: list[dict[str, Any]] = []
     for index, point in enumerate(branch_points, start=1):
         step = point.get("step")
@@ -127,16 +168,9 @@ def build_case_replay_view_model(
             }
         )
 
-    editable_controls = [
-        {
-            "control_id": "user_overlap_threshold",
-            "label": "User overlap threshold",
-            "control_type": "parameter",
-            "current_value": 0.2,
-            "allowed_values": [0.1, 0.2, 0.3, 0.4, 0.5],
-            "source_node_id": "step-1",
-        }
-    ]
+    editable_controls = build_editable_controls(result)
+    causal_gap_links = build_causal_gap_links(branch_points, reality_gaps, nodes)
+    reality_graph_edges = _build_reality_graph_edges(nodes, causal_gap_links)
 
     evidence_panel = [
         {
@@ -160,7 +194,9 @@ def build_case_replay_view_model(
         "space_summary": space_summary,
         "graph_nodes": nodes,
         "graph_edges": edges,
+        "reality_graph_edges": reality_graph_edges,
         "causal_trace_options": causal_options,
+        "causal_gap_links": causal_gap_links,
         "editable_controls": editable_controls,
         "evidence_panel": evidence_panel,
     }

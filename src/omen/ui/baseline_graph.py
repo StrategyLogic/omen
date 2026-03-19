@@ -46,6 +46,19 @@ def build_baseline_path_figure(view_model: dict) -> Any:
         edge_x.extend([x0, x1, None])
         edge_y.extend([y0, y1, None])
 
+    reality_edge_x: list[float | None] = []
+    reality_edge_y: list[float | None] = []
+    reality_edges = view_model.get("reality_graph_edges", [])
+    for edge in reality_edges:
+        source = edge.get("source")
+        target = edge.get("target")
+        if source not in positions or target not in positions:
+            continue
+        x0, y0 = positions[source]
+        x1, y1 = positions[target]
+        reality_edge_x.extend([x0, x1, None])
+        reality_edge_y.extend([y0, y1, None])
+
     node_x: list[float] = []
     node_y: list[float] = []
     labels: list[str] = []
@@ -61,13 +74,22 @@ def build_baseline_path_figure(view_model: dict) -> Any:
         hover_texts.append(summary)
         marker_colors.append(event_color_map.get(event, "#2563EB"))
 
-    edge_trace = go.Scatter(
+    model_edge_trace = go.Scatter(
         x=edge_x,
         y=edge_y,
-        line={"width": 1.2, "color": "#94A3B8"},
+        line={"width": 1.6, "color": "#94A3B8", "dash": "dash"},
         hoverinfo="none",
         mode="lines",
-        name="transitions",
+        name="Model path",
+    )
+
+    reality_edge_trace = go.Scatter(
+        x=reality_edge_x,
+        y=reality_edge_y,
+        line={"width": 3.0, "color": "#DC2626"},
+        hoverinfo="none",
+        mode="lines",
+        name="Real-world path",
     )
 
     node_trace = go.Scatter(
@@ -82,10 +104,11 @@ def build_baseline_path_figure(view_model: dict) -> Any:
         name="steps",
     )
 
-    fig = go.Figure(data=[edge_trace, node_trace])
+    fig = go.Figure(data=[model_edge_trace, reality_edge_trace, node_trace])
     fig.update_layout(
         title="Baseline Evolution Path",
-        showlegend=False,
+        showlegend=True,
+        legend={"orientation": "h", "x": 0.0, "y": 1.08},
         xaxis={"visible": False},
         yaxis={"visible": False},
         margin={"l": 20, "r": 20, "t": 60, "b": 20},

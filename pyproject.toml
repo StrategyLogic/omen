@@ -33,6 +33,7 @@ spec6 = [
   "plotly>=5.23.0",
   "networkx>=3.3",
   "python-dotenv>=1.0.1",
+  "pytest>=8.2",
 ]
 
 [tool.setuptools]

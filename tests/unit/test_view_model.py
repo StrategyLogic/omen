@@ -10,6 +10,8 @@ def test_view_model_nodes_include_business_events() -> None:
                 "market_space_actor_count": 2,
                 "shared_actor_count": 2,
                 "adoption_resistance": 0.7,
+                "incumbent_response_speed": 0.6,
+                "value_perception_gap": 0.5,
             }
         },
         "timeline": [
@@ -42,7 +44,34 @@ def test_view_model_nodes_include_business_events() -> None:
             },
         ],
     }
-    explanation = {"branch_points": [], "narrative_summary": "summary"}
+    explanation = {
+        "branch_points": [
+            {"step": 1, "type": "user_overlap", "description": "overlap starts"},
+            {"step": 2, "type": "competition_activation", "description": "competition starts"},
+            {"step": 3, "type": "winner_emergence", "description": "winner emerges"},
+        ],
+        "reality_gap_analysis": [
+            {
+                "gap_id": "GAP-1",
+                "factor": "simulated_vs_real_outcome",
+                "reality_observation": "model diverges",
+                "suggested_calibration": "recalibrate outcome mapping",
+            },
+            {
+                "gap_id": "GAP-2",
+                "factor": "adoption_resistance",
+                "reality_observation": "high resistance",
+                "suggested_calibration": "lower resistance",
+            },
+            {
+                "gap_id": "GAP-3",
+                "factor": "pilot_success_to_scale",
+                "reality_observation": "pilot does not scale",
+                "suggested_calibration": "model decision-chain friction",
+            }
+        ],
+        "narrative_summary": "summary",
+    }
 
     view_model = build_case_replay_view_model(result=result, explanation=explanation, case_id="demo")
     labels = [node["label"] for node in view_model["graph_nodes"]]
@@ -53,3 +82,10 @@ def test_view_model_nodes_include_business_events() -> None:
     assert any("Adoption resistance" in label for label in labels)
     assert all("leader=" in summary for summary in summaries)
     assert view_model["space_summary"]["adoption_resistance"] == 0.7
+    control_ids = {item["control_id"] for item in view_model["editable_controls"]}
+    assert "adoption_resistance" in control_ids
+    assert "incumbent_response_speed" in control_ids
+    assert "value_perception_gap" in control_ids
+    assert view_model["causal_gap_links"]
+    assert view_model["reality_graph_edges"]
+    assert len(view_model["reality_graph_edges"]) >= 2

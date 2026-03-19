@@ -112,26 +112,94 @@ def _step_index(node_id: str) -> int:
         return 0
 
 
-def _build_reality_graph_edges(
+def _resolve_real_world_outcome(
+    result: dict[str, Any],
+    explanation: dict[str, Any],
+) -> str | None:
+    for candidate in (
+        result.get("real_world_outcome"),
+        result.get("known_outcome"),
+        explanation.get("known_outcome"),
+    ):
+        if candidate is None:
+            continue
+        text = str(candidate).strip()
+        if text:
+            return text
+    return None
+
+
+def _build_reality_graph(
+    *,
     nodes: list[dict[str, Any]],
     causal_gap_links: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+    reality_gaps: list[dict[str, Any]],
+    result: dict[str, Any],
+    explanation: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     node_ids = [str(node.get("id") or "") for node in nodes if node.get("id")]
     node_id_set = set(node_ids)
 
-    target_nodes = [
-        str(link.get("target_node_id") or "")
-        for link in causal_gap_links
-        if str(link.get("target_node_id") or "") in node_id_set
-    ]
+    overlap_targets = sorted(
+        {
+            str(link.get("target_node_id") or "")
+            for link in causal_gap_links
+            if str(link.get("target_node_id") or "") in node_id_set
+        },
+        key=_step_index,
+    )
 
-    unique_targets = sorted(set(target_nodes), key=_step_index)
+    first_model_node_id = node_ids[0] if node_ids else None
+    overlap_anchor = overlap_targets[0] if overlap_targets else first_model_node_id
 
-    if len(unique_targets) < 2 and len(node_ids) >= 2 and causal_gap_links:
-        unique_targets = [node_ids[0], node_ids[min(1, len(node_ids) - 1)]]
+    reality_nodes: list[dict[str, Any]] = []
+    reality_path_node_ids: list[str] = []
+    if overlap_anchor:
+        reality_path_node_ids.append(overlap_anchor)
+
+    for index, gap in enumerate(reality_gaps, start=1):
+        factor = str(gap.get("factor") or "reality_gap").strip() or "reality_gap"
+        observation = str(gap.get("reality_observation") or "").strip()
+        significance = str(gap.get("gap_significance") or "medium").strip() or "medium"
+        node_id = f"real-gap-{index}"
+        label = f"Reality {index}: {factor}"
+        summary = observation or str(gap.get("suggested_calibration") or factor)
+        reality_nodes.append(
+            {
+                "id": node_id,
+                "label": label,
+                "kind": "reality_gap",
+                "evidence_level": significance,
+                "event": "Reality divergence",
+                "summary": summary,
+                "factor": factor,
+            }
+        )
+        reality_path_node_ids.append(node_id)
+
+    real_outcome = _resolve_real_world_outcome(result, explanation)
+    if real_outcome:
+        real_end_id = "real-end"
+        reality_nodes.append(
+            {
+                "id": real_end_id,
+                "label": "Reality End",
+                "kind": "reality_outcome",
+                "evidence_level": "high",
+                "event": "Real-world outcome",
+                "summary": real_outcome,
+                "outcome": real_outcome,
+            }
+        )
+        reality_path_node_ids.append(real_end_id)
+
+    if len(reality_path_node_ids) < 2 and overlap_targets:
+        reality_path_node_ids = overlap_targets
 
     reality_edges: list[dict[str, Any]] = []
-    for source, target in zip(unique_targets, unique_targets[1:], strict=False):
+    for source, target in zip(reality_path_node_ids, reality_path_node_ids[1:], strict=False):
+        if source == target:
+            continue
         reality_edges.append(
             {
                 "id": f"reality:{source}->{target}",
@@ -139,7 +207,8 @@ def _build_reality_graph_edges(
                 "target": target,
             }
         )
-    return reality_edges
+
+    return reality_nodes, reality_edges
 
 
 def build_case_replay_view_model(
@@ -170,7 +239,13 @@ def build_case_replay_view_model(
 
     editable_controls = build_editable_controls(result)
     causal_gap_links = build_causal_gap_links(branch_points, reality_gaps, nodes)
-    reality_graph_edges = _build_reality_graph_edges(nodes, causal_gap_links)
+    reality_graph_nodes, reality_graph_edges = _build_reality_graph(
+        nodes=nodes,
+        causal_gap_links=causal_gap_links,
+        reality_gaps=reality_gaps,
+        result=result,
+        explanation=explanation,
+    )
 
     evidence_panel = [
         {
@@ -194,6 +269,7 @@ def build_case_replay_view_model(
         "space_summary": space_summary,
         "graph_nodes": nodes,
         "graph_edges": edges,
+        "reality_graph_nodes": reality_graph_nodes,
         "reality_graph_edges": reality_graph_edges,
         "causal_trace_options": causal_options,
         "causal_gap_links": causal_gap_links,

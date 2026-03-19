@@ -132,37 +132,45 @@ def _seed_actor_nodes(payload: dict[str, Any], actor_scope: str) -> set[str]:
     return {f"actor:{actor_id}" for actor_id in actor_ids if actor_id}
 
 
-def _filter_graph_by_actor_scope(graph: nx.DiGraph, payload: dict[str, Any], actor_scope: str) -> nx.DiGraph:
-    if actor_scope == "all":
-        return graph.copy()
-
-    seed_nodes = {node for node in _seed_actor_nodes(payload, actor_scope) if node in graph}
+def _collect_reachable_with_actor_terminals(
+    graph: nx.DiGraph,
+    seed_nodes: set[str],
+) -> set[str]:
     if not seed_nodes:
-        return graph.copy()
+        return set()
 
     undirected = graph.to_undirected()
-    reachable_nodes: set[str] = set(seed_nodes)
+    visited: set[str] = set(seed_nodes)
     queue: list[str] = list(seed_nodes)
 
     while queue:
-        node = queue.pop(0)
-        is_actor = node.startswith("actor:")
-        is_selected_actor = node in seed_nodes
+        current = queue.pop(0)
+        current_data = graph.nodes[current]
+        current_is_actor = str(current_data.get("node_type") or "") == "actor"
+        current_is_seed = current in seed_nodes
 
-        if is_actor and not is_selected_actor:
+        if current_is_actor and not current_is_seed:
             continue
 
-        for neighbor in undirected.neighbors(node):
-            if neighbor in reachable_nodes:
+        for neighbor in undirected.neighbors(current):
+            if neighbor in visited:
                 continue
-            reachable_nodes.add(neighbor)
+            visited.add(neighbor)
             queue.append(neighbor)
 
-    filtered = graph.subgraph(reachable_nodes).copy()
+    return visited
 
-    no_relation_nodes = [node for node in filtered.nodes() if filtered.degree(node) == 0]
-    if no_relation_nodes:
-        filtered.remove_nodes_from(no_relation_nodes)
+
+def _filter_graph_by_actor_scope(graph: nx.DiGraph, payload: dict[str, Any], actor_scope: str) -> nx.DiGraph:
+    if actor_scope == "all":
+        return graph.copy()
+    else:
+        seed_nodes = {node for node in _seed_actor_nodes(payload, actor_scope) if node in graph}
+        if not seed_nodes:
+            filtered = graph.copy()
+        else:
+            reachable_nodes = _collect_reachable_with_actor_terminals(graph, seed_nodes)
+            filtered = graph.subgraph(reachable_nodes).copy()
     return filtered
 
 

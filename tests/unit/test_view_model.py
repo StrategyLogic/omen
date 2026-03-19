@@ -4,6 +4,7 @@ from omen.ui.view_model import build_case_replay_view_model
 def test_view_model_nodes_include_business_events() -> None:
     result = {
         "outcome_class": "convergence",
+        "known_outcome": "project failed in market expansion",
         "ontology_setup": {
             "space_summary": {
                 "tech_space_actor_count": 3,
@@ -87,5 +88,9 @@ def test_view_model_nodes_include_business_events() -> None:
     assert "incumbent_response_speed" in control_ids
     assert "value_perception_gap" in control_ids
     assert view_model["causal_gap_links"]
+    assert view_model["reality_graph_nodes"]
+    reality_node_ids = {node["id"] for node in view_model["reality_graph_nodes"]}
+    assert "real-gap-1" in reality_node_ids
+    assert "real-end" in reality_node_ids
     assert view_model["reality_graph_edges"]
     assert len(view_model["reality_graph_edges"]) >= 2

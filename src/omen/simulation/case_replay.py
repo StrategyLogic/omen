@@ -20,6 +20,7 @@ def run_case_replay_baseline(
     output_root: str | Path = "output/case_replay",
 ) -> dict[str, Any]:
     scenario, ontology_setup = load_case_replay_scenario(ontology_path=ontology_path)
+    ontology_warnings = list(ontology_setup.get("ontology_warnings") or [])
     result = run_simulation(scenario, ontology_setup=ontology_setup)
     explanation = build_explanation_report(result)
 
@@ -34,6 +35,7 @@ def run_case_replay_baseline(
         "result": result,
         "explanation": explanation,
         "view_model": view_model,
+        "ontology_warnings": ontology_warnings,
         "paths": {
             "result": str(result_path),
             "explanation": str(explanation_path),

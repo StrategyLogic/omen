@@ -261,3 +261,55 @@ def test_validate_ontology_input_rejects_missing_market_adoption_resistance() ->
         validate_ontology_input_or_raise(payload)
 
     assert any(issue.code == "missing_market_adoption_resistance" for issue in exc.value.issues)
+
+
+def test_validate_ontology_input_autofixes_capability_constraint_mismatch() -> None:
+    payload = {
+        "meta": {
+            "version": "1.0",
+            "case_id": "autofix-mismatch",
+            "domain": "strategy",
+        },
+        "tbox": {
+            "concepts": [
+                {"name": "StartupActor", "description": "", "category": "actor"},
+                {"name": "analytics", "description": "", "category": "capability"},
+                {
+                    "name": "process_compliance_burden",
+                    "description": "",
+                    "category": "constraint",
+                },
+            ],
+            "relations": [
+                {
+                    "name": "has_capability",
+                    "source": "StartupActor",
+                    "target": "analytics",
+                    "description": "",
+                }
+            ],
+            "axioms": [{"id": "ax-1", "statement": "sample", "type": "activation"}],
+        },
+        "abox": {
+            "actors": [{"actor_id": "startup", "actor_type": "StartupActor"}],
+            "capabilities": [
+                {"actor_id": "startup", "name": "analytics", "score": 0.8},
+                {
+                    "actor_id": "startup",
+                    "name": "process_compliance_burden",
+                    "score": 0.75,
+                },
+            ],
+            "constraints": [],
+        },
+        "reasoning_profile": {"activation_rules": [{"rule_id": "ax-1"}]},
+    }
+
+    with pytest.warns(UserWarning, match="Auto-fix"):
+        package = validate_ontology_input_or_raise(payload)
+
+    capability_names = [item.name for item in package.abox.capabilities]
+    assert "process_compliance_burden" not in capability_names
+
+    constraint_names = [item.name for item in package.abox.constraints]
+    assert "process_compliance_burden" in constraint_names

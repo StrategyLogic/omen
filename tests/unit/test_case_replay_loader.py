@@ -108,3 +108,58 @@ def test_load_case_replay_scenario_merges_missing_abox_actors(tmp_path: Path) ->
     scenario_actor_ids = {actor.actor_id for actor in scenario.actors}
     assert {"x_developer", "pilot_dev_team", "broad_market_teams"}.issubset(scenario_actor_ids)
     assert ontology_setup["actor_count"] == 3
+
+
+def test_load_case_replay_scenario_exposes_autofix_warnings(tmp_path: Path) -> None:
+    payload = {
+        "meta": {
+            "version": "1.0",
+            "case_id": "x-developer-replay",
+            "domain": "management_ontology",
+        },
+        "tbox": {
+            "concepts": [
+                {"name": "StartupActor", "description": "", "category": "actor"},
+                {
+                    "name": "process_compliance_burden",
+                    "description": "",
+                    "category": "constraint",
+                },
+            ],
+            "relations": [
+                {
+                    "name": "constrains",
+                    "source": "process_compliance_burden",
+                    "target": "StartupActor",
+                    "description": "",
+                }
+            ],
+            "axioms": [{"id": "ax-1", "statement": "sample", "type": "activation"}],
+        },
+        "abox": {
+            "actors": [{"actor_id": "x_developer", "concept": "StartupActor"}],
+            "capabilities": [
+                {
+                    "actor_id": "x_developer",
+                    "name": "process_compliance_burden",
+                    "score": 0.75,
+                }
+            ],
+            "constraints": [],
+        },
+        "reasoning_profile": {"activation_rules": [{"rule_id": "ax-1"}]},
+        "scenario_id": "warning-case",
+        "name": "warning-case",
+        "time_steps": 6,
+        "actors": ["x_developer"],
+        "capabilities": ["process_compliance_burden"],
+    }
+
+    ontology_path = tmp_path / "strategy_ontology.json"
+    ontology_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    _, ontology_setup = load_case_replay_scenario(ontology_path)
+
+    warning_messages = list(ontology_setup.get("ontology_warnings") or [])
+    assert warning_messages
+    assert any("Auto-fix" in message for message in warning_messages)

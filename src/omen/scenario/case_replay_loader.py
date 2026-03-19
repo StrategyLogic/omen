@@ -10,7 +10,10 @@ from pydantic import ValidationError
 
 from omen.scenario.ontology_loader import bind_ontology_to_scenario
 from omen.scenario.validator import validate_scenario_or_raise
-from omen.scenario.ontology_validator import validate_ontology_input_or_raise
+from omen.scenario.ontology_validator import (
+    validate_ontology_input_or_raise,
+    validate_ontology_input_with_warnings,
+)
 
 
 _DEFAULT_ACTIONS = [
@@ -258,7 +261,7 @@ def save_strategy_ontology(payload: dict[str, Any], path: str | Path) -> Path:
 
 
 def validate_strategy_ontology(payload: dict[str, Any]) -> dict[str, Any]:
-    validated = validate_ontology_input_or_raise(payload)
+    validated, _ = validate_ontology_input_with_warnings(payload)
     return validated.model_dump(mode="python")
 
 
@@ -266,12 +269,17 @@ def load_case_replay_scenario(
     ontology_path: str | Path,
 ):
     ontology_payload = json.loads(Path(ontology_path).read_text(encoding="utf-8"))
-    ontology = validate_ontology_input_or_raise(ontology_payload)
-    normalized_payload = _normalize_scenario_payload(ontology_payload)
+    ontology, normalization_warnings = validate_ontology_input_with_warnings(ontology_payload)
+
+    ontology_warnings = list(normalization_warnings)
+    validated_payload = ontology.model_dump(mode="python")
+
+    normalized_payload = _normalize_scenario_payload(validated_payload)
     try:
         scenario = validate_scenario_or_raise(normalized_payload)
     except ValidationError:
-        fallback_payload = _build_us1_fallback_scenario(ontology_payload)
+        fallback_payload = _build_us1_fallback_scenario(validated_payload)
         scenario = validate_scenario_or_raise(fallback_payload)
     ontology_setup = bind_ontology_to_scenario(ontology, scenario)
+    ontology_setup["ontology_warnings"] = ontology_warnings
     return scenario, ontology_setup

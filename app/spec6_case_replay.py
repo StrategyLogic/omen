@@ -309,7 +309,16 @@ with col_run:
                     ontology_path=ontology_path,
                 )
                 st.session_state.spec6_baseline_payload = baseline
-                st.session_state.spec6_output_note = f"Baseline completed with ontology: {Path(ontology_path).name}"
+                ontology_warnings = list(baseline.get("ontology_warnings") or [])
+                if ontology_warnings:
+                    st.session_state.spec6_output_note = (
+                        f"Baseline completed with auto-fix corrections ({len(ontology_warnings)}): "
+                        + " | ".join(ontology_warnings)
+                    )
+                else:
+                    st.session_state.spec6_output_note = (
+                        f"Baseline completed with ontology: {Path(ontology_path).name}"
+                    )
             except Exception as exc:  # pragma: no cover - UI surfaced exception
                 st.session_state.spec6_output_note = f"Baseline run failed: {exc}"
 

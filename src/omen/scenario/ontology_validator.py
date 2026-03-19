@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 from typing import Any
+import warnings
 
 from pydantic import ValidationError
 
@@ -273,8 +274,85 @@ def _normalize_reasoning_profile(value: Any) -> dict[str, Any]:
     }
 
 
-def _normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _align_abox_entries(
+    *,
+    capabilities: list[Any],
+    constraints: list[Any],
+    capability_concepts: set[str],
+    constraint_concepts: set[str],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    warnings_list: list[str] = []
+
+    normalized_capabilities: list[dict[str, Any]] = []
+    normalized_constraints: list[dict[str, Any]] = [item for item in constraints if isinstance(item, dict)]
+    existing_constraint_names = {
+        str(item.get("name") or "").strip() for item in normalized_constraints if isinstance(item, dict)
+    }
+
+    for cap in capabilities:
+        if not isinstance(cap, dict):
+            continue
+        name = str(cap.get("name") or "").strip()
+        if not name:
+            continue
+
+        if name in constraint_concepts and name not in capability_concepts:
+            value = cap.get("score", cap.get("value", 1.0))
+            if name not in existing_constraint_names:
+                normalized_constraints.append({"name": name, "value": value})
+                existing_constraint_names.add(name)
+            warnings_list.append(
+                "Auto-fix: moved abox.capabilities item "
+                f"'{name}' to abox.constraints to align with tbox concept category 'constraint'."
+            )
+            continue
+
+        normalized_capabilities.append(cap)
+
+    existing_capability_keys = {
+        (
+            str(item.get("actor_id") or "").strip(),
+            str(item.get("name") or "").strip(),
+        )
+        for item in normalized_capabilities
+        if isinstance(item, dict)
+    }
+
+    final_constraints: list[dict[str, Any]] = []
+    for constraint in normalized_constraints:
+        name = str(constraint.get("name") or "").strip()
+        if not name:
+            continue
+
+        if name in capability_concepts and name not in constraint_concepts:
+            actor_id = str(constraint.get("actor_id") or "system").strip() or "system"
+            value = constraint.get("value")
+            if value is None:
+                score = 0.5
+            else:
+                try:
+                    score = float(value)
+                except (TypeError, ValueError):
+                    score = 0.5
+            score = max(0.0, min(1.0, score))
+            key = (actor_id, name)
+            if key not in existing_capability_keys:
+                normalized_capabilities.append({"actor_id": actor_id, "name": name, "score": score})
+                existing_capability_keys.add(key)
+            warnings_list.append(
+                "Auto-fix: moved abox.constraints item "
+                f"'{name}' to abox.capabilities to align with tbox concept category 'capability'."
+            )
+            continue
+
+        final_constraints.append(constraint)
+
+    return normalized_capabilities, final_constraints, warnings_list
+
+
+def _normalize_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     normalized = dict(payload)
+    normalization_warnings: list[str] = []
 
     meta = dict(payload.get("meta") or {})
     meta.setdefault("version", meta.get("ontology_version") or "1.0")
@@ -318,8 +396,27 @@ def _normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
     abox = dict(payload.get("abox") or {})
     abox["actors"] = _normalize_actors(list(abox.get("actors") or []))
-    abox["capabilities"] = list(abox.get("capabilities") or [])
-    abox["constraints"] = list(abox.get("constraints") or [])
+    raw_capabilities = list(abox.get("capabilities") or [])
+    raw_constraints = list(abox.get("constraints") or [])
+    capability_concepts = {
+        str(concept.get("name") or "")
+        for concept in tbox["concepts"]
+        if concept.get("category") == "capability"
+    }
+    constraint_concepts = {
+        str(concept.get("name") or "")
+        for concept in tbox["concepts"]
+        if concept.get("category") == "constraint"
+    }
+    aligned_capabilities, aligned_constraints, warnings_list = _align_abox_entries(
+        capabilities=raw_capabilities,
+        constraints=raw_constraints,
+        capability_concepts=capability_concepts,
+        constraint_concepts=constraint_concepts,
+    )
+    abox["capabilities"] = aligned_capabilities
+    abox["constraints"] = aligned_constraints
+    normalization_warnings.extend(warnings_list)
     tbox["relations"] = _normalize_relations(
         list(tbox.get("relations") or []),
         abox["actors"],
@@ -336,7 +433,11 @@ def _normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
         normalized["market_space_ontology"] = dict(payload["market_space_ontology"])
     if isinstance(payload.get("shared_actors"), list):
         normalized["shared_actors"] = list(payload["shared_actors"])
-    return normalized
+    return normalized, normalization_warnings
+
+
+def normalize_ontology_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    return _normalize_payload(payload)
 
 
 def _extract_actor_ids(actor_items: Any) -> set[str]:
@@ -563,8 +664,10 @@ def _semantic_checks(
     return issues
 
 
-def validate_ontology_input(payload: dict[str, Any]) -> OntologyInputPackage:
-    normalized_payload = _normalize_payload(payload)
+def validate_ontology_input_with_warnings(
+    payload: dict[str, Any],
+) -> tuple[OntologyInputPackage, list[str]]:
+    normalized_payload, normalization_warnings = normalize_ontology_payload(payload)
     try:
         package = OntologyInputPackage.model_validate(normalized_payload)
     except ValidationError as exc:
@@ -581,6 +684,15 @@ def validate_ontology_input(payload: dict[str, Any]) -> OntologyInputPackage:
     issues = _semantic_checks(package, normalized_payload)
     if issues:
         raise OntologyValidationError(issues)
+    return package, normalization_warnings
+
+
+def validate_ontology_input(payload: dict[str, Any]) -> OntologyInputPackage:
+    package, normalization_warnings = validate_ontology_input_with_warnings(payload)
+
+    for message in normalization_warnings:
+        warnings.warn(message, UserWarning, stacklevel=2)
+
     return package
 
 

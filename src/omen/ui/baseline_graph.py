@@ -67,6 +67,12 @@ def _weighted_edge_trace(
     )
 
 
+def _edge_bends_from_delta(delta_weight: float) -> tuple[float, float]:
+    magnitude = max(0.0, min(1.0, abs(delta_weight)))
+    spread = 0.08 + magnitude * 0.34
+    return 0.0, -spread
+
+
 def build_baseline_path_figure(view_model: dict) -> Any:
     go = importlib.import_module("plotly.graph_objects")
 
@@ -118,6 +124,8 @@ def build_baseline_path_figure(view_model: dict) -> Any:
         transition = transition_map.get(transition_id, {})
         baseline_weight = float(transition.get("baseline_weight") or 0.5)
         adjusted_weight = float(transition.get("adjusted_weight") or baseline_weight)
+        delta_weight = adjusted_weight - baseline_weight
+        baseline_bend, adjusted_bend = _edge_bends_from_delta(delta_weight)
 
         model_edge_traces.append(
             _weighted_edge_trace(
@@ -130,7 +138,7 @@ def build_baseline_path_figure(view_model: dict) -> Any:
                 dash="dash",
                 name="Baseline transition",
                 showlegend=not model_legend_shown,
-                bend=0.02,
+                bend=baseline_bend,
                 hover_label=f"{source} -> {target} | baseline_weight={baseline_weight:.3f}",
             )
         )
@@ -147,7 +155,7 @@ def build_baseline_path_figure(view_model: dict) -> Any:
                 dash="solid",
                 name="Adjusted transition",
                 showlegend=not adjusted_legend_shown,
-                bend=-0.06,
+                bend=adjusted_bend,
                 hover_label=f"{source} -> {target} | adjusted_weight={adjusted_weight:.3f}",
             )
         )

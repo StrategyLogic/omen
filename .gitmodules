@@ -1,3 +1,6 @@
 [submodule "specs"]
 	path = specs
 	url = git@github.com:StrategyLogic/omen-specs.git
+[submodule ".specify"]
+	path = .specify
+	url = git@github.com:StrategyLogic/omen-spec-instruction.git

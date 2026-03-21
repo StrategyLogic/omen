@@ -25,7 +25,6 @@ dist/
 .vscode/
 .github/agents/
 .github/prompts/
-.specify/
 
 # OS generated files
 .DS_Store

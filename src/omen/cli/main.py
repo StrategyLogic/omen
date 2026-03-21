@@ -281,6 +281,13 @@ def main() -> None:
         default="omen case replay probe",
         help="Sample text used for embedding probe",
     )
+    case_replay_check_llm.add_argument("--case-id", required=True, help="Case identifier")
+    case_replay_check_llm.add_argument(
+        "--output-dir",
+        required=False,
+        default="output/case_replay",
+        help="Root output directory",
+    )
     case_replay_check_llm.add_argument("--output", required=False, help="Optional output JSON path")
     case_replay_check_llm.add_argument(
         "--incremental",
@@ -544,8 +551,8 @@ def main() -> None:
                     rendered = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
                     report_output_path = _write_output(
                         rendered,
-                        None,
-                        "case_replay_generation.json",
+                        args.output or str(case_dir / "generation.json"),
+                        "generation.json",
                         args.incremental,
                     )
                     print(f"Reused ontology at {existing_path}")
@@ -576,8 +583,8 @@ def main() -> None:
         rendered = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
         report_output_path = _write_output(
             rendered,
-            None,
-            "case_replay_generation.json",
+            args.output or str(case_dir / "generation.json"),
+            "generation.json",
             args.incremental,
         )
         _step_logger("report", "PASSED", f"saved generation report to {report_output_path}")
@@ -591,6 +598,7 @@ def main() -> None:
         if not payload["validation_passed"]:
             raise SystemExit(2)
     elif args.command == "case-replay-baseline":
+        from omen.ui.artifacts import ensure_case_output_dir
         from omen.simulation.case_replay import run_case_replay_baseline
 
         payload = run_case_replay_baseline(
@@ -598,16 +606,18 @@ def main() -> None:
             ontology_path=args.ontology,
             output_root=args.output_dir,
         )
+        case_dir = ensure_case_output_dir(args.case_id, output_root=args.output_dir)
         rendered = json.dumps(payload, ensure_ascii=False, indent=2)
         output_path = _write_output(
             rendered,
-            args.output,
-            "case_replay_baseline_summary.json",
+            args.output or str(case_dir / "baseline_summary.json"),
+            "baseline_summary.json",
             args.incremental,
         )
         print(f"Saved baseline summary to {output_path}")
     elif args.command == "case-replay-check-llm":
         from omen.ingest.llm_ontology.healthcheck import run_llm_healthcheck
+        from omen.ui.artifacts import ensure_case_output_dir
 
         def _step_logger(step: str, status: str, message: str) -> None:
             print(f"[LLM-CHECK][{step}][{status}] {message}", flush=True)
@@ -618,11 +628,12 @@ def main() -> None:
             logger=_step_logger,
         )
 
+        case_dir = ensure_case_output_dir(args.case_id, output_root=args.output_dir)
         rendered = json.dumps(report, ensure_ascii=False, indent=2)
         output_path = _write_output(
             rendered,
-            args.output,
-            "case_replay_llm_check.json",
+            args.output or str(case_dir / "llm_check.json"),
+            "llm_check.json",
             args.incremental,
         )
         print(f"Saved llm check report to {output_path}")

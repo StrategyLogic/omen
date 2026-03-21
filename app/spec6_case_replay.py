@@ -13,6 +13,17 @@ from omen.scenario.case_replay_loader import save_strategy_ontology, validate_st
 from omen.simulation.case_replay import run_case_replay_baseline
 from omen.ui.artifacts import ensure_case_output_dir
 from omen.ui.baseline_graph import build_baseline_path_figure
+from omen.ui.case_catalog import (
+    case_display_title,
+    case_output_dir,
+    default_case_id,
+    list_case_ids_from_cases,
+    normalize_case_id,
+    resolve_existing_case_output_dir,
+    suggest_document_path,
+    suggest_known_outcome,
+    suggest_strategy,
+)
 from omen.ui.ontology_graph import build_ontology_graph_figure
 
 STRATEGY_LIBRARY: dict[str, dict[str, str]] = {
@@ -85,16 +96,43 @@ def _strategy_profile(strategy_name: str) -> dict[str, str]:
 
 with st.sidebar:
     st.header("Inputs")
-    document_path = st.text_input("Case document path", value="solution/case-xd.md")
-    case_id = st.text_input("Case ID", value="x-developer-replay")
-    strategy = st.text_input("Strategy", value="new_tech_market_entry")
-    known_outcome = st.text_input("Known Outcome", value="project failed in market expansion")
+    existing_case_ids = list_case_ids_from_cases()
+    selected_default_case_id = default_case_id(
+        existing_case_ids,
+        st.session_state.spec6_loaded_case_id,
+    )
+    if not existing_case_ids and selected_default_case_id:
+        existing_case_ids = [selected_default_case_id]
+    selected_case_index = existing_case_ids.index(selected_default_case_id) if existing_case_ids else 0
+
+    case_id = st.selectbox(
+        "Case ID",
+        options=existing_case_ids,
+        index=selected_case_index,
+        help="Select a case document from cases/*.md to switch context.",
+    )
+
+    document_path = st.text_input(
+        "Case document path",
+        value=suggest_document_path(case_id),
+        key=f"spec6_document_path_{case_id}",
+    )
+    strategy = st.text_input(
+        "Strategy",
+        value=suggest_strategy(case_id),
+        key=f"spec6_strategy_{case_id}",
+    )
+    known_outcome = st.text_input(
+        "Known Outcome",
+        value=suggest_known_outcome(case_id),
+        key=f"spec6_known_outcome_{case_id}",
+    )
     config_path = st.text_input("LLM Config", value="config/llm.toml")
 
 active_ontology_payload = _active_ontology_payload()
 active_strategy = _extract_strategy_name(active_ontology_payload, strategy)
 strategy_profile = _strategy_profile(active_strategy)
-title = "X-Developer Startup Case"
+title = case_display_title(case_id)
 
 st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
 st.title(f"Omen · {title}")
@@ -104,7 +142,7 @@ col_gen, col_graph, col_run = st.columns(3)
 
 
 def _artifact_paths(case_id: str) -> dict[str, Path]:
-    case_dir = ensure_case_output_dir(case_id)
+    case_dir = resolve_existing_case_output_dir(case_id)
     return {
         "root": case_dir,
         "ontology": case_dir / "strategy_ontology.json",
@@ -121,7 +159,7 @@ def _resolve_ontology_for_baseline(case_id: str) -> tuple[str | None, str | None
         if ontology_path and Path(ontology_path).exists():
             return str(ontology_path), None
 
-    case_dir = ensure_case_output_dir(case_id)
+    case_dir = resolve_existing_case_output_dir(case_id)
     ontology_path = case_dir / "strategy_ontology.json"
     if not ontology_path.exists():
         return None, f"Ontology file not found: {ontology_path}"
@@ -241,7 +279,7 @@ def _resolve_ontology_for_graph(case_id: str) -> tuple[dict[str, Any] | None, st
         if isinstance(payload, dict):
             return payload, None
 
-    case_dir = ensure_case_output_dir(case_id)
+    case_dir = resolve_existing_case_output_dir(case_id)
     ontology_path = case_dir / "strategy_ontology.json"
     if not ontology_path.exists():
         return None, f"Ontology file not found: {ontology_path}"
@@ -259,8 +297,11 @@ if st.session_state.spec6_loaded_case_id != case_id:
     st.session_state.spec6_generation_result = None
     st.session_state.spec6_baseline_payload = None
     st.session_state.spec6_ontology_graph_payload = None
+    st.session_state.spec6_output_note = ""
+    st.session_state.spec6_ontology_scope = "all"
     _load_existing_outputs(case_id)
     st.session_state.spec6_loaded_case_id = case_id
+    st.rerun()
 
 with col_gen:
     if st.button("Generate Ontology", type="primary", use_container_width=True):
@@ -329,7 +370,7 @@ with st.sidebar:
     st.divider()
     st.header("Output")
     paths = _artifact_paths(case_id)
-    st.caption(f"{paths['root']}")
+    st.caption(f"{case_output_dir(case_id)}")
 
     for label, key in (
         ("Ontology", "ontology"),

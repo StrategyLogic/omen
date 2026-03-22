@@ -185,7 +185,7 @@ def build_ontology_graph_figure(payload: dict[str, Any], actor_scope: str = "all
         fig.update_layout(title="Ontology Graph (empty after filter)")
         return fig
 
-    positions = nx.spring_layout(graph, k=0.5, iterations=50, center=(0, 0), seed=42) 
+    positions = nx.spring_layout(graph, seed=42) 
 
     edge_x: list[float | None] = []
     edge_y: list[float | None] = []

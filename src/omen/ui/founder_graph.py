@@ -1,12 +1,9 @@
 """Founder graph visualization helpers for analysis status view."""
 
 from __future__ import annotations
-
 import importlib
 from typing import Any
-
 import networkx as nx
-
 
 def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
     go = importlib.import_module("plotly.graph_objects")

@@ -1,4 +1,5 @@
 from omen.ingest.llm_ontology.event_builder import extract_timeline_events
+from omen.ingest.llm_ontology.founder_actor_enhancer import enhance_actor_decision_relationships
 from omen.ingest.llm_ontology.founder_builder import extract_founder_ontology
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
 from omen.models.case_replay_models import CaseDocument, LLMConfig
@@ -79,3 +80,77 @@ def test_strategy_assembler_attaches_events_and_founder_ref():
     assert merged["abox"]["events"][0]["description"] == "10-person pilot completed in three weeks"
     assert merged["founder_ref"]["path"] == "founder_ontology.json"
     assert merged["founder_ref"]["identity_map"]["actor:founder:xd"] == "founder.xd"
+
+
+def test_enhance_actor_decision_relationships_excludes_founder_actor():
+    founder_ontology = {
+        "meta": {"case_id": "x-developer"},
+        "actors": [
+            {"id": "founder.xd", "name": "Founder", "role": "founder"},
+            {"id": "actor-tech-managers", "name": "Technical Managers", "type": "role"},
+            {"id": "actor-software-teams", "name": "Software Teams", "type": "role"},
+        ],
+        "events": [
+            {
+                "id": "xdev-3",
+                "label": "pilot",
+                "actors_involved": ["founder.xd", "actor-tech-managers", "actor-software-teams"],
+                "evidence_refs": ["doc:pilot"],
+            }
+        ],
+        "constraints": [
+            {
+                "id": "constraint-1",
+                "type": "value_proposition",
+                "applies_to": ["actor-tech-managers", "actor-software-teams"],
+            }
+        ],
+        "influences": [],
+    }
+
+    enhanced, added = enhance_actor_decision_relationships(founder_ontology)
+
+    assert added >= 1
+    influences = enhanced["influences"]
+    assert any(
+        rel.get("source") == "actor-software-teams"
+        and rel.get("target") == "actor-tech-managers"
+        and rel.get("type") in {"co_decision_alignment", "shared_constraint_context"}
+        for rel in influences
+    )
+    assert not any(rel.get("source") == "founder.xd" or rel.get("target") == "founder.xd" for rel in influences)
+
+
+def test_enhance_actor_decision_relationships_infers_company_as_founder_when_missing_flag():
+    founder_ontology = {
+        "meta": {"case_id": "x-developer"},
+        "actors": [
+            {"id": "actor-xdev-team", "name": "X-Developer Team", "type": "company"},
+            {"id": "actor-customer", "name": "Customer Team", "type": "customer"},
+            {"id": "actor-manager", "name": "Technical Managers", "type": "role"},
+        ],
+        "events": [
+            {
+                "id": "xdev-3",
+                "label": "pilot",
+                "actors_involved": ["actor-xdev-team", "actor-customer", "actor-manager"],
+                "evidence_refs": ["doc:pilot"],
+            }
+        ],
+        "constraints": [],
+        "influences": [],
+    }
+
+    enhanced, _ = enhance_actor_decision_relationships(founder_ontology)
+    influences = enhanced["influences"]
+
+    assert any(
+        rel.get("source") == "actor-customer"
+        and rel.get("target") == "actor-manager"
+        and rel.get("type") == "co_decision_alignment"
+        for rel in influences
+    )
+    assert not any(
+        rel.get("source") == "actor-xdev-team" or rel.get("target") == "actor-xdev-team"
+        for rel in influences
+    )

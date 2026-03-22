@@ -7,6 +7,7 @@ from typing import Callable
 from omen.ingest.llm_ontology.config import load_llm_config
 from omen.ingest.llm_ontology.document_loader import chunk_case_document, load_case_document
 from omen.ingest.llm_ontology.event_builder import extract_timeline_events
+from omen.ingest.llm_ontology.founder_actor_enhancer import enhance_actor_decision_relationships
 from omen.ingest.llm_ontology.founder_builder import extract_founder_ontology
 
 
@@ -66,6 +67,12 @@ def generate_founder_and_events_from_document(
         config=llm_config,
         timeline_events=timeline_events,
     )
+    emit("founder_enhance", "RUNNING", "enhancing semantic relations between non-founder actors")
+    founder_ontology, added_relations = enhance_actor_decision_relationships(
+        founder_ontology,
+        config=llm_config,
+    )
+    emit("founder_enhance", "PASSED", f"added_relations={added_relations}")
     founder_actor_count = len(founder_ontology.get("actors") or []) if isinstance(founder_ontology, dict) else 0
     emit("founder_extract", "PASSED", f"actors={founder_actor_count}")
 

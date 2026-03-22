@@ -231,5 +231,5 @@ omen case-replay-baseline \
 ### 5) 启动可视化界面
 
 ```bash
-streamlit run app/spec6_case_replay.py
+streamlit run app/case_analysis.py
 ```

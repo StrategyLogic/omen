@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from omen.cli.case import handle_case_command, register_case_commands
 from omen.explain.precision_report import build_precision_report
 from omen.explain.report import build_explanation_report
 from omen.ingest.assertion_builder import build_assertions_from_candidates
@@ -294,6 +295,8 @@ def main() -> None:
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
     )
+
+    register_case_commands(sub)
 
     args = parser.parse_args()
     if args.command == "simulate":
@@ -639,6 +642,8 @@ def main() -> None:
         print(f"Saved llm check report to {output_path}")
         if not report.get("ok", False):
             raise SystemExit(2)
+    elif args.command == "case":
+        raise SystemExit(handle_case_command(args))
 
 
 if __name__ == "__main__":

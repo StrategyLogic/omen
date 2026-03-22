@@ -8,7 +8,10 @@ from typing import Any
 
 import streamlit as st
 
+from omen.analysis.founder.query import build_status_snapshot
+from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
+from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology, validate_strategy_ontology
 from omen.simulation.case_replay import run_case_replay_baseline
 from omen.ui.artifacts import ensure_case_output_dir
@@ -24,6 +27,7 @@ from omen.ui.case_catalog import (
     suggest_known_outcome,
     suggest_strategy,
 )
+from omen.ui.founder_graph import build_founder_graph_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
 
 STRATEGY_LIBRARY: dict[str, dict[str, str]] = {
@@ -51,6 +55,8 @@ if "spec6_output_note" not in st.session_state:
     st.session_state.spec6_output_note = ""
 if "spec6_ontology_scope" not in st.session_state:
     st.session_state.spec6_ontology_scope = "all"
+if "spec6_status_payload" not in st.session_state:
+    st.session_state.spec6_status_payload = None
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -127,6 +133,8 @@ with st.sidebar:
         value=suggest_known_outcome(case_id),
         key=f"spec6_known_outcome_{case_id}",
     )
+    status_year = st.text_input("Analyze Status Year", value="")
+    status_date = st.text_input("Analyze Status Date", value="")
     config_path = st.text_input("LLM Config", value="config/llm.toml")
 
 active_ontology_payload = _active_ontology_payload()
@@ -138,7 +146,7 @@ st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
 st.title(f"Omen · {title}")
 st.caption(f"This case is framed as **{strategy_profile['label']}**. {strategy_profile['summary']} {strategy_profile['fit']}")
 
-col_gen, col_graph, col_run = st.columns(3)
+col_gen, col_status, col_run = st.columns(3)
 
 
 def _artifact_paths(case_id: str) -> dict[str, Path]:
@@ -146,6 +154,8 @@ def _artifact_paths(case_id: str) -> dict[str, Path]:
     return {
         "root": case_dir,
         "ontology": case_dir / "strategy_ontology.json",
+        "founder": case_dir / "founder_ontology.json",
+        "analyze_status": case_dir / "analyze_status.json",
         "baseline_result": case_dir / "baseline_result.json",
         "baseline_explanation": case_dir / "baseline_explanation.json",
         "view_model": case_dir / "view_model.json",
@@ -190,6 +200,13 @@ def _load_existing_outputs(case_id: str) -> None:
                 }
         except Exception:
             st.session_state.spec6_ontology_graph_payload = None
+
+    if paths["analyze_status"].exists():
+        try:
+            status_payload = json.loads(paths["analyze_status"].read_text(encoding="utf-8"))
+            st.session_state.spec6_status_payload = status_payload if isinstance(status_payload, dict) else None
+        except Exception:
+            st.session_state.spec6_status_payload = None
 
     if paths["baseline_result"].exists() and paths["baseline_explanation"].exists() and paths["view_model"].exists():
         try:
@@ -272,31 +289,11 @@ def _build_space_summary(ontology_payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _resolve_ontology_for_graph(case_id: str) -> tuple[dict[str, Any] | None, str | None]:
-    generation_payload = st.session_state.spec6_generation_result
-    if generation_payload and generation_payload.get("strategy_ontology"):
-        payload = generation_payload.get("strategy_ontology")
-        if isinstance(payload, dict):
-            return payload, None
-
-    case_dir = resolve_existing_case_output_dir(case_id)
-    ontology_path = case_dir / "strategy_ontology.json"
-    if not ontology_path.exists():
-        return None, f"Ontology file not found: {ontology_path}"
-
-    try:
-        payload = json.loads(ontology_path.read_text(encoding="utf-8"))
-        if not isinstance(payload, dict):
-            return None, "Ontology JSON root must be an object"
-        return payload, None
-    except Exception as exc:
-        return None, f"Failed to load ontology: {exc}"
-
-
 if st.session_state.spec6_loaded_case_id != case_id:
     st.session_state.spec6_generation_result = None
     st.session_state.spec6_baseline_payload = None
     st.session_state.spec6_ontology_graph_payload = None
+    st.session_state.spec6_status_payload = None
     st.session_state.spec6_output_note = ""
     st.session_state.spec6_ontology_scope = "all"
     _load_existing_outputs(case_id)
@@ -314,31 +311,74 @@ with col_gen:
                 known_outcome=known_outcome,
                 config_path=config_path,
             )
-            payload = generation.model_dump(mode="python")
-            generation.strategy_ontology.setdefault("meta", {})
-            generation.strategy_ontology["meta"]["strategy"] = _normalize_strategy_name(strategy)
-            st.session_state.spec6_generation_result = payload
+
+            founder_payload, timeline_events = generate_founder_and_events_from_document(
+                document_path=document_path,
+                case_id=case_id,
+                title=title,
+                known_outcome=known_outcome,
+                config_path=config_path,
+            )
+
+            strategy_payload = attach_timeline_events(generation.strategy_ontology, timeline_events)
 
             case_dir = ensure_case_output_dir(case_id)
+            founder_path = case_dir / "founder_ontology.json"
+            strategy_payload = attach_founder_ref(
+                strategy_payload,
+                founder_payload,
+                founder_filename=founder_path.name,
+            )
+
+            payload = generation.model_dump(mode="python")
+            strategy_payload.setdefault("meta", {})
+            strategy_payload["meta"]["strategy"] = _normalize_strategy_name(strategy)
+            payload["strategy_ontology"] = strategy_payload
+            st.session_state.spec6_generation_result = payload
+
             ontology_path = save_strategy_ontology(
-                generation.strategy_ontology,
+                strategy_payload,
                 case_dir / "strategy_ontology.json",
             )
+            founder_path.write_text(json.dumps(founder_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
             payload["ontology_path"] = str(ontology_path)
             st.session_state.spec6_generation_result = payload
-            st.session_state.spec6_ontology_graph_payload = generation.strategy_ontology
-            st.session_state.spec6_output_note = "Ontology generated and saved."
+            st.session_state.spec6_ontology_graph_payload = strategy_payload
+            st.session_state.spec6_output_note = "Ontology + founder slice generated and saved."
         except Exception as exc:  # pragma: no cover - UI surfaced exception
             st.session_state.spec6_output_note = f"Generate failed: {exc}"
 
-with col_graph:
-    if st.button("Show Ontology Graph", use_container_width=True):
-        ontology_payload, resolve_error = _resolve_ontology_for_graph(case_id)
-        if resolve_error or ontology_payload is None:
-            st.session_state.spec6_output_note = resolve_error or "Ontology graph input is unavailable."
+with col_status:
+    if st.button("Analyze Status", use_container_width=True):
+        paths = _artifact_paths(case_id)
+        if not paths["ontology"].exists() or not paths["founder"].exists():
+            st.session_state.spec6_output_note = (
+                "Analyze status requires existing strategy_ontology.json and founder_ontology.json."
+            )
         else:
-            st.session_state.spec6_ontology_graph_payload = ontology_payload
-            st.session_state.spec6_output_note = "Ontology graph loaded."
+            try:
+                strategy_payload = json.loads(paths["ontology"].read_text(encoding="utf-8"))
+                founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
+                parsed_year = int(status_year.strip()) if status_year.strip() else None
+                parsed_date = status_date.strip() or None
+                status_payload = build_status_snapshot(
+                    strategy_ontology=strategy_payload,
+                    founder_ontology=founder_payload,
+                    year=parsed_year,
+                    date=parsed_date,
+                )
+                st.session_state.spec6_ontology_graph_payload = strategy_payload
+                paths["analyze_status"].write_text(
+                    json.dumps(status_payload, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                st.session_state.spec6_status_payload = status_payload
+                st.session_state.spec6_output_note = (
+                    "Analyze status loaded from existing artifacts (strategy ontology graph included)."
+                )
+            except Exception as exc:  # pragma: no cover - UI surfaced exception
+                st.session_state.spec6_output_note = f"Analyze status failed: {exc}"
 
 with col_run:
     if st.button("Run Baseline", use_container_width=True):
@@ -374,6 +414,8 @@ with st.sidebar:
 
     for label, key in (
         ("Ontology", "ontology"),
+        ("Founder", "founder"),
+        ("AnalyzeStatus", "analyze_status"),
         ("Result", "baseline_result"),
         ("Explanation", "baseline_explanation"),
         ("ViewModel", "view_model"),
@@ -385,6 +427,28 @@ with st.sidebar:
 
     if st.session_state.spec6_output_note:
         st.info(st.session_state.spec6_output_note)
+
+st.divider()
+
+if st.session_state.spec6_status_payload:
+    status_payload = st.session_state.spec6_status_payload
+    st.subheader("Analyze Status")
+
+    summary = status_payload.get("summary") if isinstance(status_payload.get("summary"), dict) else {}
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    metric_col1.metric("Timeline Events", int(summary.get("timeline_event_count") or 0))
+    metric_col2.metric("Founder Nodes", int(summary.get("founder_node_count") or 0))
+    metric_col3.metric("Founder Edges", int(summary.get("founder_edge_count") or 0))
+
+    timeline_rows = status_payload.get("timeline") if isinstance(status_payload.get("timeline"), list) else []
+    if timeline_rows:
+        st.markdown("**Timeline**")
+        st.dataframe(timeline_rows, use_container_width=True)
+    else:
+        st.info("No timeline events for current status filter.")
+
+    founder_fig = build_founder_graph_figure(status_payload)
+    st.plotly_chart(founder_fig, use_container_width=True)
 
 st.divider()
 

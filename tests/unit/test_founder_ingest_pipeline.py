@@ -42,6 +42,8 @@ def test_event_and_founder_extractors_fallback_without_llm(monkeypatch):
     assert len(events) >= 1
     assert "time" in events[0]
     assert "event" in events[0]
+    assert "description" in events[0]
+    assert events[0]["event"] in {"launch", "release", "pilot", "pricing", "expansion", "other"}
 
     founder = extract_founder_ontology(
         case_doc=case_doc,
@@ -59,11 +61,21 @@ def test_strategy_assembler_attaches_events_and_founder_ref():
         "meta": {"version": "1.0.0", "case_id": "xd"},
         "actors": [{"id": "founder.xd", "shared_id": "actor:founder:xd"}],
     }
-    events = [{"id": "event.1", "time": "2016", "event": "pivot", "evidence_refs": ["doc:1"]}]
+    events = [
+        {
+            "id": "event.1",
+            "time": "2016",
+            "event": "pilot",
+            "description": "10-person pilot completed in three weeks",
+            "evidence_refs": ["doc:1"],
+        }
+    ]
 
     merged = attach_timeline_events(strategy, events)
     merged = attach_founder_ref(merged, founder, founder_filename="founder_ontology.json")
 
     assert merged["abox"]["events"][0]["event_id"] == "event.1"
+    assert merged["abox"]["events"][0]["event"] == "pilot"
+    assert merged["abox"]["events"][0]["description"] == "10-person pilot completed in three weeks"
     assert merged["founder_ref"]["path"] == "founder_ontology.json"
     assert merged["founder_ref"]["identity_map"]["actor:founder:xd"] == "founder.xd"

@@ -59,7 +59,7 @@ def _default_founder(case_id: str, timeline_events: list[dict[str, Any]]) -> dic
                 "related": [],
                 "evidence_refs": event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else [],
                 "decision": {
-                    "content": str(event.get("event") or "unknown"),
+                    "content": str(event.get("description") or event.get("event") or "unknown"),
                     "alternatives": [],
                     "aligned_intent": "unknown",
                     "response_to": [],
@@ -113,6 +113,8 @@ def extract_founder_ontology(
         Required constraints:
         - meta includes version/case_id/slice/generated_at
         - events must use time evidence from timeline input
+        - events should include short type labels for graph display (e.g. launch/release/pilot)
+        - keep long narrative in description fields when available
         - do not use phase/stage field
         - query_skeleton.query_types must be: status, why, persona
 

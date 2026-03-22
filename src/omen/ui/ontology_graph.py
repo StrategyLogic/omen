@@ -60,8 +60,8 @@ def _extract_actor_ids(actor_items: Any) -> set[str]:
 def _build_graph(payload: dict[str, Any]) -> nx.DiGraph:
     graph = nx.DiGraph()
 
-    tbox = payload.get("tbox") if isinstance(payload.get("tbox"), dict) else {}
-    abox = payload.get("abox") if isinstance(payload.get("abox"), dict) else {}
+    tbox = payload.get("tbox") or {}
+    abox = payload.get("abox") or {}
 
     concepts = _extract_concepts(tbox)
     concept_names = {item["name"] for item in concepts}
@@ -69,7 +69,7 @@ def _build_graph(payload: dict[str, Any]) -> nx.DiGraph:
         node_id = f"concept:{concept['name']}"
         graph.add_node(node_id, label=concept["name"], node_type="concept", category=concept["category"])
 
-    relations = tbox.get("relations") if isinstance(tbox.get("relations"), list) else []
+    relations = tbox.get("relations") or []
     for relation in relations:
         if not isinstance(relation, dict):
             continue
@@ -86,7 +86,7 @@ def _build_graph(payload: dict[str, Any]) -> nx.DiGraph:
             graph.add_node(target_id, label=target, node_type="concept", category="other")
         graph.add_edge(source_id, target_id, label=name or "relation")
 
-    actors = abox.get("actors") if isinstance(abox.get("actors"), list) else []
+    actors = abox.get("actors") or []
     for actor in actors:
         if not isinstance(actor, dict):
             continue
@@ -104,7 +104,7 @@ def _build_graph(payload: dict[str, Any]) -> nx.DiGraph:
                 graph.add_node(concept_node_id, label=actor_type, node_type="concept", category="actor")
             graph.add_edge(actor_node_id, concept_node_id, label="instance_of")
 
-    capabilities = abox.get("capabilities") if isinstance(abox.get("capabilities"), list) else []
+    capabilities = abox.get("capabilities") or []
     for capability in capabilities:
         if not isinstance(capability, dict):
             continue
@@ -127,8 +127,8 @@ def _seed_actor_nodes(payload: dict[str, Any], actor_scope: str) -> set[str]:
         return set()
 
     scope_key = "tech_space_ontology" if actor_scope == "tech" else "market_space_ontology"
-    scope_payload = payload.get(scope_key) if isinstance(payload.get(scope_key), dict) else {}
-    actor_ids = _extract_actor_ids(scope_payload.get("actors"))
+    scope_payload = payload.get(scope_key) or {}
+    actor_ids = _extract_actor_ids(scope_payload.get("actors") or [])
     return {f"actor:{actor_id}" for actor_id in actor_ids if actor_id}
 
 
@@ -163,14 +163,14 @@ def _collect_reachable_with_actor_terminals(
 
 def _filter_graph_by_actor_scope(graph: nx.DiGraph, payload: dict[str, Any], actor_scope: str) -> nx.DiGraph:
     if actor_scope == "all":
-        return graph.copy()
+        return nx.DiGraph(graph)
+
+    seed_nodes = {node for node in _seed_actor_nodes(payload, actor_scope) if node in graph}
+    if not seed_nodes:
+        filtered: nx.DiGraph = nx.DiGraph(graph)
     else:
-        seed_nodes = {node for node in _seed_actor_nodes(payload, actor_scope) if node in graph}
-        if not seed_nodes:
-            filtered = graph.copy()
-        else:
-            reachable_nodes = _collect_reachable_with_actor_terminals(graph, seed_nodes)
-            filtered = graph.subgraph(reachable_nodes).copy()
+        reachable_nodes = _collect_reachable_with_actor_terminals(graph, seed_nodes)
+        filtered = nx.DiGraph(graph.subgraph(reachable_nodes).copy())
     return filtered
 
 
@@ -185,7 +185,7 @@ def build_ontology_graph_figure(payload: dict[str, Any], actor_scope: str = "all
         fig.update_layout(title="Ontology Graph (empty after filter)")
         return fig
 
-    positions = nx.spring_layout(graph, seed=42)
+    positions = nx.spring_layout(graph, k=0.5, iterations=50, center=(0, 0), seed=42) 
 
     edge_x: list[float | None] = []
     edge_y: list[float | None] = []

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from omen.analysis.founder.query import build_status_snapshot
 from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
@@ -52,6 +53,17 @@ def register_case_commands(subparsers: Any) -> None:
     status.add_argument("--case-id", required=True, help="Case identifier")
     status.add_argument("--year", required=False, type=int, help="Snapshot year")
     status.add_argument("--date", required=False, help="Snapshot date")
+    status.add_argument(
+        "--output-dir",
+        required=False,
+        default="output/case_replay",
+        help="Root output directory",
+    )
+    status.add_argument(
+        "--output",
+        required=False,
+        help="Optional output JSON path for analyze status payload",
+    )
 
     why = analyze_sub.add_parser("why", help="show decision attribution")
     why.add_argument("--case-id", required=True, help="Case identifier")
@@ -88,7 +100,44 @@ def handle_case_command(args: Any) -> int:
         print(f"[CASE-BUILD][{step}][{status}] {message}", flush=True)
 
     if args.case_command == "analyze":
-        print("Analyze commands are planned in next phase (status/why/persona).")
+        if args.analyze_command == "status":
+            case_id = normalize_case_id(args.case_id)
+            case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
+            strategy_path = case_dir / "strategy_ontology.json"
+            founder_path = case_dir / "founder_ontology.json"
+
+            if not strategy_path.exists() or not founder_path.exists():
+                print(
+                    "Analyze status requires existing artifacts. "
+                    f"Missing file(s): strategy={strategy_path.exists()}, founder={founder_path.exists()}"
+                )
+                return 2
+
+            strategy_payload = json.loads(strategy_path.read_text(encoding="utf-8"))
+            founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
+
+            status_payload = build_status_snapshot(
+                strategy_ontology=strategy_payload,
+                founder_ontology=founder_payload,
+                year=args.year,
+                date=args.date,
+            )
+
+            output_path = Path(args.output) if args.output else case_dir / "analyze_status.json"
+            output_path.write_text(
+                json.dumps(status_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print(f"Saved analyze status payload to {output_path}")
+            print(
+                "Summary: "
+                f"timeline_events={status_payload['summary']['timeline_event_count']}, "
+                f"founder_nodes={status_payload['summary']['founder_node_count']}, "
+                f"founder_edges={status_payload['summary']['founder_edge_count']}"
+            )
+            return 0
+
+        print(f"Analyze command `{args.analyze_command}` is not implemented yet.")
         return 3
     if args.case_command != "build":
         raise ValueError(f"unsupported case sub-command: {args.case_command}")

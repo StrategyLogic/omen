@@ -38,7 +38,8 @@ def attach_timeline_events(
             {
                 "event_id": str(event.get("id") or ""),
                 "time": str(event.get("time") or "unknown"),
-                "event": str(event.get("event") or ""),
+                "event": str(event.get("event") or "other"),
+                "description": str(event.get("description") or event.get("event") or ""),
                 "evidence_refs": event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else [],
                 "confidence": float(event.get("confidence") or 0.5),
                 "is_strategy_related": bool(event.get("is_strategy_related", True)),

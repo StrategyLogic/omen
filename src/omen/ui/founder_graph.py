@@ -45,7 +45,7 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
         fig.update_layout(title="Founder Graph (empty)")
         return fig
 
-    positions = nx.kamada_kawai_layout(graph)
+    positions = nx.spring_layout(graph, seed=42)
 
     edge_traces: list[Any] = []
     edge_label_x: list[float] = []

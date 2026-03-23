@@ -12,11 +12,15 @@ from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
+    decoder = json.JSONDecoder()
     start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
+    if start == -1:
         raise ValueError("LLM response does not contain a JSON object")
-    return json.loads(text[start : end + 1])
+    candidate = text[start:]
+    payload, _ = decoder.raw_decode(candidate)
+    if not isinstance(payload, dict):
+        raise ValueError("LLM response JSON payload is not an object")
+    return payload
 
 
 def _select_chunks_with_embeddings(chunks: list[str], config: LLMConfig) -> list[str]:
@@ -57,4 +61,18 @@ def generate_ontology_payload(
     prompt = f"{build_system_prompt()}\n\n{build_user_prompt(case_doc, selected_chunks, strategy=strategy)}"
     response = chat.invoke(prompt)
     content = response.content if isinstance(response.content, str) else json.dumps(response.content)
-    return _extract_json_object(content)
+    try:
+        return _extract_json_object(content)
+    except Exception:
+        retry_prompt = (
+            f"{prompt}\n\n"
+            "IMPORTANT: Return ONE valid JSON object only. "
+            "No markdown fences, no explanations, no trailing text."
+        )
+        retry_response = chat.invoke(retry_prompt)
+        retry_content = (
+            retry_response.content
+            if isinstance(retry_response.content, str)
+            else json.dumps(retry_response.content)
+        )
+        return _extract_json_object(retry_content)

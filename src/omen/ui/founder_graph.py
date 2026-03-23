@@ -24,6 +24,7 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
             node_id,
             label=str(node.get("label") or node_id),
             node_type=str(node.get("node_type") or "other"),
+            description=str(node.get("description") or "").strip(),
         )
 
     for edge in edges:
@@ -71,6 +72,7 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
     node_x: list[float] = []
     node_y: list[float] = []
     node_text: list[str] = []
+    node_hover_text: list[str] = []
     node_colors: list[str] = []
     color_map = {
         "founder_actor": "#DC2626",
@@ -86,8 +88,15 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
         x, y = positions[node_id]
         node_x.append(x)
         node_y.append(y)
-        node_text.append(str(data.get("label") or node_id))
-        node_colors.append(color_map.get(str(data.get("node_type") or ""), "#64748B"))
+        label = str(data.get("label") or node_id)
+        node_type = str(data.get("node_type") or "")
+        description = str(data.get("description") or "").strip()
+        node_text.append(label)
+        if node_type in {"product", "event"} and description:
+            node_hover_text.append(f"{label}<br>{description}")
+        else:
+            node_hover_text.append(label)
+        node_colors.append(color_map.get(node_type, "#64748B"))
 
     for trace in edge_traces:
         fig.add_trace(trace)
@@ -109,6 +118,7 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
             y=node_y,
             mode="markers+text",
             text=node_text,
+            hovertext=node_hover_text,
             textposition="top center",
             marker={"size": 16, "color": node_colors, "line": {"width": 1, "color": "#1E293B"}},
             hoverinfo="text",

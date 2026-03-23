@@ -58,6 +58,8 @@ if "spec6_status_payload" not in st.session_state:
     st.session_state.spec6_status_payload = None
 if "spec6_pending_known_outcome_updates" not in st.session_state:
     st.session_state.spec6_pending_known_outcome_updates = {}
+if "spec6_pending_strategy_updates" not in st.session_state:
+    st.session_state.spec6_pending_strategy_updates = {}
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -134,10 +136,20 @@ with st.sidebar:
         value=suggest_document_path(case_id),
         key=f"spec6_document_path_{case_id}",
     )
+    strategy_key = f"spec6_strategy_{case_id}"
+    pending_strategy_updates = st.session_state.spec6_pending_strategy_updates
+    if isinstance(pending_strategy_updates, dict):
+        pending_strategy = pending_strategy_updates.pop(case_id, None)
+        if pending_strategy is not None:
+            st.session_state[strategy_key] = pending_strategy
+    ontology_strategy = _extract_strategy_name(_active_ontology_payload(), "")
+    if strategy_key not in st.session_state:
+        st.session_state[strategy_key] = ontology_strategy or suggest_strategy(case_id)
+    elif ontology_strategy and not str(st.session_state.get(strategy_key) or "").strip():
+        st.session_state[strategy_key] = ontology_strategy
     strategy = st.text_input(
         "Strategy",
-        value=suggest_strategy(case_id),
-        key=f"spec6_strategy_{case_id}",
+        key=strategy_key,
     )
     known_outcome_key = f"spec6_known_outcome_{case_id}"
     pending_known_outcome_updates = st.session_state.spec6_pending_known_outcome_updates
@@ -218,6 +230,9 @@ def _load_existing_outputs(case_id: str) -> None:
                     "validation_issues": [],
                     "reused_existing": True,
                 }
+                strategy_name = _extract_strategy_name(ontology_payload, "")
+                if strategy_name:
+                    st.session_state.spec6_pending_strategy_updates[case_id] = strategy_name
                 known_outcome = _extract_known_outcome(ontology_payload)
                 if known_outcome:
                     st.session_state.spec6_pending_known_outcome_updates[case_id] = known_outcome
@@ -312,6 +327,15 @@ def _build_space_summary(ontology_payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _display_output_subpath(case_id: str) -> str:
+    output_path = case_output_dir(case_id)
+    try:
+        output_root = output_path.parents[1]
+        return str(output_path.relative_to(output_root))
+    except Exception:
+        return str(output_path)
+
+
 if st.session_state.spec6_loaded_case_id != case_id:
     st.session_state.spec6_generation_result = None
     st.session_state.spec6_baseline_payload = None
@@ -366,6 +390,7 @@ with col_gen:
             strategy_payload["meta"]["known_outcome"] = known_outcome_effective
             payload["strategy_ontology"] = strategy_payload
             st.session_state.spec6_generation_result = payload
+            st.session_state.spec6_pending_strategy_updates[case_id] = _normalize_strategy_name(strategy)
 
             ontology_path = save_strategy_ontology(
                 strategy_payload,
@@ -396,11 +421,11 @@ with col_gen:
             st.session_state.spec6_output_note = f"Generate failed: {exc}"
 
 with col_status:
-    if st.button("Analyze Status", use_container_width=True):
+    if st.button("Analyze Founder", use_container_width=True):
         paths = _artifact_paths(case_id)
         if not paths["ontology"].exists() or not paths["founder"].exists():
             st.session_state.spec6_output_note = (
-                "Analyze status requires existing strategy_ontology.json and founder_ontology.json."
+                "Analyze founder requires existing strategy_ontology.json and founder_ontology.json."
             )
         else:
             try:
@@ -455,7 +480,7 @@ with st.sidebar:
     st.divider()
     st.header("Output")
     paths = _artifact_paths(case_id)
-    st.caption(f"{case_output_dir(case_id)}")
+    st.caption(_display_output_subpath(case_id))
 
     for label, key in (
         ("Ontology", "ontology"),
@@ -480,10 +505,6 @@ if st.session_state.spec6_status_payload:
     st.subheader("Analyze Status")
 
     summary = status_payload.get("summary") or {}
-    metric_col1, metric_col2, metric_col3 = st.columns(3)
-    metric_col1.metric("Timeline Events", int(summary.get("timeline_event_count") or 0))
-    metric_col2.metric("Founder Nodes", int(summary.get("founder_node_count") or 0))
-    metric_col3.metric("Founder Edges", int(summary.get("founder_edge_count") or 0))
 
     timeline_rows = status_payload.get("timeline") or []
     if timeline_rows:

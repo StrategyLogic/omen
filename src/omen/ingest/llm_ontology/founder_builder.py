@@ -124,7 +124,28 @@ def _as_product_node(actor: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _normalize_founder_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _infer_default_product(case_doc: CaseDocument) -> dict[str, Any] | None:
+    text = case_doc.raw_text.lower()
+    if not any(token in text for token in ("product", "platform", "tool", "saas", "software")):
+        return None
+
+    base_name = case_doc.title.replace("Replay", "").strip(" -_")
+    if "/" in base_name:
+        base_name = base_name.split("/", 1)[0].strip()
+    if not base_name:
+        base_name = case_doc.case_id.replace("-", " ").title()
+
+    product_id = f"product-{case_doc.case_id}".replace("_", "-")
+    return {
+        "id": product_id,
+        "name": base_name,
+        "type": "platform",
+        "description": f"Core product/platform asset for case {case_doc.case_id}.",
+        "attributes": {},
+    }
+
+
+def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) -> dict[str, Any]:
     normalized = dict(payload)
     actors = normalized.get("actors")
     products = normalized.get("products")
@@ -161,8 +182,56 @@ def _normalize_founder_payload(payload: dict[str, Any]) -> dict[str, Any]:
         query_skeleton = {}
     query_skeleton["query_types"] = _DEF_QUERY_TYPES
 
+    if not product_items:
+        default_product = _infer_default_product(case_doc)
+        if default_product is not None:
+            product_items.append(default_product)
+
+    founder_actor_id = ""
+    for actor in next_actors:
+        actor_id = str(actor.get("id") or "").strip()
+        actor_type = str(actor.get("type") or "").strip().lower()
+        actor_name = str(actor.get("name") or "").strip().lower()
+        if not actor_id:
+            continue
+        if actor_type == "founder" or "founder" in actor_name or "founder" in actor_id.lower():
+            founder_actor_id = actor_id
+            break
+    if not founder_actor_id and next_actors:
+        founder_actor_id = str(next_actors[0].get("id") or "").strip()
+
+    influences = normalized.get("influences")
+    influence_items = [item for item in influences if isinstance(item, dict)] if isinstance(influences, list) else []
+    seen_edges = {
+        (
+            str(item.get("source") or "").strip(),
+            str(item.get("target") or "").strip(),
+            str(item.get("type") or "").strip(),
+        )
+        for item in influence_items
+    }
+    if founder_actor_id:
+        for product in product_items:
+            product_id = str(product.get("id") or "").strip()
+            if not product_id:
+                continue
+            key = (founder_actor_id, product_id, "builds")
+            if key in seen_edges:
+                continue
+            influence_items.append(
+                {
+                    "source": founder_actor_id,
+                    "target": product_id,
+                    "type": "builds",
+                    "description": "Founder/lead actor builds and steers the core product asset.",
+                    "origin": "normalization",
+                }
+            )
+            seen_edges.add(key)
+
     normalized["actors"] = next_actors
     normalized["products"] = product_items
+    normalized["influences"] = influence_items
     normalized["query_skeleton"] = query_skeleton
     return normalized
 
@@ -184,7 +253,7 @@ def extract_founder_ontology(
         content = response.content if isinstance(response.content, str) else json.dumps(response.content)
         payload = _extract_json_object(content)
         if payload:
-            return _normalize_founder_payload(payload)
+            return _normalize_founder_payload(payload, case_doc)
     except Exception:
         pass
 

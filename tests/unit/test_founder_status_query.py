@@ -176,3 +176,37 @@ def test_build_founder_graph_handles_legacy_constraint_event_influence_keys():
         and edge["label"] == "mitigates"
         for edge in graph["edges"]
     )
+
+
+def test_build_founder_graph_adds_constraint_edge_to_founder_by_default():
+    strategy_ontology = {"abox": {"events": []}}
+    founder_ontology = {
+        "meta": {"case_id": "x-developer"},
+        "actors": [
+            {"id": "actor-founders", "name": "Founder Team", "type": "organization"},
+            {"id": "actor-customer", "name": "Customer", "type": "customer"},
+        ],
+        "events": [],
+        "constraints": [
+            {
+                "id": "constraint-adoption",
+                "type": "market_adoption",
+                "actors_affected": ["actor-customer"],
+            }
+        ],
+        "influences": [],
+    }
+
+    payload = build_status_snapshot(
+        strategy_ontology=strategy_ontology,
+        founder_ontology=founder_ontology,
+        year=None,
+    )
+
+    graph = payload["founder_graph"]
+    assert any(
+        edge["source"] == "constraint-adoption"
+        and edge["target"] == "actor-founders"
+        and edge["label"] == "constraints"
+        for edge in graph["edges"]
+    )

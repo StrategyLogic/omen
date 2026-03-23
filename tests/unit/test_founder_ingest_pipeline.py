@@ -246,3 +246,9 @@ def test_extract_founder_ontology_moves_product_like_actor_to_products(monkeypat
     actor_types = {str(item.get("type") or "") for item in founder.get("actors") or [] if isinstance(item, dict)}
     assert "product" not in actor_types
     assert any(item.get("id") == "actor-xdev" for item in founder.get("products") or [])
+    assert any(
+        item.get("source") == "actor-founder"
+        and item.get("target") == "actor-xdev"
+        and item.get("type") == "builds"
+        for item in founder.get("influences") or []
+    )

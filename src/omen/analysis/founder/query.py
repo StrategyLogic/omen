@@ -281,6 +281,7 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
         )
 
         applies_to = constraint.get("applies_to") or constraint.get("actors_affected") or []
+        linked_founder = False
         for actor_id in applies_to:
             actor_token = str(actor_id).strip()
             if not actor_token:
@@ -289,6 +290,18 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
                 {
                     "source": cid,
                     "target": actor_token,
+                    "label": "constraints",
+                    "weight": 1.0,
+                }
+            )
+            if actor_token == founder_actor_id:
+                linked_founder = True
+
+        if founder_actor_id and not linked_founder:
+            edges.append(
+                {
+                    "source": cid,
+                    "target": founder_actor_id,
                     "label": "constraints",
                     "weight": 1.0,
                 }

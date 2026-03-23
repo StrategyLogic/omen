@@ -180,6 +180,7 @@ def handle_case_command(args: Any) -> int:
         config_path=args.config,
         logger=emit,
     )
+    known_outcome_effective = generation.inferred_known_outcome or known_outcome
     emit("strategy_generation", "PASSED", f"validation_passed={generation.validation_passed}")
 
     emit("slice_generation", "STARTED", "generating founder ontology + timeline events")
@@ -187,7 +188,7 @@ def handle_case_command(args: Any) -> int:
         document_path=args.document,
         case_id=case_id,
         title=title,
-        known_outcome=known_outcome,
+        known_outcome=known_outcome_effective,
         config_path=args.config,
         logger=emit,
     )

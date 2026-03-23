@@ -15,6 +15,7 @@ def build_system_prompt() -> str:
         Output MUST be valid JSON only.
 
         Required top-level keys:
+        - known_outcome
         - meta
         - tbox
         - abox
@@ -32,6 +33,7 @@ def build_system_prompt() -> str:
         - capabilities
 
         Constraints:
+        - known_outcome MUST be a concise final outcome phrase; return empty string only when evidence is insufficient.
         - meta MUST include: version, case_id, domain, strategy.
         - meta.strategy MUST be a reusable strategy-family slug in snake_case, not a case-specific title.
         - If the caller provides a preferred strategy label, use it exactly.
@@ -111,10 +113,99 @@ def build_user_prompt(
         Preferred strategy label: {preferred_strategy}
 
         Build a StrategyOntology JSON for this case.
+        Extract and output top-level known_outcome in the same JSON response.
+        If input Known outcome is unknown/empty, infer from evidence.
         The ontology must classify the case into a reusable strategy family under meta.strategy.
         Preserve meaningful narrative signals, but convert them into explicit concepts, axioms, actors, capabilities, constraints, and scenario fields.
 
         Case content:
         {chunk_text}
+        """
+    ).strip()
+
+
+def build_timeline_events_prompt(doc: CaseDocument, excerpt: str) -> str:
+    return dedent(
+        f"""
+        You are an ontology extraction assistant.
+        Extract timeline events from the case document as JSON array only.
+
+        Required item fields:
+        - id (string)
+        - time (string, e.g. 2016 or 2016-06)
+        - event (string enum type only, short token: launch|release|pilot|pricing|expansion|other)
+        - description (string, concrete event narrative)
+        - evidence_refs (string array)
+        - confidence (number in [0,1])
+        - is_strategy_related (boolean)
+
+        Rules:
+        - Do NOT emit phase/stage fields.
+        - Keep only historically grounded events with evidence.
+        - Output JSON array only, no markdown.
+
+        Case ID: {doc.case_id}
+        Title: {doc.title}
+        Known outcome: {doc.known_outcome}
+
+        Content:
+        {excerpt}
+        """
+    ).strip()
+
+
+def build_founder_ontology_prompt(
+    doc: CaseDocument,
+    excerpt: str,
+    timeline_json: str,
+) -> str:
+    return dedent(
+        f"""
+        You are an ontology extraction assistant.
+        Build founder_ontology JSON only.
+
+        Required top-level keys:
+        - meta
+        - actors
+        - events
+        - constraints
+        - influences
+        - query_skeleton
+
+        Required constraints:
+        - meta includes version/case_id/slice/generated_at
+        - events must use time evidence from timeline input
+        - events should include short type labels for graph display (e.g. launch/release/pilot)
+        - keep long narrative in description fields when available
+        - do not use phase/stage field
+        - query_skeleton.query_types must be: status, why, persona
+
+        Case ID: {doc.case_id}
+        Title: {doc.title}
+        Known outcome: {doc.known_outcome}
+
+        Timeline events (JSON):
+        {timeline_json}
+
+        Source excerpt:
+        {excerpt}
+        """
+    ).strip()
+
+
+def build_actor_semantic_enhancement_prompt(actor_payload_json: str) -> str:
+    return dedent(
+        f"""
+        Analyze decision-making and influence relationships among the provided actors.
+
+        Rules:
+        - Only use these actor IDs as source/target.
+        - Do not reference founder actor.
+        - Do not reference events, constraints, or any other node types.
+        - Return only JSON array.
+        - Each item must include: source, target, type, description.
+
+        Actors (JSON):
+        {actor_payload_json}
         """
     ).strip()

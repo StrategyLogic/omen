@@ -9,10 +9,10 @@ Rules:
 from __future__ import annotations
 
 import json
-from textwrap import dedent
 from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
+from omen.ingest.llm_ontology.prompts import build_actor_semantic_enhancement_prompt
 from omen.models.case_replay_models import LLMConfig
 
 
@@ -141,21 +141,9 @@ def enhance_actor_decision_relationships(
             if str(actor.get("id") or "").strip() in candidate_actor_ids
         ]
 
-        prompt = dedent(
-            f"""
-            Analyze decision-making and influence relationships among the provided actors.
-
-            Rules:
-            - Only use these actor IDs as source/target.
-            - Do not reference founder actor.
-            - Do not reference events, constraints, or any other node types.
-            - Return only JSON array.
-            - Each item must include: source, target, type, description.
-
-            Actors (JSON):
-            {json.dumps(actor_payload, ensure_ascii=False)}
-            """
-        ).strip()
+        prompt = build_actor_semantic_enhancement_prompt(
+            json.dumps(actor_payload, ensure_ascii=False)
+        )
 
         try:
             chat = create_chat_client(config)

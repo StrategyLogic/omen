@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-from textwrap import dedent
 from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
+from omen.ingest.llm_ontology.prompts import build_founder_ontology_prompt
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
@@ -96,39 +96,7 @@ def extract_founder_ontology(
 ) -> dict[str, Any]:
     excerpt = "\n\n---\n\n".join(chunks[: min(len(chunks), config.max_chunks)])
     timeline_json = json.dumps(timeline_events[:20], ensure_ascii=False)
-
-    prompt = dedent(
-        f"""
-        You are an ontology extraction assistant.
-        Build founder_ontology JSON only.
-
-        Required top-level keys:
-        - meta
-        - actors
-        - events
-        - constraints
-        - influences
-        - query_skeleton
-
-        Required constraints:
-        - meta includes version/case_id/slice/generated_at
-        - events must use time evidence from timeline input
-        - events should include short type labels for graph display (e.g. launch/release/pilot)
-        - keep long narrative in description fields when available
-        - do not use phase/stage field
-        - query_skeleton.query_types must be: status, why, persona
-
-        Case ID: {case_doc.case_id}
-        Title: {case_doc.title}
-        Known outcome: {case_doc.known_outcome}
-
-        Timeline events (JSON):
-        {timeline_json}
-
-        Source excerpt:
-        {excerpt}
-        """
-    ).strip()
+    prompt = build_founder_ontology_prompt(case_doc, excerpt, timeline_json)
 
     try:
         chat = create_chat_client(config)

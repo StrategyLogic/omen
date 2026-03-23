@@ -128,12 +128,12 @@ with st.sidebar:
         value=suggest_strategy(case_id),
         key=f"spec6_strategy_{case_id}",
     )
+    known_outcome_key = f"spec6_known_outcome_{case_id}"
     known_outcome = st.text_input(
         "Known Outcome",
         value=suggest_known_outcome(case_id),
-        key=f"spec6_known_outcome_{case_id}",
+        key=known_outcome_key,
     )
-    status_year = st.text_input("Analyze Status Year", value="")
     status_date = st.text_input("Analyze Status Date", value="")
     config_path = st.text_input("LLM Config", value="config/llm.toml")
 
@@ -311,12 +311,15 @@ with col_gen:
                 known_outcome=known_outcome,
                 config_path=config_path,
             )
+            known_outcome_effective = generation.inferred_known_outcome or known_outcome
+            if generation.inferred_known_outcome:
+                st.session_state[known_outcome_key] = generation.inferred_known_outcome
 
             founder_payload, timeline_events = generate_founder_and_events_from_document(
                 document_path=document_path,
                 case_id=case_id,
                 title=title,
-                known_outcome=known_outcome,
+                known_outcome=known_outcome_effective,
                 config_path=config_path,
             )
 
@@ -360,12 +363,11 @@ with col_status:
             try:
                 strategy_payload = json.loads(paths["ontology"].read_text(encoding="utf-8"))
                 founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
-                parsed_year = int(status_year.strip()) if status_year.strip() else None
                 parsed_date = status_date.strip() or None
                 status_payload = build_status_snapshot(
                     strategy_ontology=strategy_payload,
                     founder_ontology=founder_payload,
-                    year=parsed_year,
+                    year=None,
                     date=parsed_date,
                 )
                 st.session_state.spec6_ontology_graph_payload = strategy_payload
@@ -434,13 +436,13 @@ if st.session_state.spec6_status_payload:
     status_payload = st.session_state.spec6_status_payload
     st.subheader("Analyze Status")
 
-    summary = status_payload.get("summary") if isinstance(status_payload.get("summary"), dict) else {}
+    summary = status_payload.get("summary") or {}
     metric_col1, metric_col2, metric_col3 = st.columns(3)
     metric_col1.metric("Timeline Events", int(summary.get("timeline_event_count") or 0))
     metric_col2.metric("Founder Nodes", int(summary.get("founder_node_count") or 0))
     metric_col3.metric("Founder Edges", int(summary.get("founder_edge_count") or 0))
 
-    timeline_rows = status_payload.get("timeline") if isinstance(status_payload.get("timeline"), list) else []
+    timeline_rows = status_payload.get("timeline") or []
     if timeline_rows:
         st.markdown("**Timeline**")
         st.dataframe(timeline_rows, use_container_width=True)

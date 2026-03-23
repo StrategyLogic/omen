@@ -16,12 +16,14 @@ def test_normalize_case_id_supports_canonical_and_legacy_names() -> None:
     assert normalize_case_id("xd") == "xd"
     assert normalize_case_id("cases/xd.md") == "xd"
     assert normalize_case_id("case-xd") == "xd"
+    assert normalize_case_id("x-developer") == "xd"
     assert normalize_case_id("x-developer-replay") == "xd"
     assert normalize_case_id("shenda-replay") == "shenda"
 
 
 def test_case_id_from_markdown_uses_case_stem_without_prefix() -> None:
     assert case_id_from_markdown(Path("cases/xd.md")) == "xd"
+    assert case_id_from_markdown(Path("cases/x-developer.md")) == "xd"
     assert case_id_from_markdown(Path("cases/case-xd.md")) == "xd"
 
 
@@ -37,7 +39,7 @@ def test_list_case_ids_from_cases_reads_only_cases_markdown(tmp_path: Path) -> N
     cases_dir.mkdir(parents=True)
     output_dir.mkdir(parents=True)
 
-    (cases_dir / "xd.md").write_text("# xd", encoding="utf-8")
+    (cases_dir / "x-developer.md").write_text("# xd", encoding="utf-8")
     (cases_dir / "shenda.md").write_text("# shenda", encoding="utf-8")
     (cases_dir / "vector-memory-source.md").write_text("# ignored", encoding="utf-8")
     (output_dir / "strategy_ontology.json").write_text("{}", encoding="utf-8")
@@ -55,6 +57,7 @@ def test_resolve_existing_case_output_dir_falls_back_to_legacy_directory(tmp_pat
 
 
 def test_case_metadata_helpers_follow_canonical_case_names() -> None:
-    assert suggest_document_path("xd") == "cases/xd.md"
-    assert suggest_document_path("x-developer-replay") == "cases/xd.md"
+    assert suggest_document_path("xd") == "cases/x-developer.md"
+    assert suggest_document_path("x-developer") == "cases/x-developer.md"
+    assert suggest_document_path("x-developer-replay") == "cases/x-developer.md"
     assert case_display_title("shenda") == "Shanda / Chen Tianqiao Replay"

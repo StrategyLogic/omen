@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from textwrap import dedent
 from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
+from omen.ingest.llm_ontology.prompts import build_timeline_events_prompt
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
@@ -86,33 +86,7 @@ def extract_timeline_events(
         return []
 
     excerpt = "\n\n---\n\n".join(chunks[: min(len(chunks), config.max_chunks)])
-    prompt = dedent(
-        f"""
-        You are an ontology extraction assistant.
-        Extract timeline events from the case document as JSON array only.
-
-        Required item fields:
-        - id (string)
-        - time (string, e.g. 2016 or 2016-06)
-        - event (string enum type only, short token: launch|release|pilot|pricing|expansion|other)
-        - description (string, concrete event narrative)
-        - evidence_refs (string array)
-        - confidence (number in [0,1])
-        - is_strategy_related (boolean)
-
-        Rules:
-        - Do NOT emit phase/stage fields.
-        - Keep only historically grounded events with evidence.
-        - Output JSON array only, no markdown.
-
-        Case ID: {case_doc.case_id}
-        Title: {case_doc.title}
-        Known outcome: {case_doc.known_outcome}
-
-        Content:
-        {excerpt}
-        """
-    ).strip()
+    prompt = build_timeline_events_prompt(case_doc, excerpt)
 
     try:
         chat = create_chat_client(config)

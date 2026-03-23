@@ -61,9 +61,12 @@ def generate_strategy_ontology_from_document(
         config=llm_config,
         strategy=strategy,
     )
+    inferred_known_outcome = str(payload.pop("known_outcome", "") or "").strip() or None
     payload.setdefault("meta", {})
     if strategy:
         payload["meta"]["strategy"] = strategy
+    if inferred_known_outcome:
+        payload["meta"]["known_outcome"] = inferred_known_outcome
     emit("ontology_generation", "PASSED", f"top_level_keys={len(payload.keys())}")
 
     try:
@@ -73,6 +76,7 @@ def generate_strategy_ontology_from_document(
         return OntologyGenerationResult(
             case_id=case_id,
             strategy_ontology=payload,
+            inferred_known_outcome=inferred_known_outcome,
             validation_passed=True,
             validation_issues=[],
             generated_at=datetime.now(),
@@ -83,6 +87,7 @@ def generate_strategy_ontology_from_document(
         return OntologyGenerationResult(
             case_id=case_id,
             strategy_ontology=payload,
+            inferred_known_outcome=inferred_known_outcome,
             validation_passed=False,
             validation_issues=issues,
             generated_at=datetime.now(),

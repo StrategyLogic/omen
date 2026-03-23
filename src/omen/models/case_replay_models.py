@@ -34,6 +34,7 @@ class CaseDocument(BaseModel):
 class OntologyGenerationResult(BaseModel):
     case_id: str
     strategy_ontology: dict[str, Any]
+    inferred_known_outcome: str | None = None
     validation_passed: bool
     validation_issues: list[dict[str, Any]] = Field(default_factory=list)
     generated_at: datetime

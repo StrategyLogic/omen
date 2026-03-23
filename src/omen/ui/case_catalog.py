@@ -9,6 +9,14 @@ def normalize_case_id(value: str | Path) -> str:
     return Path(str(value)).stem.strip().lower()
 
 
+def _resolve_output_root(output_root: str | Path) -> Path:
+    root = Path(output_root)
+    if root.is_absolute():
+        return root
+    repo_root = Path(__file__).resolve().parents[3]
+    return repo_root / root
+
+
 def case_id_from_markdown(file_path: Path) -> str:
     return normalize_case_id(file_path)
 
@@ -36,7 +44,10 @@ def default_case_id(case_ids: list[str], loaded_case_id: str | Path | None = Non
 
 
 def case_output_dir(case_id: str, output_root: str | Path = "output/case_replay") -> Path:
-    return Path(output_root) / normalize_case_id(case_id)
+    root = _resolve_output_root(output_root)
+    case_dir = root / normalize_case_id(case_id)
+    case_dir.mkdir(parents=True, exist_ok=True)
+    return case_dir
 
 
 def resolve_existing_case_output_dir(case_id: str, output_root: str | Path = "output/case_replay") -> Path:

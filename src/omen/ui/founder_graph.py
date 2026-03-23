@@ -9,7 +9,7 @@ import networkx as nx
 def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
     go = importlib.import_module("plotly.graph_objects")
 
-    graph = nx.MultiDiGraph()
+    graph = nx.DiGraph()
     founder_graph = payload.get("founder_graph") or {}
     nodes = founder_graph.get("nodes") or []
     edges = founder_graph.get("edges") or []
@@ -37,7 +37,6 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
             source,
             target,
             label=str(edge.get("label") or ""),
-            curvature=("arc3,rad=0.1"),
         )
 
     fig = go.Figure()

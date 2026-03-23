@@ -6,10 +6,21 @@ import json
 from pathlib import Path
 from typing import Any
 
+from omen.ui.case_catalog import normalize_case_id
+
+
+def _resolve_output_root(output_root: str | Path) -> Path:
+    root = Path(output_root)
+    if root.is_absolute():
+        return root
+    repo_root = Path(__file__).resolve().parents[3]
+    return repo_root / root
+
 
 def ensure_case_output_dir(case_id: str, output_root: str | Path = "output/case_replay") -> Path:
-    root = Path(output_root)
-    case_dir = root / case_id
+    root = _resolve_output_root(output_root)
+    normalized_id = normalize_case_id(case_id)
+    case_dir = root / normalized_id
     case_dir.mkdir(parents=True, exist_ok=True)
     return case_dir
 

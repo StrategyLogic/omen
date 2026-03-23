@@ -53,7 +53,7 @@ def _find_founder_actor_id(actors: list[dict[str, Any]]) -> str:
 
 def _add_relation(
     relations: list[dict[str, Any]],
-    seen: set[tuple[str, str, str]],
+    seen: set[tuple[str, str]],
     *,
     source: str,
     target: str,
@@ -61,7 +61,9 @@ def _add_relation(
     description: str,
     evidence_refs: list[str] | None = None,
 ) -> bool:
-    key = (source, target, relation_type)
+    # Key change: We block ANY new relation between two nodes that ALREADY have a relationship
+    # This prevents synonyms like (A, B, "influences") and (A, B, "pressures")
+    key = (source, target)
     if key in seen:
         return False
     seen.add(key)
@@ -120,35 +122,44 @@ def enhance_actor_decision_relationships(
     }
 
     founder_actor_id = _find_founder_actor_id(actor_dicts)
-    candidate_actor_ids = {actor_id for actor_id in actor_ids if actor_id != founder_actor_id}
     
-    # Combined target IDs for enhancement (non-founder actors + competitor products)
-    all_candidate_ids = candidate_actor_ids | competitor_product_ids
+    # 0. Exclude Founder from analysis candidates
+    candidate_actor_ids = {aid for aid in actor_ids if aid != founder_actor_id}
+    
+    # Combined entity pool for analysis (Excluded-Founder Actors + Competitor Products)
+    all_entity_ids = candidate_actor_ids | competitor_product_ids
 
     influences = payload.get("influences") or []
     relations: list[dict[str, Any]] = []
+    
+    # Collect existing relations for exclusion in prompt
+    existing_simple_rels = []
+    seen: set[tuple[str, str]] = set()
+
     for item in influences:
         if not isinstance(item, dict):
             continue
-        relations.append(_normalize_relation_keys(item))
-
-    seen: set[tuple[str, str, str]] = set()
-    for relation in relations:
-        source = str(relation.get("source") or "").strip()
-        target = str(relation.get("target") or "").strip()
-        relation_type = str(relation.get("type") or "").strip()
-        if source and target and relation_type:
-            seen.add((source, target, relation_type))
+        rel = _normalize_relation_keys(item)
+        relations.append(rel)
+        
+        src = str(rel.get("source") or "").strip()
+        tgt = str(rel.get("target") or "").strip()
+        rtype = str(rel.get("type") or "").strip()
+        if src and tgt:
+            # We track (src, tgt) to block any additional semantic link between them
+            seen.add((src, tgt))
+            # Even if founder is in existing, we still pass it to list for exclusion
+            existing_simple_rels.append({"source": src, "target": tgt, "type": rtype})
 
     added_count = 0
 
-    if config and len(all_candidate_ids) >= 2:
-        # Prepare payload including both actors and competitor products
-        actor_payload = []
+    if config and len(all_entity_ids) >= 2:
+        # Prepare payload: STRICTLY non-founder actors + competitor products
+        analysis_payload = []
         for actor in actor_dicts:
             aid = str(actor.get("id") or "").strip()
             if aid in candidate_actor_ids:
-                actor_payload.append({
+                analysis_payload.append({
                     "id": aid,
                     "name": str(actor.get("name") or "").strip(),
                     "type": str(actor.get("type") or "").strip(),
@@ -158,15 +169,16 @@ def enhance_actor_decision_relationships(
         for product in product_dicts:
             pid = str(product.get("id") or "").strip()
             if pid in competitor_product_ids:
-                actor_payload.append({
+                analysis_payload.append({
                     "id": pid,
                     "name": str(product.get("name") or "").strip(),
-                    "type": "competitor",
+                    "type": "competitor_product",
                     "description": str(product.get("description") or "").strip(),
                 })
 
         prompt = build_actor_semantic_enhancement_prompt(
-            json.dumps(actor_payload, ensure_ascii=False)
+            json.dumps(analysis_payload, ensure_ascii=False),
+            json.dumps(existing_simple_rels, ensure_ascii=False)
         )
 
         try:
@@ -182,11 +194,19 @@ def enhance_actor_decision_relationships(
                 description = str(relation.get("description") or "").strip()
                 evidence_refs = relation.get("evidence_refs") or []
                 
-                # Validation: source/target must be in our candidate pool (actors or competitor products)
-                if source not in all_candidate_ids or target not in all_candidate_ids:
+                # Validation rules:
+                # 1. Source/Target must be in the entity pool (no Founder)
+                if source not in all_entity_ids or target not in all_entity_ids:
                     continue
+                
+                # 2. COMPETITOR product ONLY points outward (influences/pressures others)
+                if source in competitor_product_ids and target in competitor_product_ids:
+                   # Skip competitor-to-competitor for now or keep if strategic
+                   pass
+
                 if source == target:
                     continue
+
                 added = _add_relation(
                     relations,
                     seen,

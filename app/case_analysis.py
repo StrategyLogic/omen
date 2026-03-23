@@ -21,7 +21,6 @@ from omen.ui.case_catalog import (
     case_output_dir,
     default_case_id,
     list_case_ids_from_cases,
-    normalize_case_id,
     resolve_existing_case_output_dir,
     suggest_document_path,
     suggest_known_outcome,
@@ -57,6 +56,8 @@ if "spec6_ontology_scope" not in st.session_state:
     st.session_state.spec6_ontology_scope = "all"
 if "spec6_status_payload" not in st.session_state:
     st.session_state.spec6_status_payload = None
+if "spec6_pending_known_outcome_updates" not in st.session_state:
+    st.session_state.spec6_pending_known_outcome_updates = {}
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -86,6 +87,16 @@ def _extract_strategy_name(ontology_payload: dict[str, Any] | None, fallback: st
             if strategy_name:
                 return _normalize_strategy_name(strategy_name)
     return _normalize_strategy_name(fallback)
+
+
+def _extract_known_outcome(ontology_payload: dict[str, Any] | None, fallback: str = "") -> str:
+    if isinstance(ontology_payload, dict):
+        meta = ontology_payload.get("meta")
+        if isinstance(meta, dict):
+            known_outcome = str(meta.get("known_outcome") or "").strip()
+            if known_outcome:
+                return known_outcome
+    return fallback
 
 
 def _strategy_profile(strategy_name: str) -> dict[str, str]:
@@ -129,9 +140,18 @@ with st.sidebar:
         key=f"spec6_strategy_{case_id}",
     )
     known_outcome_key = f"spec6_known_outcome_{case_id}"
+    pending_known_outcome_updates = st.session_state.spec6_pending_known_outcome_updates
+    if isinstance(pending_known_outcome_updates, dict):
+        pending_known_outcome = pending_known_outcome_updates.pop(case_id, None)
+        if pending_known_outcome is not None:
+            st.session_state[known_outcome_key] = pending_known_outcome
+    ontology_known_outcome = _extract_known_outcome(_active_ontology_payload())
+    if known_outcome_key not in st.session_state:
+        st.session_state[known_outcome_key] = ontology_known_outcome or suggest_known_outcome(case_id)
+    elif ontology_known_outcome and str(st.session_state.get(known_outcome_key) or "").strip().lower() in {"", "unknown"}:
+        st.session_state[known_outcome_key] = ontology_known_outcome
     known_outcome = st.text_input(
         "Known Outcome",
-        value=suggest_known_outcome(case_id),
         key=known_outcome_key,
     )
     status_date = st.text_input("Analyze Status Date", value="")
@@ -198,6 +218,9 @@ def _load_existing_outputs(case_id: str) -> None:
                     "validation_issues": [],
                     "reused_existing": True,
                 }
+                known_outcome = _extract_known_outcome(ontology_payload)
+                if known_outcome:
+                    st.session_state.spec6_pending_known_outcome_updates[case_id] = known_outcome
         except Exception:
             st.session_state.spec6_ontology_graph_payload = None
 
@@ -303,6 +326,10 @@ if st.session_state.spec6_loaded_case_id != case_id:
 with col_gen:
     if st.button("Generate Ontology", type="primary", use_container_width=True):
         try:
+            # Step 1: Ensure directory exists BEFORE running LLM
+            case_dir = ensure_case_output_dir(case_id)
+            st.session_state.spec6_output_note = f"Directory verified: {case_dir}"
+            
             generation = generate_strategy_ontology_from_document(
                 document_path=document_path,
                 case_id=case_id,
@@ -313,7 +340,7 @@ with col_gen:
             )
             known_outcome_effective = generation.inferred_known_outcome or known_outcome
             if generation.inferred_known_outcome:
-                st.session_state[known_outcome_key] = generation.inferred_known_outcome
+                st.session_state.spec6_pending_known_outcome_updates[case_id] = generation.inferred_known_outcome
 
             founder_payload, timeline_events = generate_founder_and_events_from_document(
                 document_path=document_path,
@@ -336,6 +363,7 @@ with col_gen:
             payload = generation.model_dump(mode="python")
             strategy_payload.setdefault("meta", {})
             strategy_payload["meta"]["strategy"] = _normalize_strategy_name(strategy)
+            strategy_payload["meta"]["known_outcome"] = known_outcome_effective
             payload["strategy_ontology"] = strategy_payload
             st.session_state.spec6_generation_result = payload
 
@@ -345,10 +373,25 @@ with col_gen:
             )
             founder_path.write_text(json.dumps(founder_payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
+            # Generate and save generation.json to match CLI behavior
+            report = {
+                "case_id": case_id,
+                "strategy_ontology_path": str(ontology_path),
+                "founder_ontology_path": str(founder_path),
+                "validation_passed": generation.validation_passed,
+                "validation_issues": generation.validation_issues,
+                "reused_existing": False,
+            }
+            (case_dir / "generation.json").write_text(
+                json.dumps(report, ensure_ascii=False, indent=2, default=str),
+                encoding="utf-8",
+            )
+
             payload["ontology_path"] = str(ontology_path)
             st.session_state.spec6_generation_result = payload
             st.session_state.spec6_ontology_graph_payload = strategy_payload
             st.session_state.spec6_output_note = "Ontology + founder slice generated and saved."
+            st.rerun()
         except Exception as exc:  # pragma: no cover - UI surfaced exception
             st.session_state.spec6_output_note = f"Generate failed: {exc}"
 
@@ -445,7 +488,13 @@ if st.session_state.spec6_status_payload:
     timeline_rows = status_payload.get("timeline") or []
     if timeline_rows:
         st.markdown("**Timeline**")
-        st.dataframe(timeline_rows, use_container_width=True)
+        import pandas as pd
+        df_timeline = pd.DataFrame(timeline_rows)
+        # Display only requested columns in specific order
+        requested_cols = ["time", "name", "evidence", "strategic"]
+        available_cols = [c for c in requested_cols if c in df_timeline.columns]
+        df_timeline = df_timeline[available_cols]
+        st.dataframe(df_timeline, use_container_width=True)
     else:
         st.info("No timeline events for current status filter.")
 

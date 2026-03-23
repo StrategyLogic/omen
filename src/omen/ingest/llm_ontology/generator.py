@@ -7,6 +7,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client, embed_documents_with_voyage
 from omen.ingest.llm_ontology.prompts import build_system_prompt, build_user_prompt
+from omen.ingest.llm_ontology.vector_cache import get_cached_vectors, save_vectors_to_cache
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
@@ -21,10 +22,18 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 def _select_chunks_with_embeddings(chunks: list[str], config: LLMConfig) -> list[str]:
     if not chunks:
         return []
-    try:
-        embeddings = embed_documents_with_voyage(config, chunks)
-    except Exception:
-        return chunks[: config.max_chunks]
+
+    # Try local cache first
+    embeddings = get_cached_vectors(chunks, config)
+
+    if embeddings is None:
+        try:
+            embeddings = embed_documents_with_voyage(config, chunks)
+            if embeddings:
+                save_vectors_to_cache(chunks, embeddings, config)
+        except Exception:
+            return chunks[: config.max_chunks]
+
     if not embeddings:
         return chunks[: config.max_chunks]
 

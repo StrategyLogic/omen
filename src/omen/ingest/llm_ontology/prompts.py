@@ -217,25 +217,28 @@ def build_founder_ontology_prompt(
     ).strip()
 
 
-def build_actor_semantic_enhancement_prompt(actor_payload_json: str) -> str:
+def build_actor_semantic_enhancement_prompt(actor_payload_json: str, existing_relations_json: str) -> str:
     return dedent(
         f"""
-        Analyze decision-making, strategic influence, and competitive dynamics among the provided actors.
+        Analyze strategic influence and competitive dynamics among the provided organizations, stakeholders, and competitor products.
 
         Focus Areas:
-        1. Strategic Influence: How do actors influence each other's decisions or positioning?
-        2. Competitive Impact: Specifically for actors of type 'competitor', how do they constrain, pressure, or influence the strategic choices of other actors (e.g., pricing pressure, feature mimicry, market share defense)?
-        3. Market Logic: Relationships reflecting market entry barriers, substitution effects, or partner ecosystem dependencies.
+        1. STRATEGIC INFLUENCE: How do these entities influence each other's market positioning, decision-making, or survival?
+        2. COMPETITIVE IMPACT: For 'competitor' products, identify how they exert pressure (pricing, features, market defense) on specific actors.
+        3. EXCLUSION: Do NOT analyze the primary Founder/CEO. Focus only on secondary actors and competitor products.
 
         Rules:
-        - Only use these actor IDs as source/target.
-        - Do not reference founder actor.
-        - Do not reference events, constraints, or any other node types.
-        - Return only JSON array of influence objects.
-        - Each item must include: source, target, type, description.
+        - Use ONLY the provided IDs as source/target.
+        - DIRECTION: Influencer -> [Relation Type] -> Impacted Entity.
+        - EXTREME SELECTIVITY: Only create a relationship if there is a CLEAR STRATEGIC or COMPETITIVE link. If no strategic relationship exists between two nodes, do NOT create one.
+        - NO REPETITION: Do NOT repeat or synonymize any relationship already listed in "Existing Relations".
+        - Return only a JSON array of influence objects. If nothing new is found, return empty array [].
         - Semantic types: influences, constrains, pressures, substitutes, complements, competes_with.
 
-        Actors (JSON):
+        Entities to Analyze (JSON):
         {actor_payload_json}
+
+        Existing Relations (Do NOT repeat or duplicate these):
+        {existing_relations_json}
         """
     ).strip()

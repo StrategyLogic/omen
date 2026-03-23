@@ -70,13 +70,12 @@ def _filter_strategy_events(
             continue
         items.append(
             {
-                "event_id": str(event.get("event_id") or event.get("id") or "").strip() or "unknown",
+                "id": str(event.get("id") or event.get("event_id") or "").strip() or "unknown",
                 "time": time_text or "unknown",
-                "event": str(event.get("event") or event.get("type") or "").strip() or "unknown",
+                "name": str(event.get("name") or event.get("event") or event.get("type") or "").strip() or "unknown",
                 "description": str(event.get("description") or event.get("content") or "").strip(),
-                "evidence_refs": event.get("evidence_refs") or [],
-                "confidence": event.get("confidence") if event.get("confidence") is not None else "medium",
-                "is_strategy_related": bool(event.get("is_strategy_related", True)),
+                "evidence": " | ".join(str(ref) for ref in (event.get("evidence_refs") or [])),
+                "strategic": "Yes" if bool(event.get("is_strategy_related", True)) else "No",
             }
         )
     return items
@@ -85,20 +84,24 @@ def _filter_strategy_events(
 def _timeline_from_founder_events(founder_events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     timeline: list[dict[str, Any]] = []
     for event in founder_events:
-        raw_text = str(event.get("event") or event.get("description") or "").strip()
-        event_type = _normalize_event_type(
-            event.get("type") or event.get("label") or event.get("event"),
-            raw_text,
-        )
+        event_id = str(event.get("id") or "").strip()
+        event_name = str(event.get("name") or "").strip()
+        
+        if not event_name:
+            raw_text = str(event.get("event") or event.get("description") or "").strip()
+            event_type = _normalize_event_type(
+                event.get("type") or event.get("label") or event.get("event"),
+                raw_text,
+            )
+            event_name = event_type
+
         timeline.append(
             {
-                "event_id": str(event.get("id") or "").strip() or "unknown",
+                "id": event_id or "unknown",
                 "time": _as_time_text(event.get("date") or event.get("time")) or "unknown",
-                "event": event_type,
-                "description": str(event.get("description") or raw_text).strip(),
-                "evidence_refs": event.get("evidence_refs") or [],
-                "confidence": event.get("confidence") if event.get("confidence") is not None else "medium",
-                "is_strategy_related": bool(event.get("is_strategy_related", True)),
+                "name": event_name or "unknown",
+                "evidence": " | ".join(str(ref) for ref in (event.get("evidence_refs") or [])),
+                "strategic": "Yes" if bool(event.get("is_strategy_related", True)) else "No",
             }
         )
     return timeline
@@ -373,10 +376,16 @@ def build_status_snapshot(
     year: int | None = None,
     date: str | None = None,
 ) -> dict[str, Any]:
+    # Founder events carry the canonical source names/IDs
     founder_events = _filter_founder_events(founder_ontology, year=year, date=date)
-    timeline_events = _filter_strategy_events(strategy_ontology, year=year, date=date)
+    
+    # We prefer to build timeline from founder ontology to ensure 'name' matches canonical event name
+    timeline_events = _timeline_from_founder_events(founder_events)
+    
+    # If founder ontology is empty for some reason, fallback to strategy ontology ABOX events
     if not timeline_events:
-        timeline_events = _timeline_from_founder_events(founder_events)
+        timeline_events = _filter_strategy_events(strategy_ontology, year=year, date=date)
+        
     founder_graph = _build_founder_graph(founder_ontology, founder_events)
 
     return {

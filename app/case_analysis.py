@@ -8,14 +8,14 @@ from typing import Any
 
 import streamlit as st
 
+from omen.analysis.founder.formation import build_strategic_formation_chain
+from omen.analysis.founder.insight import generate_unified_insight
 from omen.analysis.founder.query import build_status_snapshot
 from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
-from omen.scenario.case_replay_loader import save_strategy_ontology, validate_strategy_ontology
-from omen.simulation.case_replay import run_case_replay_baseline
+from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.ui.artifacts import ensure_case_output_dir
-from omen.ui.baseline_graph import build_baseline_path_figure
 from omen.ui.case_catalog import (
     case_display_title,
     case_output_dir,
@@ -26,6 +26,7 @@ from omen.ui.case_catalog import (
     suggest_known_outcome,
     suggest_strategy,
 )
+from omen.ui.formation_graph import build_formation_chain_figure
 from omen.ui.founder_graph import build_founder_graph_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
 
@@ -44,8 +45,6 @@ STRATEGY_LIBRARY: dict[str, dict[str, str]] = {
 
 if "spec6_generation_result" not in st.session_state:
     st.session_state.spec6_generation_result = None
-if "spec6_baseline_payload" not in st.session_state:
-    st.session_state.spec6_baseline_payload = None
 if "spec6_ontology_graph_payload" not in st.session_state:
     st.session_state.spec6_ontology_graph_payload = None
 if "spec6_loaded_case_id" not in st.session_state:
@@ -56,6 +55,10 @@ if "spec6_ontology_scope" not in st.session_state:
     st.session_state.spec6_ontology_scope = "all"
 if "spec6_status_payload" not in st.session_state:
     st.session_state.spec6_status_payload = None
+if "spec6_formation_payload" not in st.session_state:
+    st.session_state.spec6_formation_payload = None
+if "spec6_insight_payload" not in st.session_state:
+    st.session_state.spec6_insight_payload = None
 if "spec6_pending_known_outcome_updates" not in st.session_state:
     st.session_state.spec6_pending_known_outcome_updates = {}
 if "spec6_pending_strategy_updates" not in st.session_state:
@@ -178,7 +181,7 @@ st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
 st.title(f"Omen · {title}")
 st.caption(f"This case is framed as **{strategy_profile['label']}**. {strategy_profile['summary']} {strategy_profile['fit']}")
 
-col_gen, col_status, col_run = st.columns(3)
+col_gen, col_status, col_run, col_insight = st.columns(4)
 
 
 def _artifact_paths(case_id: str) -> dict[str, Path]:
@@ -188,31 +191,9 @@ def _artifact_paths(case_id: str) -> dict[str, Path]:
         "ontology": case_dir / "strategy_ontology.json",
         "founder": case_dir / "founder_ontology.json",
         "analyze_status": case_dir / "analyze_status.json",
-        "baseline_result": case_dir / "baseline_result.json",
-        "baseline_explanation": case_dir / "baseline_explanation.json",
-        "view_model": case_dir / "view_model.json",
+        "analyze_formation": case_dir / "analyze_formation.json",
+        "analyze_insight": case_dir / "analyze_insight.json",
     }
-
-
-def _resolve_ontology_for_baseline(case_id: str) -> tuple[str | None, str | None]:
-    generation_payload = st.session_state.spec6_generation_result
-    if generation_payload and generation_payload.get("validation_passed"):
-        ontology_path = generation_payload.get("ontology_path")
-        if ontology_path and Path(ontology_path).exists():
-            return str(ontology_path), None
-
-    case_dir = resolve_existing_case_output_dir(case_id)
-    ontology_path = case_dir / "strategy_ontology.json"
-    if not ontology_path.exists():
-        return None, f"Ontology file not found: {ontology_path}"
-
-    try:
-        payload = json.loads(ontology_path.read_text(encoding="utf-8"))
-        validate_strategy_ontology(payload)
-    except Exception as exc:
-        return None, f"Existing ontology is invalid: {exc}"
-
-    return str(ontology_path), None
 
 
 def _load_existing_outputs(case_id: str) -> None:
@@ -246,23 +227,20 @@ def _load_existing_outputs(case_id: str) -> None:
         except Exception:
             st.session_state.spec6_status_payload = None
 
-    if paths["baseline_result"].exists() and paths["baseline_explanation"].exists() and paths["view_model"].exists():
+    if paths["analyze_formation"].exists():
         try:
-            result_payload = json.loads(paths["baseline_result"].read_text(encoding="utf-8"))
-            explanation_payload = json.loads(paths["baseline_explanation"].read_text(encoding="utf-8"))
-            view_model_payload = json.loads(paths["view_model"].read_text(encoding="utf-8"))
-            st.session_state.spec6_baseline_payload = {
-                "result": result_payload,
-                "explanation": explanation_payload,
-                "view_model": view_model_payload,
-                "paths": {
-                    "result": str(paths["baseline_result"]),
-                    "explanation": str(paths["baseline_explanation"]),
-                    "view_model": str(paths["view_model"]),
-                },
-            }
+            formation_payload = json.loads(paths["analyze_formation"].read_text(encoding="utf-8"))
+            st.session_state.spec6_formation_payload = formation_payload if isinstance(formation_payload, dict) else None
         except Exception:
-            st.session_state.spec6_baseline_payload = None
+            st.session_state.spec6_formation_payload = None
+    st.session_state.spec6_insight_payload = None
+
+    if paths["analyze_insight"].exists():
+        try:
+            insight_payload = json.loads(paths["analyze_insight"].read_text(encoding="utf-8"))
+            st.session_state.spec6_insight_payload = insight_payload if isinstance(insight_payload, dict) else None
+        except Exception:
+            st.session_state.spec6_insight_payload = None
 
 
 def _extract_actor_ids(actor_items: Any) -> set[str]:
@@ -336,11 +314,31 @@ def _display_output_subpath(case_id: str) -> str:
         return str(output_path)
 
 
+def _pick_formation_target_event_id(founder_payload: dict[str, Any], status_payload: dict[str, Any] | None) -> str | None:
+    timeline = (status_payload or {}).get("timeline") if isinstance(status_payload, dict) else None
+    if isinstance(timeline, list) and timeline:
+        for item in reversed(timeline):
+            if isinstance(item, dict):
+                event_id = str(item.get("id") or "").strip()
+                if event_id:
+                    return event_id
+
+    events = founder_payload.get("events")
+    if isinstance(events, list) and events:
+        for item in reversed(events):
+            if isinstance(item, dict):
+                event_id = str(item.get("id") or "").strip()
+                if event_id:
+                    return event_id
+    return None
+
+
 if st.session_state.spec6_loaded_case_id != case_id:
     st.session_state.spec6_generation_result = None
-    st.session_state.spec6_baseline_payload = None
     st.session_state.spec6_ontology_graph_payload = None
     st.session_state.spec6_status_payload = None
+    st.session_state.spec6_formation_payload = None
+    st.session_state.spec6_insight_payload = None
     st.session_state.spec6_output_note = ""
     st.session_state.spec6_ontology_scope = "all"
     _load_existing_outputs(case_id)
@@ -451,30 +449,55 @@ with col_status:
                 st.session_state.spec6_output_note = f"Analyze status failed: {exc}"
 
 with col_run:
-    if st.button("Run Baseline", use_container_width=True):
-        ontology_path, resolve_error = _resolve_ontology_for_baseline(case_id)
-        if resolve_error or ontology_path is None:
-            st.session_state.spec6_output_note = resolve_error or "Ontology path resolution failed."
+    if st.button("Analyze Formation", use_container_width=True):
+        paths = _artifact_paths(case_id)
+        if not paths["founder"].exists():
+            st.session_state.spec6_output_note = "Analyze formation requires existing founder_ontology.json."
         else:
             try:
-                baseline = run_case_replay_baseline(
-                    case_id=case_id,
-                    ontology_path=ontology_path,
-                    known_outcome=known_outcome,
+                founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
+                target_event_id = _pick_formation_target_event_id(
+                    founder_payload,
+                    st.session_state.spec6_status_payload,
                 )
-                st.session_state.spec6_baseline_payload = baseline
-                ontology_warnings = list(baseline.get("ontology_warnings") or [])
-                if ontology_warnings:
-                    st.session_state.spec6_output_note = (
-                        f"Baseline completed with auto-fix corrections ({len(ontology_warnings)}): "
-                        + " | ".join(ontology_warnings)
-                    )
+                if not target_event_id:
+                    st.session_state.spec6_output_note = "No event id available for formation analysis."
                 else:
-                    st.session_state.spec6_output_note = (
-                        f"Baseline completed with ontology: {Path(ontology_path).name}"
+                    formation_payload = build_strategic_formation_chain(
+                        founder_ontology=founder_payload,
+                        target_event_id=target_event_id,
                     )
+                    paths["analyze_formation"].write_text(
+                        json.dumps(formation_payload, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    st.session_state.spec6_formation_payload = formation_payload
+                    st.session_state.spec6_output_note = f"Analyze formation generated for event: {target_event_id}"
             except Exception as exc:  # pragma: no cover - UI surfaced exception
-                st.session_state.spec6_output_note = f"Baseline run failed: {exc}"
+                st.session_state.spec6_output_note = f"Analyze formation failed: {exc}"
+with col_insight:
+    if st.button("Deep Insight", use_container_width=True):
+        paths = _artifact_paths(case_id)
+        if not paths["founder"].exists() or not paths["analyze_formation"].exists():
+            st.session_state.spec6_output_note = "Deep Insight requires existing founder_ontology.json and analyze_formation.json."
+        else:
+            try:
+                founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
+                formation_payload = json.loads(paths["analyze_formation"].read_text(encoding="utf-8"))
+                insight_payload = generate_unified_insight(
+                    case_id=case_id,
+                    founder_ontology=founder_payload,
+                    formation_payload=formation_payload,
+                )
+                paths["analyze_insight"].write_text(
+                    json.dumps(insight_payload, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                st.session_state.spec6_insight_payload = insight_payload
+                st.session_state.spec6_output_note = "Deep Insight (Narrative + Gaps) generated."
+            except Exception as exc:
+                st.session_state.spec6_output_note = f"Deep Insight failed: {exc}"
+
 
 with st.sidebar:
     st.divider()
@@ -486,9 +509,8 @@ with st.sidebar:
         ("Ontology", "ontology"),
         ("Founder", "founder"),
         ("AnalyzeStatus", "analyze_status"),
-        ("Result", "baseline_result"),
-        ("Explanation", "baseline_explanation"),
-        ("ViewModel", "view_model"),
+        ("AnalyzeFormation", "analyze_formation"),
+        ("AnalyzeInsight", "analyze_insight"),
     ):
         filename = paths[key].name
         exists = paths[key].exists()
@@ -577,46 +599,72 @@ if st.session_state.spec6_ontology_graph_payload:
 
 st.divider()
 
-if st.session_state.spec6_baseline_payload:
-    payload = st.session_state.spec6_baseline_payload
-    view_model = payload.get("view_model", {})
-    explanation = payload.get("explanation", {})
-    st.subheader("Baseline Replay Path")
-    summary = view_model.get("baseline_summary", {})
+if st.session_state.spec6_formation_payload:
+    formation_payload = st.session_state.spec6_formation_payload
+    st.subheader("Strategic Formation Chain")
 
-    metric_col1, metric_col2, metric_col3 = st.columns(3)
-    metric_col1.metric("Outcome", summary.get("outcome", "unknown"))
-    metric_col2.metric("Phases", summary.get("phase_count", 0))
-    metric_col3.metric("Nodes", summary.get("node_count", 0))
+    summary = formation_payload.get("summary") or {}
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    metric_col1.metric("Perception Signals", int(summary.get("perception_signal_count") or 0))
+    metric_col2.metric("Internal Constraints", int(summary.get("internal_constraint_count") or 0))
+    metric_col3.metric("External Pressures", int(summary.get("external_pressure_count") or 0))
+    metric_col4.metric("Execution Deltas", int(summary.get("execution_delta_count") or 0))
 
-    fig = build_baseline_path_figure(view_model)
-    st.plotly_chart(fig, use_container_width=True)
+    formation_fig = build_formation_chain_figure(formation_payload)
+    st.plotly_chart(formation_fig, use_container_width=True)
 
-    st.subheader("Simulated vs Real Outcome")
-    outcome_col1, outcome_col2 = st.columns(2)
-    outcome_col1.metric("Simulated outcome", str(summary.get("outcome", "unknown")))
-    outcome_col2.metric("Known real outcome", str(known_outcome))
+    chain = formation_payload.get("formation_chain") or {}
+    st.markdown("**Perception**")
+    st.json(chain.get("perception") or [])
 
-    reality_gaps = list(explanation.get("reality_gap_analysis") or [])
-    if reality_gaps:
-        st.markdown("**Reality Gap Analysis**")
-        for gap in reality_gaps:
-            st.warning(
-                (
-                    f"{gap.get('factor', 'gap')}: {gap.get('reality_observation', '')} "
-                    f"| calibration: {gap.get('suggested_calibration', '')}"
-                )
-            )
+    st.markdown("**Constraint Conflict**")
+    st.json(chain.get("constraint_conflict") or {})
 
-    causal_gap_links = list(view_model.get("causal_gap_links") or [])
-    if causal_gap_links:
-        st.markdown("**Causal-Gap Links**")
-        st.json(causal_gap_links)
+    st.markdown("**Mediation (Mental Patterns / Strategic Style)**")
+    st.json(chain.get("mediation") or {})
 
-    editable_controls = list(view_model.get("editable_controls") or [])
-    if editable_controls:
-        st.markdown("**Key Calibration Controls**")
-        st.json(editable_controls)
+    st.markdown("**Decision Logic**")
+    st.json(chain.get("decision_logic") or {})
 
-    st.subheader("Artifact Paths")
-    st.code(json.dumps(payload.get("paths", {}), ensure_ascii=False, indent=2), language="json")
+    st.markdown("**Execution Delta**")
+    st.json(chain.get("execution_delta") or [])
+
+st.divider()
+
+if st.session_state.spec6_insight_payload:
+    insight_payload = st.session_state.spec6_insight_payload
+    st.subheader("Deep Strategic Insight")
+    
+    persona = insight_payload.get("persona_insight") or {}
+    gaps = insight_payload.get("strategy_gaps") or {}
+    
+    t1, t2 = st.tabs(["👤 Persona Narrative", "⚖️ Strategy Gaps & What-if"])
+    
+    with t1:
+        st.markdown(f"### {persona.get('title', 'Founder Persona')}")
+        st.write(persona.get("narrative", "No narrative available."))
+        
+        if persona.get("core_beliefs"):
+            st.markdown("**Core Beliefs**")
+            for b in persona["core_beliefs"]:
+                st.info(b)
+        
+        if persona.get("decision_style"):
+            st.markdown("**Decision Style**")
+            st.json(persona["decision_style"])
+
+    with t2:
+        st.markdown("### Misalignment & Counterfactuals")
+        
+        gaps_list = gaps if isinstance(gaps, list) else []
+        for gap in gaps_list:
+            with st.expander(f"Gap: {gap.get('assumption', 'Unknown Point')}"):
+                st.write(f"**Observed Reality:** {gap.get('observation', '...')}")
+                if gap.get('contradiction'):
+                    st.error(f"**Contradiction:** {gap.get('contradiction')}")
+                if gap.get('gap_significance'):
+                    st.warning(f"**Significance:** {gap.get('gap_significance')}")
+                if gap.get('what_if_scenario'):
+                    st.success("**What-if Scenario**")
+                    st.write(gap['what_if_scenario'])
+

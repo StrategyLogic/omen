@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from omen.analysis.founder.formation import build_strategic_formation_chain
 from omen.analysis.founder.query import build_status_snapshot
 from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
@@ -73,6 +74,36 @@ def register_case_commands(subparsers: Any) -> None:
     persona.add_argument("--case-id", required=True, help="Case identifier")
     persona.add_argument("--year-range", required=False, help="Year range like 2014:2018")
 
+    formation = analyze_sub.add_parser("formation", help="trace strategic formation chain")
+    formation.add_argument("--case-id", required=True, help="Case identifier")
+    formation.add_argument("--event-id", required=True, help="Target event id")
+    formation.add_argument(
+        "--output-dir",
+        required=False,
+        default="output/case_replay",
+        help="Root output directory",
+    )
+    formation.add_argument(
+        "--output",
+        required=False,
+        help="Optional output JSON path for analyze formation payload",
+    )
+
+    insight = analyze_sub.add_parser("insight", help="unified deep insight (persona + gaps)")
+    insight.add_argument("--case-id", required=True, help="Case identifier")
+    insight.add_argument("--event-id", required=False, help="Optional event ID for gap context")
+    insight.add_argument(
+        "--output-dir",
+        required=False,
+        default="output/case_replay",
+        help="Root output directory",
+    )
+    insight.add_argument(
+        "--output",
+        required=False,
+        help="Optional output JSON path for unified insight",
+    )
+
 
 def _generation_report_payload(
     *,
@@ -135,6 +166,94 @@ def handle_case_command(args: Any) -> int:
                 f"founder_nodes={status_payload['summary']['founder_node_count']}, "
                 f"founder_edges={status_payload['summary']['founder_edge_count']}"
             )
+            return 0
+
+        if args.analyze_command == "formation":
+            from omen.analysis.founder.formation import build_strategic_formation_chain
+            from omen.analysis.founder.llm_enhance import enhance_formation_with_narrative
+
+            case_id = normalize_case_id(args.case_id)
+            case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
+            founder_path = case_dir / "founder_ontology.json"
+
+            if not founder_path.exists():
+                print(
+                    "Analyze formation requires existing founder artifact. "
+                    f"Missing founder file: {founder_path}"
+                )
+                return 2
+
+            founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
+            try:
+                formation_payload = build_strategic_formation_chain(
+                    founder_ontology=founder_payload,
+                    target_event_id=str(args.event_id).strip(),
+                )
+
+                # Add narrative enhancement (US2/T025)
+                # In this phase, we use the skeleton narrative if no LLM config is passed
+                formation_payload = enhance_formation_with_narrative(formation_payload)
+
+            except Exception as exc:
+                print(f"Analyze formation failed: {exc}")
+                return 2
+
+            output_path = Path(args.output) if args.output else case_dir / "analyze_formation.json"
+            output_path.write_text(
+                json.dumps(formation_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            summary = formation_payload.get("summary") or {}
+            print(f"Saved analyze formation payload to {output_path}")
+            print(
+                "Summary: "
+                f"founder={summary.get('founder', 'unknown')}, "
+                f"perception_signals={summary.get('perception_signal_count', 0)}, "
+                f"internal_constraints={summary.get('internal_constraint_count', 0)}, "
+                f"external_pressures={summary.get('external_pressure_count', 0)}, "
+                f"execution_delta={summary.get('execution_delta_count', 0)}"
+            )
+            return 0
+
+        if args.analyze_command == "insight":
+            from omen.analysis.founder.formation import build_strategic_formation_chain
+            from omen.analysis.founder.insight import generate_unified_insight
+
+            case_id = normalize_case_id(args.case_id)
+            case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
+            founder_path = case_dir / "founder_ontology.json"
+
+            if not founder_path.exists():
+                print(f"Analyze insight requires existing founder artifact: {founder_path}")
+                return 2
+
+            founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
+            formation_payload = None
+            if args.event_id:
+                try:
+                    formation_payload = build_strategic_formation_chain(
+                        founder_ontology=founder_payload,
+                        target_event_id=str(args.event_id).strip(),
+                    )
+                except Exception as exc:
+                    print(f"Formation tracing for insight failed: {exc}. Proceeding with persona only.")
+
+            try:
+                insight_payload = generate_unified_insight(
+                    case_id=case_id,
+                    founder_ontology=founder_payload,
+                    formation_payload=formation_payload,
+                )
+            except Exception as exc:
+                print(f"Analyze insight failed: {exc}")
+                return 2
+
+            output_path = Path(args.output) if args.output else case_dir / "analyze_insight.json"
+            output_path.write_text(
+                json.dumps(insight_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print(f"Saved unified insight payload to {output_path}")
             return 0
 
         print(f"Analyze command `{args.analyze_command}` is not implemented yet.")

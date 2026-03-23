@@ -23,6 +23,7 @@ dist/
 *.log
 .idea/
 .vscode/
+.VSCodeCounter/
 .github/agents/
 .github/prompts/
 
@@ -36,6 +37,7 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*TEST*
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -48,7 +50,6 @@ htmlcov/
 *.~ 
 .env*
 config/llm.toml
-solution/
 .local.md
 output/
 *legacy*

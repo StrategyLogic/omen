@@ -167,6 +167,7 @@ def build_founder_ontology_prompt(
         Required top-level keys:
         - meta
         - actors
+        - products
         - events
         - constraints
         - influences
@@ -174,6 +175,10 @@ def build_founder_ontology_prompt(
 
         Required constraints:
         - meta includes version/case_id/slice/generated_at
+        - actors MUST contain strategic actors only (people/teams/organizations and decision-making stakeholders)
+        - actors[].type MUST be one of: founder, person, team, organization, customer, partner, investor, regulator, competitor, role
+        - products/platform/tool/saas/app/system MUST NOT appear in actors
+        - products MUST include product/platform/tool assets with fields: id, name, type, description
         - events must use time evidence from timeline input
         - events should include short type labels for graph display (e.g. launch/release/pilot)
         - keep long narrative in description fields when available

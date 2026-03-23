@@ -135,3 +135,44 @@ def test_build_founder_graph_uses_only_explicit_edges_and_keeps_all_nodes():
         for edge in edges
     )
     assert "actor-enterprise-leaders" in node_ids
+
+
+def test_build_founder_graph_handles_legacy_constraint_event_influence_keys():
+    strategy_ontology = {"abox": {"events": []}}
+    founder_ontology = {
+        "meta": {"case_id": "x-developer"},
+        "actors": [{"id": "actor-founder", "name": "Founder", "type": "founder"}],
+        "products": [{"id": "product-xdev", "name": "X-Developer", "type": "platform"}],
+        "events": [{"id": "xdev-1", "time": "2019", "type": "launch", "actors_involved": ["actor-founder"]}],
+        "constraints": [{"id": "constraint-1", "type": "market_adoption", "actors_affected": ["actor-founder"]}],
+        "influences": [
+            {
+                "source_event": "xdev-1",
+                "target_constraint": "constraint-1",
+                "type": "mitigates",
+            }
+        ],
+    }
+
+    payload = build_status_snapshot(
+        strategy_ontology=strategy_ontology,
+        founder_ontology=founder_ontology,
+        year=None,
+    )
+
+    graph = payload["founder_graph"]
+    node_ids = {node["id"] for node in graph["nodes"]}
+    assert "product-xdev" in node_ids
+
+    assert any(
+        edge["source"] == "constraint-1"
+        and edge["target"] == "actor-founder"
+        and edge["label"] == "constraints"
+        for edge in graph["edges"]
+    )
+    assert any(
+        edge["source"] == "xdev-1"
+        and edge["target"] == "constraint-1"
+        and edge["label"] == "mitigates"
+        for edge in graph["edges"]
+    )

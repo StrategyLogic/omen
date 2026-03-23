@@ -1,3 +1,5 @@
+import json
+
 from omen.ingest.llm_ontology.event_builder import extract_timeline_events
 from omen.ingest.llm_ontology.founder_actor_enhancer import enhance_actor_decision_relationships
 from omen.ingest.llm_ontology.founder_builder import extract_founder_ontology
@@ -82,7 +84,31 @@ def test_strategy_assembler_attaches_events_and_founder_ref():
     assert merged["founder_ref"]["identity_map"]["actor:founder:xd"] == "founder.xd"
 
 
-def test_enhance_actor_decision_relationships_excludes_founder_actor():
+def test_enhance_actor_decision_relationships_excludes_founder_actor(monkeypatch):
+    from omen.ingest.llm_ontology import founder_actor_enhancer
+
+    class _DummyResponse:
+        def __init__(self, content: str) -> None:
+            self.content = content
+
+    class _DummyChat:
+        def invoke(self, _prompt: str) -> _DummyResponse:
+            return _DummyResponse(
+                json.dumps(
+                    [
+                        {
+                            "source": "actor-software-teams",
+                            "target": "actor-tech-managers",
+                            "type": "co_decision_alignment",
+                            "description": "shared decision context",
+                        }
+                    ],
+                    ensure_ascii=False,
+                )
+            )
+
+    monkeypatch.setattr(founder_actor_enhancer, "create_chat_client", lambda _config: _DummyChat())
+
     founder_ontology = {
         "meta": {"case_id": "x-developer"},
         "actors": [
@@ -108,7 +134,7 @@ def test_enhance_actor_decision_relationships_excludes_founder_actor():
         "influences": [],
     }
 
-    enhanced, added = enhance_actor_decision_relationships(founder_ontology)
+    enhanced, added = enhance_actor_decision_relationships(founder_ontology, config=_dummy_config())
 
     assert added >= 1
     influences = enhanced["influences"]
@@ -121,7 +147,37 @@ def test_enhance_actor_decision_relationships_excludes_founder_actor():
     assert not any(rel.get("source") == "founder.xd" or rel.get("target") == "founder.xd" for rel in influences)
 
 
-def test_enhance_actor_decision_relationships_infers_company_as_founder_when_missing_flag():
+def test_enhance_actor_decision_relationships_infers_company_as_founder_when_missing_flag(monkeypatch):
+    from omen.ingest.llm_ontology import founder_actor_enhancer
+
+    class _DummyResponse:
+        def __init__(self, content: str) -> None:
+            self.content = content
+
+    class _DummyChat:
+        def invoke(self, _prompt: str) -> _DummyResponse:
+            return _DummyResponse(
+                json.dumps(
+                    [
+                        {
+                            "source": "actor-customer",
+                            "target": "actor-manager",
+                            "type": "co_decision_alignment",
+                            "description": "pilot collaboration",
+                        },
+                        {
+                            "source": "actor-xdev-team",
+                            "target": "actor-customer",
+                            "type": "co_decision_alignment",
+                            "description": "should be filtered because founder inferred",
+                        },
+                    ],
+                    ensure_ascii=False,
+                )
+            )
+
+    monkeypatch.setattr(founder_actor_enhancer, "create_chat_client", lambda _config: _DummyChat())
+
     founder_ontology = {
         "meta": {"case_id": "x-developer"},
         "actors": [
@@ -141,7 +197,7 @@ def test_enhance_actor_decision_relationships_infers_company_as_founder_when_mis
         "influences": [],
     }
 
-    enhanced, _ = enhance_actor_decision_relationships(founder_ontology)
+    enhanced, _ = enhance_actor_decision_relationships(founder_ontology, config=_dummy_config())
     influences = enhanced["influences"]
 
     assert any(
@@ -154,3 +210,39 @@ def test_enhance_actor_decision_relationships_infers_company_as_founder_when_mis
         rel.get("source") == "actor-xdev-team" or rel.get("target") == "actor-xdev-team"
         for rel in influences
     )
+
+
+def test_extract_founder_ontology_moves_product_like_actor_to_products(monkeypatch):
+    from omen.ingest.llm_ontology import founder_builder
+
+    class _DummyResponse:
+        def __init__(self, content: str) -> None:
+            self.content = content
+
+    class _DummyChat:
+        def invoke(self, _prompt: str) -> _DummyResponse:
+            payload = {
+                "meta": {"case_id": "xd", "slice": "founder", "version": "1.0", "generated_at": "now"},
+                "actors": [
+                    {"id": "actor-xdev", "name": "X-Developer Platform", "type": "product"},
+                    {"id": "actor-founder", "name": "Founder Team", "type": "company"},
+                ],
+                "events": [],
+                "constraints": [],
+                "influences": [],
+                "query_skeleton": {},
+            }
+            return _DummyResponse(json.dumps(payload, ensure_ascii=False))
+
+    monkeypatch.setattr(founder_builder, "create_chat_client", lambda _config: _DummyChat())
+
+    founder = extract_founder_ontology(
+        case_doc=_dummy_case(),
+        chunks=[_dummy_case().raw_text],
+        config=_dummy_config(),
+        timeline_events=[],
+    )
+
+    actor_types = {str(item.get("type") or "") for item in founder.get("actors") or [] if isinstance(item, dict)}
+    assert "product" not in actor_types
+    assert any(item.get("id") == "actor-xdev" for item in founder.get("products") or [])

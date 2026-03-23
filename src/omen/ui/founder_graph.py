@@ -126,6 +126,7 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
     color_map = {
         "founder_actor": "#DC2626",
         "actor": "#059669",
+        "product": "#7C3AED",
         "event": "#2563EB",
         "constraint": "#D97706",
     }

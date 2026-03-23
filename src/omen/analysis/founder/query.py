@@ -146,6 +146,29 @@ def _resolve_node_id(raw_id: Any, known_ids: set[str]) -> str:
     return ""
 
 
+def _resolve_influence_endpoint(
+    influence: dict[str, Any],
+    *,
+    primary_key: str,
+    legacy_event_key: str,
+    legacy_constraint_key: str,
+    known_ids: set[str],
+) -> str:
+    direct = _resolve_node_id(influence.get(primary_key), known_ids)
+    if direct:
+        return direct
+
+    legacy_event = _resolve_node_id(influence.get(legacy_event_key), known_ids)
+    if legacy_event:
+        return legacy_event
+
+    legacy_constraint = _resolve_node_id(influence.get(legacy_constraint_key), known_ids)
+    if legacy_constraint:
+        return legacy_constraint
+
+    return ""
+
+
 def _pick_founder_actor_id(actors: list[dict[str, Any]], case_id: str | None = None) -> str:
     if not actors:
         return ""
@@ -199,6 +222,21 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
             }
         )
 
+    products = founder_ontology.get("products") or []
+    for product in products:
+        if not isinstance(product, dict):
+            continue
+        product_id = str(product.get("id") or "").strip()
+        if not product_id:
+            continue
+        nodes.append(
+            {
+                "id": product_id,
+                "label": str(product.get("name") or product_id),
+                "node_type": "product",
+            }
+        )
+
     for event in founder_events:
         event_id = str(event.get("id") or "").strip()
         if not event_id:
@@ -242,7 +280,7 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
             }
         )
 
-        applies_to = constraint.get("applies_to") or []
+        applies_to = constraint.get("applies_to") or constraint.get("actors_affected") or []
         for actor_id in applies_to:
             actor_token = str(actor_id).strip()
             if not actor_token:
@@ -261,8 +299,20 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
     for influence in influences:
         if not isinstance(influence, dict):
             continue
-        source = _resolve_node_id(influence.get("source"), known_node_ids)
-        target = _resolve_node_id(influence.get("target"), known_node_ids)
+        source = _resolve_influence_endpoint(
+            influence,
+            primary_key="source",
+            legacy_event_key="source_event",
+            legacy_constraint_key="source_constraint",
+            known_ids=known_node_ids,
+        )
+        target = _resolve_influence_endpoint(
+            influence,
+            primary_key="target",
+            legacy_event_key="target_event",
+            legacy_constraint_key="target_constraint",
+            known_ids=known_node_ids,
+        )
         if not source or not target:
             continue
         edges.append(

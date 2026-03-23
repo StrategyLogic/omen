@@ -12,6 +12,29 @@ from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
 _DEF_QUERY_TYPES = ["status", "why", "persona"]
+_PRODUCT_TYPES = {"product", "platform", "tool", "saas", "app", "system"}
+_ACTOR_TYPE_ALIAS = {
+    "company": "organization",
+    "startup": "organization",
+    "enterprise": "organization",
+    "business": "organization",
+    "org": "organization",
+    "department": "team",
+    "squad": "team",
+    "group": "team",
+}
+_ALLOWED_ACTOR_TYPES = {
+    "founder",
+    "person",
+    "team",
+    "organization",
+    "customer",
+    "partner",
+    "investor",
+    "regulator",
+    "competitor",
+    "role",
+}
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
@@ -50,6 +73,7 @@ def _default_founder(case_id: str, timeline_events: list[dict[str, Any]]) -> dic
                 "evidence_refs": evidence_refs[:3],
             }
         ],
+        "products": [],
         "events": [
             {
                 "id": f"founder.{event.get('id', 'event')}",
@@ -87,6 +111,62 @@ def _default_founder(case_id: str, timeline_events: list[dict[str, Any]]) -> dic
     }
 
 
+def _as_product_node(actor: dict[str, Any]) -> dict[str, Any]:
+    item_id = str(actor.get("id") or "").strip()
+    item_name = str(actor.get("name") or item_id or "product").strip() or "product"
+    item_type = str(actor.get("type") or "product").strip().lower() or "product"
+    return {
+        "id": item_id,
+        "name": item_name,
+        "type": item_type,
+        "description": str(actor.get("description") or "").strip(),
+        "attributes": actor.get("attributes") if isinstance(actor.get("attributes"), dict) else {},
+    }
+
+
+def _normalize_founder_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    actors = normalized.get("actors")
+    products = normalized.get("products")
+    actor_items = [item for item in actors if isinstance(item, dict)] if isinstance(actors, list) else []
+    product_items = [item for item in products if isinstance(item, dict)] if isinstance(products, list) else []
+
+    next_actors: list[dict[str, Any]] = []
+    product_ids = {str(item.get("id") or "").strip() for item in product_items if str(item.get("id") or "").strip()}
+
+    for actor in actor_items:
+        actor_id = str(actor.get("id") or "").strip()
+        actor_name = str(actor.get("name") or "").strip().lower()
+        actor_type_raw = str(actor.get("type") or "organization").strip().lower()
+        actor_type = _ACTOR_TYPE_ALIAS.get(actor_type_raw, actor_type_raw)
+
+        is_product_like = (
+            actor_type in _PRODUCT_TYPES
+            or any(token in actor_name for token in ("product", "platform", "tool", "saas", "app"))
+        )
+        if is_product_like:
+            product_node = _as_product_node({**actor, "type": actor_type})
+            if actor_id and actor_id not in product_ids:
+                product_items.append(product_node)
+                product_ids.add(actor_id)
+            continue
+
+        normalized_type = actor_type if actor_type in _ALLOWED_ACTOR_TYPES else "organization"
+        next_actor = dict(actor)
+        next_actor["type"] = normalized_type
+        next_actors.append(next_actor)
+
+    query_skeleton = normalized.get("query_skeleton")
+    if not isinstance(query_skeleton, dict):
+        query_skeleton = {}
+    query_skeleton["query_types"] = _DEF_QUERY_TYPES
+
+    normalized["actors"] = next_actors
+    normalized["products"] = product_items
+    normalized["query_skeleton"] = query_skeleton
+    return normalized
+
+
 def extract_founder_ontology(
     *,
     case_doc: CaseDocument,
@@ -104,7 +184,7 @@ def extract_founder_ontology(
         content = response.content if isinstance(response.content, str) else json.dumps(response.content)
         payload = _extract_json_object(content)
         if payload:
-            return payload
+            return _normalize_founder_payload(payload)
     except Exception:
         pass
 

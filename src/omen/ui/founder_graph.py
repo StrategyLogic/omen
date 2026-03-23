@@ -90,7 +90,6 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
 
     for trace in edge_traces:
         fig.add_trace(trace)
-    fig.add_trace(
         go.Scatter(
             x=edge_label_x,
             y=edge_label_y,
@@ -101,7 +100,6 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
             textfont={"size": 10, "color": "#334155"},
             name="relation_labels",
         )
-    )
     fig.add_trace(
         go.Scatter(
             x=node_x,

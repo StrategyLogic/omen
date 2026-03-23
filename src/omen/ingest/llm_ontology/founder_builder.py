@@ -11,7 +11,7 @@ from omen.ingest.llm_ontology.prompts import build_founder_ontology_prompt
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
-_DEF_QUERY_TYPES = ["status", "why", "persona"]
+_DEF_QUERY_TYPES = ["status", "why", "persona", "cognitive_tracing", "decision_trade_offs"]
 _PRODUCT_TYPES = {"product", "platform", "tool", "saas", "app", "system"}
 _ACTOR_TYPE_ALIAS = {
     "company": "organization",
@@ -57,56 +57,62 @@ def _default_founder(case_id: str, timeline_events: list[dict[str, Any]]) -> dic
 
     return {
         "meta": {
-            "version": "1.0.0",
+            "version": "0.1.0",
             "case_id": case_id,
             "slice": "founder",
-            "generated_at": "fallback",
+        },
+        "identity": {
+            "shared_ids": [f"actor:founder:{case_id}"]
         },
         "actors": [
             {
                 "id": f"founder.{case_id}",
                 "shared_id": f"actor:founder:{case_id}",
-                "role": "founder",
                 "name": "Founder",
-                "assignments": [{"title": "founder", "start_date": "unknown", "end_date": None}],
-                "traits": [],
-                "evidence_refs": evidence_refs[:3],
+                "background_facts": {
+                    "birth_year": None,
+                    "origin": None,
+                    "education": [],
+                    "career_trajectory": [],
+                    "key_experiences": []
+                },
+                "mental_patterns": {
+                    "core_beliefs": [],
+                    "cognitive_frames": [],
+                    "founder_dna": "Unknown",
+                    "risk_profile": {
+                        "technical_risk": "Medium",
+                        "market_risk": "Medium",
+                        "financial_risk": "Medium"
+                    }
+                },
+                "strategic_style": {
+                    "decision_style": "Pragmatic",
+                    "value_proposition": "Unknown",
+                    "decision_preferences": [],
+                    "non_negotiables": []
+                }
             }
         ],
         "products": [],
         "events": [
             {
                 "id": f"founder.{event.get('id', 'event')}",
-                "type": "decision",
+                "name": str(event.get("name")),
+                "type": str(event.get("type")),
                 "date": str(event.get("time") or "unknown"),
-                "impact_score": float(event.get("confidence") or 0.5),
-                "related": [],
+                "description": str(event.get("description") or event.get("event") or "unknown"),
+                "context_constraints": [],
+                "actors_involved": [f"founder.{case_id}"],
                 "evidence_refs": event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else [],
-                "decision": {
-                    "content": str(event.get("description") or event.get("event") or "unknown"),
-                    "alternatives": [],
-                    "aligned_intent": "unknown",
-                    "response_to": [],
-                    "outcome": "unknown",
-                },
             }
             for event in timeline_events[:5]
         ],
-        "constraints": [],
-        "influences": [
-            {
-                "source": f"founder.{case_id}",
-                "targets": ["tech", "market"],
-                "weight": 0.6,
-                "nature": "shaper",
-                "rationale": "derived from historical founder decisions",
-                "evidence_refs": evidence_refs[:5],
-            }
-        ],
+        "influences": [],
         "query_skeleton": {
             "query_types": _DEF_QUERY_TYPES,
-            "base_context": ["actors", "events", "constraints", "influences"],
-            "evidence_bundle": evidence_refs[:10],
+            "persona_prompt_template": "founder_persona_v1",
+            "required_evidence_fields": ["evidence_refs", "date", "relation", "context_constraints"]
         },
     }
 
@@ -175,6 +181,16 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
         normalized_type = actor_type if actor_type in _ALLOWED_ACTOR_TYPES else "organization"
         next_actor = dict(actor)
         next_actor["type"] = normalized_type
+
+        # Ensure stakeholders have the expected structure
+        if normalized_type != "founder" and "profile" not in next_actor:
+            next_actor["profile"] = {
+                "interest": "Unknown",
+                "influence_level": "Medium",
+                "alignment_with_founder": "Unknown",
+                "key_constraints": []
+            }
+        
         next_actors.append(next_actor)
 
     query_skeleton = normalized.get("query_skeleton")
@@ -213,21 +229,86 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
     if founder_actor_id:
         for product in product_items:
             product_id = str(product.get("id") or "").strip()
+            product_type = str(product.get("type") or "").strip().lower()
             if not product_id:
                 continue
-            key = (founder_actor_id, product_id, "builds")
-            if key in seen_edges:
-                continue
-            influence_items.append(
-                {
-                    "source": founder_actor_id,
-                    "target": product_id,
-                    "type": "builds",
-                    "description": "Founder/lead actor builds and steers the core product asset.",
-                    "origin": "normalization",
-                }
-            )
-            seen_edges.add(key)
+
+            if product_type == "competitor":
+                # Competitor influences/constrains the founder/actors
+                key = (product_id, founder_actor_id, "influences")
+                if key not in seen_edges:
+                    influence_items.append(
+                        {
+                            "source": product_id,
+                            "target": founder_actor_id,
+                            "type": "influences",
+                            "description": "Competitor market presence influences founder strategic decisions.",
+                            "origin": "normalization",
+                        }
+                    )
+                    seen_edges.add(key)
+            else:
+                # Founder builds core products
+                key = (founder_actor_id, product_id, "builds")
+                if key not in seen_edges:
+                    influence_items.append(
+                        {
+                            "source": founder_actor_id,
+                            "target": product_id,
+                            "type": "builds",
+                            "description": "Founder/lead actor builds and steers the core product asset.",
+                            "origin": "normalization",
+                        }
+                    )
+                    seen_edges.add(key)
+
+        # Cross-link: Product competes with Competitor
+        core_products = [p for p in product_items if str(p.get("type")).lower() != "competitor"]
+        competitors = [p for p in product_items if str(p.get("type")).lower() == "competitor"]
+        for cp in core_products:
+            for comp in competitors:
+                cp_id = str(cp.get("id"))
+                comp_id = str(comp.get("id"))
+                key = (cp_id, comp_id, "competes_with")
+                if key not in seen_edges:
+                    influence_items.append({
+                        "source": cp_id,
+                        "target": comp_id,
+                        "type": "competes_with",
+                        "description": "Core product competes with traditional solutions.",
+                        "origin": "normalization"
+                    })
+                    seen_edges.add(key)
+
+        # Link actors to events they participate in
+        for event in normalized.get("events", []):
+            event_id = str(event.get("id"))
+            for actor_involved_id in event.get("actors_involved", []):
+                key = (str(actor_involved_id), event_id, "participates_in")
+                if key not in seen_edges:
+                    influence_items.append({
+                        "source": str(actor_involved_id),
+                        "target": event_id,
+                        "type": "participates_in",
+                        "description": "Actor participates in strategic decision/event.",
+                        "origin": "normalization"
+                    })
+                    seen_edges.add(key)
+            
+            # Event -> affects -> Core Product
+            # By default, linking strategic decisions to all core products if not specified
+            for cp in core_products:
+                cp_id = str(cp.get("id"))
+                key = (event_id, cp_id, "affects")
+                if key not in seen_edges:
+                    influence_items.append({
+                        "source": event_id,
+                        "target": cp_id,
+                        "type": "affects",
+                        "description": "Strategic decision affects the core product lifecycle.",
+                        "origin": "normalization"
+                    })
+                    seen_edges.add(key)
 
     normalized["actors"] = next_actors
     normalized["products"] = product_items

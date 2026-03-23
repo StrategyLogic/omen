@@ -48,7 +48,8 @@ def build_system_prompt() -> str:
         - relation source/target MUST reference names declared in tbox.concepts.
         - tbox.axioms MUST be a list of objects with keys: id, statement, type.
         - axiom type may be activation, propagation, counterfactual, or case-specific custom type.
-        - abox.actors MUST be a list of objects with keys: actor_id, actor_type, labels.
+        - abox.actors MUST be a list of objects with keys: actor_id, actor_type, shared_id, labels.
+        - shared_id MUST be the literal name/brand from the document (e.g., "X-Developer") to facilitate entity linking.
         - actor_type should reference actor concept names from tbox.concepts where possible.
         - abox.capabilities and abox.constraints SHOULD be provided when evidence exists; keep capability scores in [0,1].
         - Keep capability scores in [0,1].
@@ -72,7 +73,7 @@ def build_system_prompt() -> str:
                         "axioms": [{"id": "AX-1", "statement": "...", "type": "activation"}]
                     },
                     "abox": {
-                        "actors": [{"actor_id": "example_actor", "actor_type": "ExampleActor", "labels": []}],
+                        "actors": [{"actor_id": "example_actor", "actor_type": "ExampleActor", "shared_id": "Example Inc.", "labels": []}],
                         "capabilities": [{"actor_id": "example_actor", "name": "example_capability", "score": 0.8}],
                         "constraints": [{"name": "budget", "value": 100}]
                     },
@@ -162,28 +163,46 @@ def build_founder_ontology_prompt(
     return dedent(
         f"""
         You are an ontology extraction assistant.
-        Build founder_ontology JSON only.
+        Build founder_ontology JSON only (v0.1.0-founder-centric).
 
         Required top-level keys:
-        - meta
-        - actors
-        - products
-        - events
-        - constraints
-        - influences
-        - query_skeleton
+        - meta (version, case_id, slice)
+        - identity (shared_ids)
+        - actors (detailed founder profile)
+        - products (product/platform/tool assets)
+        - events (strategic points)
+        - influences (causal relationships)
+        - query_skeleton (supported queries)
 
-        Required constraints:
-        - meta includes version/case_id/slice/generated_at
-        - actors MUST contain strategic actors only (people/teams/organizations and decision-making stakeholders)
-        - actors[].type MUST be one of: founder, person, team, organization, customer, partner, investor, regulator, competitor, role
-        - products/platform/tool/saas/app/system MUST NOT appear in actors
-        - products MUST include product/platform/tool assets with fields: id, name, type, description
-        - events must use time evidence from timeline input
-        - events should include short type labels for graph display (e.g. launch/release/pilot)
-        - keep long narrative in description fields when available
-        - do not use phase/stage field
-        - query_skeleton.query_types must be: status, why, persona
+        Actor Schema (Multi-Role):
+        - IMPORTANT: Extract ALL actors mentioned in the case (founder, investors, team members, customers, competitors, etc.).
+        - id: unique slug (e.g. 'founder-1', 'customer-apple').
+        - shared_id: The primary identifier string (e.g. "X-Developer") for mapping to StrategyOntology.
+        - name: The display name (e.g. "X-Developer Founder").
+        - type: 'founder' (primary), 'investor', 'competitor', 'customer', 'partner', 'team_member', 'organization'.
+        - Profile for Founder:
+            - background_facts: birth_year, origin, education[], career_trajectory[], key_experiences[]
+            - mental_patterns: core_beliefs[], cognitive_frames[], founder_dna, risk_profile{{technical_risk, market_risk, financial_risk}}
+            - strategic_style: decision_style, value_proposition, decision_preferences[], non_negotiables[]
+        - Profile for all other Actors (investor, customer, etc.):
+            - profile: interest, influence_level, alignment_with_founder, key_constraints[]
+
+        Events Schema:
+        - id, name, type, date, description, context_constraints[], actors_involved[], evidence_refs[]
+        Rules:
+        - philosophy: "Facts & Structures only. Narratives/Personas are generated via Query."
+        - actors[].type: MUST be 'founder' for the primary decision maker.
+        - mental_patterns.core_beliefs: Stable convictions (e.g., "Data is the only truth").
+        - strategic_style.non_negotiables: Active constraints chosen by the founder (e.g., "No manual input").
+        - events: MUST use time evidence from timeline input. Include 'context_constraints' for external pressures (e.g., "Cash flow < 6 months").
+        - influences: Link mental_patterns/background to strategic_style/decisions (e.g., manifests_as_principle, shapes_belief).
+        - IMPORTANT: Also link between Entities:
+            - Product -> competes_with -> Competitor
+            - Competitor -> influences/constrains -> Actors
+            - Actors -> participates_in -> Events
+            - Events -> affects -> Product (e.g., launch, pricing update)
+
+        query_skeleton: status, why, persona, cognitive_tracing, decision_trade_offs.
 
         Case ID: {doc.case_id}
         Title: {doc.title}
@@ -201,14 +220,20 @@ def build_founder_ontology_prompt(
 def build_actor_semantic_enhancement_prompt(actor_payload_json: str) -> str:
     return dedent(
         f"""
-        Analyze decision-making and influence relationships among the provided actors.
+        Analyze decision-making, strategic influence, and competitive dynamics among the provided actors.
+
+        Focus Areas:
+        1. Strategic Influence: How do actors influence each other's decisions or positioning?
+        2. Competitive Impact: Specifically for actors of type 'competitor', how do they constrain, pressure, or influence the strategic choices of other actors (e.g., pricing pressure, feature mimicry, market share defense)?
+        3. Market Logic: Relationships reflecting market entry barriers, substitution effects, or partner ecosystem dependencies.
 
         Rules:
         - Only use these actor IDs as source/target.
         - Do not reference founder actor.
         - Do not reference events, constraints, or any other node types.
-        - Return only JSON array.
+        - Return only JSON array of influence objects.
         - Each item must include: source, target, type, description.
+        - Semantic types: influences, constrains, pressures, substitutes, complements, competes_with.
 
         Actors (JSON):
         {actor_payload_json}

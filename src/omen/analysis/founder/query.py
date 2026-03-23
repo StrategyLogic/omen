@@ -217,7 +217,12 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
                     if actor_id == founder_actor_id
                     else str(actor.get("name") or actor_id)
                 ),
-                "node_type": "founder_actor" if actor_id == founder_actor_id else "actor",
+                "node_type": (
+                    "founder_actor" if actor_id == founder_actor_id
+                    else "competitor" if str(actor.get("type") or "").lower() == "competitor"
+                    else "customer" if str(actor.get("type") or "").lower() == "customer"
+                    else "actor"
+                ),
                 "is_founder": actor_id == founder_actor_id,
             }
         )
@@ -233,7 +238,7 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
             {
                 "id": product_id,
                 "label": str(product.get("name") or product_id),
-                "node_type": "product",
+                "node_type": "competitor" if str(product.get("type") or "").lower() == "competitor" else "product",
             }
         )
 
@@ -242,11 +247,11 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
         if not event_id:
             continue
         raw_text = str(event.get("event") or event.get("description") or "").strip()
-        event_type = _normalize_event_type(event.get("type") or event.get("label") or event.get("event"), raw_text)
+        event_name = str(event.get("name") or event.get("event") or event_id).strip()
         nodes.append(
             {
                 "id": event_id,
-                "label": event_type or "other",
+                "label": event_name,
                 "node_type": "event",
                 "description": str(event.get("description") or raw_text).strip(),
             }

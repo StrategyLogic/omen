@@ -37,7 +37,7 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
             source,
             target,
             label=str(edge.get("label") or ""),
-            curvature=("arc3,rad=0.05"),
+            curvature=("arc3,rad=0.1"),
         )
 
     fig = go.Figure()
@@ -45,7 +45,7 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
         fig.update_layout(title="Founder Graph (empty)")
         return fig
 
-    positions = nx.spring_layout(graph, seed=42)
+    positions = nx.kamada_kawai_layout(graph)
 
     edge_traces: list[Any] = []
     edge_label_x: list[float] = []
@@ -76,6 +76,8 @@ def build_founder_graph_figure(payload: dict[str, Any]) -> Any:
     color_map = {
         "founder_actor": "#DC2626",
         "actor": "#059669",
+        "customer": "#0891B2", 
+        "competitor": "#EA580C", 
         "product": "#7C3AED",
         "event": "#2563EB",
         "constraint": "#D97706",

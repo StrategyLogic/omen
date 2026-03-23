@@ -105,12 +105,25 @@ def enhance_actor_decision_relationships(
 ) -> tuple[dict[str, Any], int]:
     payload = dict(founder_ontology)
     actors = payload.get("actors") or []
+    products = payload.get("products") or []
     actor_dicts = [actor for actor in actors if isinstance(actor, dict)]
+    product_dicts = [product for product in products if isinstance(product, dict)]
     actor_ids = [str(actor.get("id") or "").strip() for actor in actor_dicts]
     actor_ids = [actor_id for actor_id in actor_ids if actor_id]
 
+    # Combine actors and products for semantic analysis
+    # Many products might be competitors that influence strategic choices
+    competitor_product_ids = {
+        str(p.get("id") or "").strip() 
+        for p in product_dicts 
+        if str(p.get("type") or "").lower() == "competitor"
+    }
+
     founder_actor_id = _find_founder_actor_id(actor_dicts)
     candidate_actor_ids = {actor_id for actor_id in actor_ids if actor_id != founder_actor_id}
+    
+    # Combined target IDs for enhancement (non-founder actors + competitor products)
+    all_candidate_ids = candidate_actor_ids | competitor_product_ids
 
     influences = payload.get("influences") or []
     relations: list[dict[str, Any]] = []
@@ -129,17 +142,28 @@ def enhance_actor_decision_relationships(
 
     added_count = 0
 
-    if config and len(candidate_actor_ids) >= 2:
-        actor_payload = [
-            {
-                "id": str(actor.get("id") or "").strip(),
-                "name": str(actor.get("name") or "").strip(),
-                "type": str(actor.get("type") or "").strip(),
-                "description": str(actor.get("description") or "").strip(),
-            }
-            for actor in actor_dicts
-            if str(actor.get("id") or "").strip() in candidate_actor_ids
-        ]
+    if config and len(all_candidate_ids) >= 2:
+        # Prepare payload including both actors and competitor products
+        actor_payload = []
+        for actor in actor_dicts:
+            aid = str(actor.get("id") or "").strip()
+            if aid in candidate_actor_ids:
+                actor_payload.append({
+                    "id": aid,
+                    "name": str(actor.get("name") or "").strip(),
+                    "type": str(actor.get("type") or "").strip(),
+                    "description": str(actor.get("description") or "").strip(),
+                })
+        
+        for product in product_dicts:
+            pid = str(product.get("id") or "").strip()
+            if pid in competitor_product_ids:
+                actor_payload.append({
+                    "id": pid,
+                    "name": str(product.get("name") or "").strip(),
+                    "type": "competitor",
+                    "description": str(product.get("description") or "").strip(),
+                })
 
         prompt = build_actor_semantic_enhancement_prompt(
             json.dumps(actor_payload, ensure_ascii=False)
@@ -157,7 +181,9 @@ def enhance_actor_decision_relationships(
                 relation_type = str(relation.get("type") or "").strip() or "influences"
                 description = str(relation.get("description") or "").strip()
                 evidence_refs = relation.get("evidence_refs") or []
-                if source not in candidate_actor_ids or target not in candidate_actor_ids:
+                
+                # Validation: source/target must be in our candidate pool (actors or competitor products)
+                if source not in all_candidate_ids or target not in all_candidate_ids:
                     continue
                 if source == target:
                     continue

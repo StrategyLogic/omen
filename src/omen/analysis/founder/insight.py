@@ -6,108 +6,515 @@ import datetime
 import json
 from typing import Any
 
+from omen.ingest.llm_ontology.clients import create_chat_client
+from omen.ingest.llm_ontology.config import load_llm_config
+from omen.ingest.llm_ontology.prompts import (
+    build_founder_gap_prompt,
+    build_founder_why_prompt,
+    build_json_retry_prompt,
+    build_persona_insight_prompt,
+)
 
-PERSONA_PROMPT = """
-Analyze the character and mental patterns of the following founder based on provided ontology data.
-Founder name: {founder_name}
-Profile Facts: {profile_facts}
-Mental Patterns: {mental_patterns}
-Strategic Style: {strategic_style}
 
-Generate a cohesive narrative (150-200 words) describing their "Persona". 
-Highlight their consistency between beliefs and actions.
-"""
+def _extract_json_object(text: str) -> dict[str, Any]:
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    if start == -1:
+        raise ValueError("LLM response does not contain a JSON object")
+    payload, _ = decoder.raw_decode(text[start:])
+    if not isinstance(payload, dict):
+        raise ValueError("LLM response JSON payload is not an object")
+    return payload
 
-STRATEGY_GAP_PROMPT = """
-Review the following strategic formation process and its real-world execution.
-Event: {event_name}
-Description: {event_description}
-Perception: {perception}
-Decision Logic: {decision_logic}
-Execution Delta: {execution_delta}
 
-Identify 2-3 significant "Strategy-Reality Gaps". For each gap, provide:
-1. The underlying Assumption (what the founder believed would happen).
-2. The observed Observation (what actually happened).
-3. Significance (why it matters for the case).
-4. A "What-if" scenario: What if the assumption were true, or if a specific constraint was removed?
-"""
+def _extract_json_array(text: str) -> list[dict[str, Any]]:
+    decoder = json.JSONDecoder()
+    start = text.find("[")
+    if start == -1:
+        raise ValueError("LLM response does not contain a JSON array")
+    payload, _ = decoder.raw_decode(text[start:])
+    if not isinstance(payload, list):
+        raise ValueError("LLM response JSON payload is not an array")
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def _invoke_json_prompt(llm_client: Any, prompt: str, *, expect: str) -> Any:
+    response = llm_client.invoke(prompt)
+    content = response.content if isinstance(response.content, str) else json.dumps(response.content)
+    try:
+        if expect == "object":
+            return _extract_json_object(content)
+        return _extract_json_array(content)
+    except Exception:
+        retry_prompt = build_json_retry_prompt(prompt)
+        retry_response = llm_client.invoke(retry_prompt)
+        retry_content = (
+            retry_response.content
+            if isinstance(retry_response.content, str)
+            else json.dumps(retry_response.content)
+        )
+        if expect == "object":
+            return _extract_json_object(retry_content)
+        return _extract_json_array(retry_content)
+
+
+def _build_insight_evidence_package(
+    *,
+    case_id: str,
+    founder_name: str,
+    founder_ontology: dict[str, Any],
+    strategy_ontology: dict[str, Any] | None,
+    formation_payload: dict[str, Any] | None,
+    known_outcome: str,
+) -> dict[str, Any]:
+    founder_actor = _pick_founder_actor(founder_ontology)
+    profile = founder_actor.get("profile") if isinstance(founder_actor, dict) else {}
+    return {
+        "case_id": case_id,
+        "founder_name": founder_name,
+        "known_outcome": known_outcome,
+        "founder_profile": profile if isinstance(profile, dict) else {},
+        "events": founder_ontology.get("events") or [],
+        "influences": founder_ontology.get("influences") or [],
+        "strategy_meta": (strategy_ontology or {}).get("meta") if isinstance(strategy_ontology, dict) else {},
+        "strategy_constraints": ((strategy_ontology or {}).get("abox") or {}).get("constraints")
+        if isinstance(strategy_ontology, dict)
+        else [],
+        "formation": formation_payload or {},
+    }
+
+
+def _enhance_persona_with_llm(
+    llm_client: Any,
+    *,
+    founder_name: str,
+    profile: dict[str, Any],
+    fallback_narrative: str,
+    fallback_traits: list[dict[str, Any]],
+) -> tuple[str, list[dict[str, Any]], float]:
+    prompt = (
+        build_persona_insight_prompt()
+        + "\n\nReturn JSON object only with keys: narrative, key_traits, consistency_score."
+        + " key_traits must be an array of objects with trait and evidence_summary."
+        + " consistency_score must be a number in [0,1].\n\n"
+        + f"Founder name: {founder_name}\n"
+        + f"Profile Facts JSON: {json.dumps(profile, ensure_ascii=False)}"
+    )
+    try:
+        payload = _invoke_json_prompt(llm_client, prompt, expect="object")
+        narrative = str(payload.get("narrative") or "").strip() or fallback_narrative
+        key_traits_raw = payload.get("key_traits")
+        key_traits = [item for item in key_traits_raw if isinstance(item, dict)] if isinstance(key_traits_raw, list) else fallback_traits
+        score_raw = payload.get("consistency_score")
+        try:
+            score = float(score_raw)
+        except Exception:
+            score = 0.85
+        score = max(0.0, min(1.0, score))
+        return narrative, key_traits or fallback_traits, score
+    except Exception:
+        return fallback_narrative, fallback_traits, 0.85
+
+
+def _enhance_why_chain_with_llm(
+    llm_client: Any,
+    *,
+    evidence_package: dict[str, Any],
+    fallback_items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    prompt = (
+        build_founder_why_prompt()
+        + "\n\nReturn JSON array only. Each item must contain: question, answer, evidence_refs."
+        + " Generate at least 3 items focused on key founder decisions and why they formed that way.\n\n"
+        + f"Evidence package JSON: {json.dumps(evidence_package, ensure_ascii=False)}"
+    )
+    try:
+        payload = _invoke_json_prompt(llm_client, prompt, expect="array")
+        items = []
+        for item in payload:
+            question = str(item.get("question") or "").strip()
+            answer = str(item.get("answer") or "").strip()
+            refs_raw = item.get("evidence_refs")
+            refs = [str(ref) for ref in refs_raw if str(ref).strip()] if isinstance(refs_raw, list) else []
+            if question and answer:
+                items.append({"question": question, "answer": answer, "evidence_refs": refs})
+        while len(items) < 3 and len(fallback_items) > len(items):
+            items.append(fallback_items[len(items)])
+        return items[: max(3, len(items))]
+    except Exception:
+        return fallback_items
+
+
+def _enhance_gap_analysis_with_llm(
+    llm_client: Any,
+    *,
+    evidence_package: dict[str, Any],
+    fallback_process_gaps: list[dict[str, Any]],
+    fallback_outcome_gaps: list[dict[str, Any]],
+    fallback_learning_loop: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    prompt = (
+        build_founder_gap_prompt()
+        + "\n\nReturn JSON object only with keys: process_gaps, outcome_gaps, learning_loop."
+        + " process_gaps must have at least 3 items. Each gap item must contain assumption, observation, gap_significance, event_id, phase."
+        + " outcome_gaps may be empty when evidence is insufficient. learning_loop may be empty when not supported.\n\n"
+        + f"Evidence package JSON: {json.dumps(evidence_package, ensure_ascii=False)}"
+    )
+    try:
+        payload = _invoke_json_prompt(llm_client, prompt, expect="object")
+
+        def _normalize_gap_list(value: Any) -> list[dict[str, Any]]:
+            result: list[dict[str, Any]] = []
+            if not isinstance(value, list):
+                return result
+            for item in value:
+                if not isinstance(item, dict):
+                    continue
+                assumption = str(item.get("assumption") or "").strip()
+                observation = str(item.get("observation") or "").strip()
+                significance = str(item.get("gap_significance") or "").strip()
+                if assumption and observation and significance:
+                    result.append(
+                        {
+                            "assumption": assumption,
+                            "observation": observation,
+                            "gap_significance": significance,
+                            "event_id": str(item.get("event_id") or "unknown_event").strip() or "unknown_event",
+                            "phase": str(item.get("phase") or "unknown_phase").strip() or "unknown_phase",
+                        }
+                    )
+            return result
+
+        def _normalize_learning_loop(value: Any) -> list[dict[str, Any]]:
+            result: list[dict[str, Any]] = []
+            if not isinstance(value, list):
+                return result
+            for item in value:
+                if not isinstance(item, dict):
+                    continue
+                signal = str(item.get("signal") or "").strip()
+                adjustment = str(item.get("adjustment") or "").strip()
+                evidence_ref = str(item.get("evidence_ref") or "").strip()
+                if signal and adjustment and evidence_ref:
+                    result.append({"signal": signal, "adjustment": adjustment, "evidence_ref": evidence_ref})
+            return result
+
+        process_gaps = _normalize_gap_list(payload.get("process_gaps"))
+        outcome_gaps = _normalize_gap_list(payload.get("outcome_gaps"))
+        learning_loop = _normalize_learning_loop(payload.get("learning_loop"))
+
+        while len(process_gaps) < 3 and len(fallback_process_gaps) > len(process_gaps):
+            process_gaps.append(fallback_process_gaps[len(process_gaps)])
+        if not outcome_gaps:
+            outcome_gaps = fallback_outcome_gaps
+        if not learning_loop:
+            learning_loop = fallback_learning_loop
+        return process_gaps[: max(3, len(process_gaps))], outcome_gaps, learning_loop
+    except Exception:
+        return fallback_process_gaps, fallback_outcome_gaps, fallback_learning_loop
+
+
+def _pick_founder_actor(founder_ontology: dict[str, Any]) -> dict[str, Any]:
+    actors = founder_ontology.get("actors") or []
+    founder_actor = next((a for a in actors if "founder" in str(a.get("type", "")).lower()), None)
+    return founder_actor or (actors[0] if actors else {})
+
+
+def _extract_known_outcome(
+    founder_ontology: dict[str, Any], strategy_ontology: dict[str, Any] | None
+) -> str:
+    strategy_meta = (strategy_ontology or {}).get("meta") if isinstance(strategy_ontology, dict) else None
+    if isinstance(strategy_meta, dict):
+        value = str(strategy_meta.get("known_outcome") or "").strip()
+        if value and value.lower() != "unknown":
+            return value
+
+    founder_meta = founder_ontology.get("meta")
+    if isinstance(founder_meta, dict):
+        value = str(founder_meta.get("known_outcome") or "").strip()
+        if value and value.lower() != "unknown":
+            return value
+
+    return ""
+
+
+def _build_why_chain(
+    founder_name: str,
+    core_beliefs: list[str],
+    decision_style: str,
+    non_negotiables: list[str],
+    constraints: list[str],
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    first_event = events[0] if events else {}
+    second_event = events[1] if len(events) > 1 else first_event
+    third_event = events[2] if len(events) > 2 else second_event
+
+    def _event_ref(event: dict[str, Any]) -> str:
+        return str(event.get("id") or event.get("event_id") or event.get("name") or "unknown_event")
+
+    why_items = [
+        {
+            "question": f"Why did {founder_name} prioritize this strategic path instead of standard process-first tooling?",
+            "answer": (
+                f"Because core beliefs such as '{core_beliefs[0] if core_beliefs else 'data-driven management'}' "
+                f"and decision style '{decision_style or 'principle-driven'}' pushed choices toward evidence-first execution."
+            ),
+            "evidence_refs": [_event_ref(first_event)],
+        },
+        {
+            "question": f"Why were constraints not treated as blockers but as filters for decision scope?",
+            "answer": (
+                "The founder framed constraints as boundary conditions and protected non-negotiables "
+                f"like '{non_negotiables[0] if non_negotiables else 'low process overhead'}' to maintain strategic coherence."
+            ),
+            "evidence_refs": [_event_ref(second_event)],
+        },
+        {
+            "question": "Why did execution still diverge from the initial strategic assumption?",
+            "answer": (
+                "External adoption pressure and organizational friction introduced reality adjustments, "
+                f"especially under constraints: {', '.join(constraints[:2]) if constraints else 'market resistance'}"
+            ),
+            "evidence_refs": [_event_ref(third_event)],
+        },
+    ]
+    return why_items
+
+
+def _build_process_gaps(
+    formation_payload: dict[str, Any] | None,
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    process_gaps: list[dict[str, Any]] = []
+    if formation_payload:
+        chain = formation_payload.get("formation_chain") or {}
+        exec_delta = chain.get("execution_delta") or []
+        decision_logic = chain.get("decision_logic") or {}
+        target_event_id = str(((formation_payload.get("query") or {}).get("target_event_id") or "unknown_event")).strip()
+        phase = str(((formation_payload.get("summary") or {}).get("stage") or "unknown_phase")).strip()
+        affected_targets = [
+            str(item.get("target_name") or "").strip()
+            for item in exec_delta
+            if isinstance(item, dict)
+        ]
+        affected_targets = [name for name in affected_targets if name]
+
+        process_gaps.append(
+            {
+                "assumption": "Initial strategic formation would validate linearly through early execution.",
+                "observation": (
+                    f"Execution produced {len(exec_delta)} delta points"
+                    + (f" affecting {', '.join(affected_targets[:2])}." if affected_targets else ".")
+                ),
+                "gap_significance": "Indicates mismatch between initial formation certainty and field adaptation complexity.",
+                "event_id": target_event_id,
+                "phase": phase,
+            }
+        )
+        process_gaps.append(
+            {
+                "assumption": "Principle-based filtering would maintain consistency without speed tradeoff.",
+                "observation": (
+                    "Decision logic remained coherent, but execution required additional adaptation cycles."
+                    if decision_logic
+                    else "Execution traces show adaptation pressure beyond original decision frame."
+                ),
+                "gap_significance": "Shows strategy coherence can coexist with delivery friction.",
+                "event_id": target_event_id,
+                "phase": phase,
+            }
+        )
+
+    fallback_events = events[:3] if events else []
+    while len(process_gaps) < 3:
+        event = fallback_events[len(process_gaps)] if len(fallback_events) > len(process_gaps) else {}
+        process_gaps.append(
+            {
+                "assumption": "Customer adoption would follow product logic once value proposition is clear.",
+                "observation": "Observed event sequence suggests adoption required staged validation and trust-building.",
+                "gap_significance": "Highlights non-linear translation from strategic logic to customer behavior.",
+                "event_id": str(event.get("id") or event.get("event_id") or "unknown_event"),
+                "phase": str(event.get("phase") or "unknown_phase"),
+            }
+        )
+
+    return process_gaps[:3]
+
+
+def _build_outcome_gaps(known_outcome: str, process_gaps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not known_outcome:
+        return []
+
+    template = [
+        "Expected strategic position and actual market adoption speed were not perfectly aligned.",
+        "Planned scaling rhythm diverged from observed customer readiness in target segments.",
+        "Strategic intent remained stable, while realized outcomes reflected incremental convergence.",
+    ]
+    result: list[dict[str, Any]] = []
+    for index, statement in enumerate(template):
+        base_gap = process_gaps[index] if len(process_gaps) > index else {}
+        result.append(
+            {
+                "assumption": "Process-level strategic wins would transfer directly to outcome-level market results.",
+                "observation": f"Known outcome indicates: {known_outcome}. {statement}",
+                "gap_significance": "Separates execution success from outcome realization speed and magnitude.",
+                "event_id": str(base_gap.get("event_id") or "unknown_event"),
+                "phase": str(base_gap.get("phase") or "unknown_phase"),
+            }
+        )
+    return result
+
+
+def _extract_learning_loop(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    loops: list[dict[str, Any]] = []
+    for event in events:
+        text = (
+            f"{event.get('name', '')} {event.get('event', '')} {event.get('description', '')}"
+        ).lower()
+        if any(keyword in text for keyword in ("pivot", "adjust", "iteration", "commercial", "pilot")):
+            loops.append(
+                {
+                    "signal": str(event.get("name") or event.get("event") or "event_signal"),
+                    "adjustment": "Founder adjusted strategy through phased validation and packaging choices.",
+                    "evidence_ref": str(event.get("id") or event.get("event_id") or "unknown_event"),
+                }
+            )
+    return loops[:2]
 
 def generate_unified_insight(
     *,
     case_id: str,
     founder_ontology: dict[str, Any],
+    strategy_ontology: dict[str, Any] | None = None,
     formation_payload: dict[str, Any] | None = None,
-    llm_client: Any = None
+    llm_client: Any = None,
+    config_path: str | None = None,
 ) -> dict[str, Any]:
     """
     Generate a unified insight JSON containing:
     1. Persona Narrative
     2. Strategy Gap Analysis (if formation_payload is provided)
     """
-    actors = founder_ontology.get("actors") or []
-    founder_actor = next((a for a in actors if "founder" in str(a.get("type", "")).lower()), None)
-    
-    if not founder_actor:
-        founder_actor = actors[0] if actors else {}
+    founder_actor = _pick_founder_actor(founder_ontology)
 
     founder_name = founder_actor.get("name", "Unknown Founder")
     profile = founder_actor.get("profile", {})
     
-    # 1. Persona Insight
-    # In skeleton mode (no llm_client), we produce a deterministic summary
-    persona_narrative = (
+    mental_patterns = profile.get("mental_patterns") or {}
+    strategic_style = profile.get("strategic_style") or {}
+    core_beliefs = [str(item) for item in (mental_patterns.get("core_beliefs") or []) if str(item).strip()]
+    decision_style = str(strategic_style.get("decision_style") or "intentional")
+    non_negotiables = [str(item) for item in (strategic_style.get("non_negotiables") or []) if str(item).strip()]
+
+    constraints = [
+        str(item.get("name") or item.get("id") or "").strip()
+        for item in (founder_ontology.get("constraints") or [])
+        if isinstance(item, dict)
+    ]
+    constraints = [item for item in constraints if item]
+    events = [item for item in (founder_ontology.get("events") or []) if isinstance(item, dict)]
+
+    fallback_persona_narrative = (
         f"{founder_name} is characterized by a strong alignment with their core beliefs: "
-        f"'{', '.join(profile.get('mental_patterns', {}).get('core_beliefs', [])[:2])}'. "
-        f"Their strategic style reflects a '{profile.get('strategic_style', {}).get('decision_style', 'intentional')}' approach, "
-        f"often prioritizing '{', '.join(profile.get('strategic_style', {}).get('non_negotiables', [])[:1])}' over external pressures. "
+        f"'{', '.join(core_beliefs[:2])}'. "
+        f"Their strategic style reflects a '{decision_style}' approach, "
+        f"often prioritizing '{', '.join(non_negotiables[:1])}' over external pressures. "
         "This indicates a founder persona that is deeply principle-driven, favoring evidence and internal logic over conventional process."
     )
     
-    key_traits = [
+    fallback_key_traits = [
         {"trait": "Principle-Driven", "evidence_summary": "Prioritizes non-negotiables in strategic decisions."},
         {"trait": "Evidence-Based", "evidence_summary": "Uses data/signals for market perception."}
     ]
     
-    # 2. Strategy Gaps
-    strategy_gaps = []
+    fallback_why_chain = _build_why_chain(
+        founder_name=founder_name,
+        core_beliefs=core_beliefs,
+        decision_style=decision_style,
+        non_negotiables=non_negotiables,
+        constraints=constraints,
+        events=events,
+    )
+
+    fallback_process_gaps = _build_process_gaps(formation_payload=formation_payload, events=events)
+    known_outcome = _extract_known_outcome(founder_ontology, strategy_ontology)
+    fallback_outcome_gaps = _build_outcome_gaps(known_outcome=known_outcome, process_gaps=fallback_process_gaps)
+    fallback_learning_loop = _extract_learning_loop(events)
+
+    effective_llm_client = llm_client
+    if effective_llm_client is None and config_path:
+        try:
+            llm_config = load_llm_config(config_path, require_embeddings=False)
+            effective_llm_client = create_chat_client(llm_config)
+        except Exception:
+            effective_llm_client = None
+
+    evidence_package = _build_insight_evidence_package(
+        case_id=case_id,
+        founder_name=founder_name,
+        founder_ontology=founder_ontology,
+        strategy_ontology=strategy_ontology,
+        formation_payload=formation_payload,
+        known_outcome=known_outcome,
+    )
+
+    persona_narrative = fallback_persona_narrative
+    key_traits = fallback_key_traits
+    consistency_score = 0.85
+    why_chain = fallback_why_chain
+    process_gaps = fallback_process_gaps
+    outcome_gaps = fallback_outcome_gaps
+    learning_loop = fallback_learning_loop
+
+    if effective_llm_client is not None:
+        persona_narrative, key_traits, consistency_score = _enhance_persona_with_llm(
+            effective_llm_client,
+            founder_name=founder_name,
+            profile=profile if isinstance(profile, dict) else {},
+            fallback_narrative=fallback_persona_narrative,
+            fallback_traits=fallback_key_traits,
+        )
+        why_chain = _enhance_why_chain_with_llm(
+            effective_llm_client,
+            evidence_package=evidence_package,
+            fallback_items=fallback_why_chain,
+        )
+        process_gaps, outcome_gaps, learning_loop = _enhance_gap_analysis_with_llm(
+            effective_llm_client,
+            evidence_package=evidence_package,
+            fallback_process_gaps=fallback_process_gaps,
+            fallback_outcome_gaps=fallback_outcome_gaps,
+            fallback_learning_loop=fallback_learning_loop,
+        )
+
+    query_payload: dict[str, Any] = {
+        "type": "insight",
+        "case_id": case_id,
+    }
     if formation_payload:
-        f_chain = formation_payload.get("formation_chain", {})
-        d_logic = f_chain.get("decision_logic", {})
-        exec_delta = f_chain.get("execution_delta", [])
-        
-        # Real logic would use LLM to compare assumption vs reality
-        # For skeleton, we derive one gap from execution delta or constraints
-        strategy_gaps.append({
-            "assumption": "The initial strategic formation would lead to linear validation of core products.",
-            "observation": f"The execution resulted in {len(exec_delta)} delta points affecting {', '.join([e.get('target_name') for e in exec_delta[:2]])}.",
-            "gap_significance": "Highlight the mismatch between internal constraints and external scalability.",
-            "what_if_scenario": "What if the founder had abandoned the non-negotiables to match external maturity standards?"
-        })
-    else:
-        # Fallback if no specific formation provided
-        strategy_gaps.append({
-            "assumption": "Strategy would proceed without major pivots.",
-            "observation": "Historical pivots recorded in timeline suggest recurring gaps in market perception.",
-            "gap_significance": "Points to potential over-reliance on internal cognitive frames.",
-            "what_if_scenario": "What if external market signals were weighted 2x more than internal beliefs?"
-        })
+        target_event_id = (formation_payload.get("query") or {}).get("target_event_id")
+        if isinstance(target_event_id, str) and target_event_id.strip():
+            query_payload["target_event_id"] = target_event_id.strip()
 
     insight_result = {
-        "query": {
-            "type": "insight",
-            "case_id": case_id,
-            "target_event_id": formation_payload.get("query", {}).get("target_event_id") if formation_payload else None
-        },
+        "query": query_payload,
         "persona_insight": {
             "narrative": persona_narrative,
             "key_traits": key_traits,
-            "consistency_score": 0.85
+            "consistency_score": consistency_score
         },
-        "strategy_gaps": strategy_gaps,
+        "why_chain": why_chain,
+        "gap_analysis": {
+            "process_gaps": process_gaps,
+            "outcome_gaps": outcome_gaps,
+            "learning_loop": learning_loop,
+            "known_outcome": known_outcome,
+        },
         "run_meta": {
             "timestamp": datetime.datetime.now().isoformat(),
-            "prompt_version": "v1.0-skeleton"
+            "prompt_version": "v2.0-why-gap-narrative",
+            "mode": "llm-enhanced" if effective_llm_client is not None else "skeleton-deterministic",
         }
     }
     

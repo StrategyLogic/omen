@@ -242,3 +242,84 @@ def build_actor_semantic_enhancement_prompt(actor_payload_json: str, existing_re
         {existing_relations_json}
         """
     ).strip()
+
+
+def build_strategic_formation_prompt() -> str:
+    return dedent(
+        """
+        You are a startup strategy analyst expert. Your task is to generate a cohesive "Strategic Formation Narrative" for a founder's decision.
+
+        Given the following raw strategic formation data:
+        Founder: {founder}
+        Decision Event: {event_name} - {event_description}
+
+        Perception (Signals from market/tech):
+        {perception_list}
+
+        Constraint Conflict (Internal vs External):
+        - Internal Constraints: {internal_constraints}
+        - External Pressures: {external_pressures}
+
+        Founder Mediation (Beliefs & Style):
+        - Core Beliefs: {core_beliefs}
+        - Cognitive Frames: {cognitive_frames}
+        - Decision Style: {decision_style}
+        - Non-negotiables: {non_negotiables}
+
+        Outcome (Execution Delta):
+        {execution_list}
+
+        TASK:
+        Write a highly analytical and structured narrative (2-3 paragraphs) that explains HOW the founder's mental patterns mediated the external signals and constraints to reach this specific decision.
+        Focus on the tension between "What was happening" and "How they thought about it".
+
+        Format the output as a JSON object with a single key "narrative".
+        """
+    ).strip()
+
+
+def build_persona_insight_prompt() -> str:
+    return dedent(
+        """
+        Analyze the character and mental patterns of the following founder based on provided ontology data.
+        Founder name: {founder_name}
+        Profile Facts: {profile_facts}
+        Mental Patterns: {mental_patterns}
+        Strategic Style: {strategic_style}
+
+        Generate a cohesive narrative (150-200 words) describing their "Persona".
+        Highlight their consistency between beliefs and actions.
+        """
+    ).strip()
+
+
+def build_founder_why_prompt() -> str:
+    return dedent(
+        """
+        You are an analyst. Based on ontology evidence, answer at least 3 "Why" questions around founder strategic formation.
+        Each answer should connect beliefs, constraints, and observed decisions.
+        Output should stay grounded in provided evidence references.
+        """
+    ).strip()
+
+
+def build_founder_gap_prompt() -> str:
+    return dedent(
+        """
+        Based on ontology evidence, extract strategy-reality gaps.
+        Require at least 3 process gaps.
+        If known outcome is available, also extract outcome gaps.
+        Do not generate counterfactual validation or what-if conclusions.
+        """
+    ).strip()
+
+
+def build_json_retry_prompt(base_prompt: str) -> str:
+    return dedent(
+        f"""
+        {base_prompt}
+
+        IMPORTANT: Return ONE valid JSON object only.
+        No markdown fences, no explanations, no trailing text.
+        """
+    ).strip()

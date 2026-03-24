@@ -5,37 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-
-STRATEGIC_FORMATION_PROMPT = """
-You are a startup strategy analyst expert. Your task is to generate a cohesive "Strategic Formation Narrative" for a founder's decision.
-
-Given the following raw strategic formation data:
-Founder: {founder}
-Decision Event: {event_name} - {event_description}
-
-Perception (Signals from market/tech):
-{perception_list}
-
-Constraint Conflict (Internal vs External):
-- Internal Constraints: {internal_constraints}
-- External Pressures: {external_pressures}
-
-Founder Mediation (Beliefs & Style):
-- Core Beliefs: {core_beliefs}
-- Cognitive Frames: {cognitive_frames}
-- Decision Style: {decision_style}
-- Non-negotiables: {non_negotiables}
-
-Outcome (Execution Delta):
-{execution_list}
-
-TASK:
-Write a highly analytical and structured narrative (2-3 paragraphs) that explains HOW the founder's mental patterns mediated the external signals and constraints to reach this specific decision. 
-Focus on the tension between "What was happening" and "How they thought about it".
-
-Format the output as a JSON object with a single key "narrative".
-"""
-
+from omen.ingest.llm_ontology.prompts import build_strategic_formation_prompt
 
 def build_persona_prompt_payload(founder_ontology: dict[str, Any], question: str) -> dict[str, Any]:
     return {
@@ -75,6 +45,7 @@ def enhance_formation_with_narrative(
     )
 
     mediation = chain.get("mediation", {})
+    formation_prompt_template = build_strategic_formation_prompt()
 
     if llm_client is None:
         # Mock LLM narrative logic as a skeleton (Spec 6 - Phase 5 approach)
@@ -93,7 +64,10 @@ def enhance_formation_with_narrative(
         )
     else:
         # Placeholder for actual LLM call integration
-        narrative = "Enhanced narrative generation with LLM is not yet active in this session."
+        narrative = (
+            "Enhanced narrative generation with LLM is not yet active in this session. "
+            f"Prompt template length={len(formation_prompt_template)}"
+        )
 
     if "decision_logic" in chain:
         chain["decision_logic"]["narrative"] = narrative

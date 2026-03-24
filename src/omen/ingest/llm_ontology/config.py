@@ -24,7 +24,16 @@ def _resolve_env_placeholder(value: str) -> str:
     return resolved
 
 
-def load_llm_config(config_path: str | Path = "config/llm.toml") -> LLMConfig:
+def _resolve_optional_env_placeholder(value: str) -> str:
+    if not value.strip():
+        return ""
+    try:
+        return _resolve_env_placeholder(value)
+    except ValueError:
+        return ""
+
+
+def load_llm_config(config_path: str | Path = "config/llm.toml", *, require_embeddings: bool = True) -> LLMConfig:
     try:
         dotenv_module = importlib.import_module("dotenv")
         dotenv_module.load_dotenv(override=False)
@@ -43,7 +52,10 @@ def load_llm_config(config_path: str | Path = "config/llm.toml") -> LLMConfig:
     runtime = payload.get("runtime", {})
 
     deepseek_api_key = _resolve_env_placeholder(str(auth.get("deepseek_api_key", "")))
-    voyage_api_key = _resolve_env_placeholder(str(auth.get("voyage_api_key", "")))
+    if require_embeddings:
+        voyage_api_key = _resolve_env_placeholder(str(auth.get("voyage_api_key", "")))
+    else:
+        voyage_api_key = _resolve_optional_env_placeholder(str(auth.get("voyage_api_key", ""))) or "chat-only"
 
     return LLMConfig(
         provider="deepseek",

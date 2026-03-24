@@ -484,10 +484,15 @@ with col_insight:
             try:
                 founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
                 formation_payload = json.loads(paths["analyze_formation"].read_text(encoding="utf-8"))
+                strategy_payload = None
+                if paths["ontology"].exists():
+                    strategy_payload = json.loads(paths["ontology"].read_text(encoding="utf-8"))
                 insight_payload = generate_unified_insight(
                     case_id=case_id,
                     founder_ontology=founder_payload,
+                    strategy_ontology=strategy_payload,
                     formation_payload=formation_payload,
+                    config_path=config_path,
                 )
                 paths["analyze_insight"].write_text(
                     json.dumps(insight_payload, ensure_ascii=False, indent=2),
@@ -636,35 +641,83 @@ if st.session_state.spec6_insight_payload:
     st.subheader("Deep Strategic Insight")
     
     persona = insight_payload.get("persona_insight") or {}
-    gaps = insight_payload.get("strategy_gaps") or {}
+    why_chain = insight_payload.get("why_chain") or []
+    gap_analysis = insight_payload.get("gap_analysis") or {}
+    process_gaps = gap_analysis.get("process_gaps") or []
+    outcome_gaps = gap_analysis.get("outcome_gaps") or []
+    learning_loop = gap_analysis.get("learning_loop") or []
+    known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
     
-    t1, t2 = st.tabs(["👤 Persona Narrative", "⚖️ Strategy Gaps & What-if"])
+    t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
     
     with t1:
-        st.markdown(f"### {persona.get('title', 'Founder Persona')}")
+        st.markdown("### Founder Persona")
         st.write(persona.get("narrative", "No narrative available."))
-        
-        if persona.get("core_beliefs"):
-            st.markdown("**Core Beliefs**")
-            for b in persona["core_beliefs"]:
-                st.info(b)
-        
-        if persona.get("decision_style"):
-            st.markdown("**Decision Style**")
-            st.json(persona["decision_style"])
+        st.markdown(f"**Consistency Score:** {persona.get('consistency_score', 'n/a')}")
+        key_traits = persona.get("key_traits") or []
+        if isinstance(key_traits, list) and key_traits:
+            st.markdown("**Key Traits**")
+            for item in key_traits:
+                if not isinstance(item, dict):
+                    continue
+                trait = str(item.get("trait") or "Unknown trait")
+                evidence_summary = str(item.get("evidence_summary") or "")
+                st.info(f"{trait}: {evidence_summary}")
 
     with t2:
-        st.markdown("### Misalignment & Counterfactuals")
-        
-        gaps_list = gaps if isinstance(gaps, list) else []
-        for gap in gaps_list:
+        st.markdown("### Why: Strategic Formation Narrative")
+        why_items = why_chain if isinstance(why_chain, list) else []
+        for index, item in enumerate(why_items, start=1):
+            if not isinstance(item, dict):
+                continue
+            question = str(item.get("question") or f"Why {index}?")
+            answer = str(item.get("answer") or "No answer available.")
+            refs = item.get("evidence_refs") or []
+            with st.expander(f"Why {index}: {question}", expanded=index == 1):
+                st.write(answer)
+                if isinstance(refs, list) and refs:
+                    st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
+
+    with t3:
+        st.markdown("### Process Reality Gaps")
+        process_gap_items = process_gaps if isinstance(process_gaps, list) else []
+        for gap in process_gap_items:
             with st.expander(f"Gap: {gap.get('assumption', 'Unknown Point')}"):
                 st.write(f"**Observed Reality:** {gap.get('observation', '...')}")
-                if gap.get('contradiction'):
-                    st.error(f"**Contradiction:** {gap.get('contradiction')}")
                 if gap.get('gap_significance'):
                     st.warning(f"**Significance:** {gap.get('gap_significance')}")
-                if gap.get('what_if_scenario'):
-                    st.success("**What-if Scenario**")
-                    st.write(gap['what_if_scenario'])
+                event_id = str(gap.get("event_id") or "").strip()
+                phase = str(gap.get("phase") or "").strip()
+                if event_id:
+                    st.caption(f"Event: {event_id}")
+                if phase:
+                    st.caption(f"Phase: {phase}")
+        
+        if known_outcome:
+            st.markdown("### Outcome Reality Gaps")
+            st.caption(f"Known Outcome: {known_outcome}")
+            outcome_gap_items = outcome_gaps if isinstance(outcome_gaps, list) else []
+            for gap in outcome_gap_items:
+                with st.expander(f"Outcome Gap: {gap.get('assumption', 'Unknown Point')}"):
+                    st.write(f"**Observed Outcome:** {gap.get('observation', '...')}")
+                    if gap.get('gap_significance'):
+                        st.warning(f"**Significance:** {gap.get('gap_significance')}")
+                    event_id = str(gap.get("event_id") or "").strip()
+                    phase = str(gap.get("phase") or "").strip()
+                    if event_id:
+                        st.caption(f"Event: {event_id}")
+                    if phase:
+                        st.caption(f"Phase: {phase}")
+
+        if isinstance(learning_loop, list) and learning_loop:
+            st.markdown("### Learning Loop Signals")
+            for item in learning_loop:
+                if not isinstance(item, dict):
+                    continue
+                signal = str(item.get("signal") or "unknown_signal")
+                adjustment = str(item.get("adjustment") or "")
+                evidence_ref = str(item.get("evidence_ref") or "")
+                st.info(f"{signal}: {adjustment}")
+                if evidence_ref:
+                    st.caption(f"Evidence: {evidence_ref}")
 

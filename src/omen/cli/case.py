@@ -103,6 +103,12 @@ def register_case_commands(subparsers: Any) -> None:
         required=False,
         help="Optional output JSON path for unified insight",
     )
+    insight.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML for insight enhancement",
+    )
 
 
 def _generation_report_payload(
@@ -221,6 +227,7 @@ def handle_case_command(args: Any) -> int:
 
             case_id = normalize_case_id(args.case_id)
             case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
+            strategy_path = case_dir / "strategy_ontology.json"
             founder_path = case_dir / "founder_ontology.json"
 
             if not founder_path.exists():
@@ -228,6 +235,9 @@ def handle_case_command(args: Any) -> int:
                 return 2
 
             founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
+            strategy_payload = None
+            if strategy_path.exists():
+                strategy_payload = json.loads(strategy_path.read_text(encoding="utf-8"))
             formation_payload = None
             if args.event_id:
                 try:
@@ -242,7 +252,9 @@ def handle_case_command(args: Any) -> int:
                 insight_payload = generate_unified_insight(
                     case_id=case_id,
                     founder_ontology=founder_payload,
+                    strategy_ontology=strategy_payload,
                     formation_payload=formation_payload,
+                    config_path=args.config,
                 )
             except Exception as exc:
                 print(f"Analyze insight failed: {exc}")

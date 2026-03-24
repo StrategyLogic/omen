@@ -6,7 +6,11 @@ import json
 from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client, embed_documents_with_voyage
-from omen.ingest.llm_ontology.prompts import build_system_prompt, build_user_prompt
+from omen.ingest.llm_ontology.prompts import (
+    build_json_retry_prompt,
+    build_system_prompt,
+    build_user_prompt,
+)
 from omen.ingest.llm_ontology.vector_cache import get_cached_vectors, save_vectors_to_cache
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
@@ -64,11 +68,7 @@ def generate_ontology_payload(
     try:
         return _extract_json_object(content)
     except Exception:
-        retry_prompt = (
-            f"{prompt}\n\n"
-            "IMPORTANT: Return ONE valid JSON object only. "
-            "No markdown fences, no explanations, no trailing text."
-        )
+        retry_prompt = build_json_retry_prompt(prompt)
         retry_response = chat.invoke(retry_prompt)
         retry_content = (
             retry_response.content

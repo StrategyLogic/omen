@@ -7,7 +7,7 @@ name = "omen"
 version = "0.1.0"
 description = "Open-source strategic simulation engine for technology-market evolution"
 readme = "README.md"
-requires-python = ">=3.12,<3.15"
+requires-python = ">=3.12,<3.13"
 authors = [{ name = "StrategyLogic" }]
 license = { text = "AGPL-3.0-or-later" }
 dependencies = [

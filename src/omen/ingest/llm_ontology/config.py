@@ -33,6 +33,59 @@ def _resolve_optional_env_placeholder(value: str) -> str:
         return ""
 
 
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        return int(raw)
+    except Exception:
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        return float(raw)
+    except Exception:
+        return default
+
+
+def _load_llm_config_from_env(*, require_embeddings: bool = True) -> LLMConfig:
+    deepseek_api_key = str(os.getenv("DEEPSEEK_API_KEY") or "").strip()
+    if not deepseek_api_key:
+        raise FileNotFoundError(
+            "LLM config file not found and DEEPSEEK_API_KEY is missing. "
+            "Set DEEPSEEK_API_KEY in deployment environment or provide config/llm.toml."
+        )
+
+    voyage_api_key = str(os.getenv("VOYAGE_API_KEY") or "").strip()
+    if require_embeddings and not voyage_api_key:
+        raise FileNotFoundError(
+            "LLM config file not found and VOYAGE_API_KEY is missing (required for embeddings). "
+            "Set VOYAGE_API_KEY in deployment environment or provide config/llm.toml."
+        )
+
+    if not voyage_api_key:
+        voyage_api_key = "chat-only"
+
+    return LLMConfig(
+        provider="deepseek",
+        base_url=str(os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"),
+        chat_model=str(os.getenv("DEEPSEEK_CHAT_MODEL") or "deepseek-chat"),
+        embedding_model=str(os.getenv("VOYAGE_EMBEDDING_MODEL") or "voyage-3.5"),
+        deepseek_api_key=deepseek_api_key,
+        voyage_api_key=voyage_api_key,
+        timeout_seconds=_env_int("LLM_TIMEOUT_SECONDS", 120),
+        temperature=_env_float("LLM_TEMPERATURE", 0.1),
+        max_chunks=_env_int("LLM_MAX_CHUNKS", 12),
+        chunk_size=_env_int("LLM_CHUNK_SIZE", 1800),
+        chunk_overlap=_env_int("LLM_CHUNK_OVERLAP", 200),
+    )
+
+
 def load_llm_config(config_path: str | Path = "config/llm.toml", *, require_embeddings: bool = True) -> LLMConfig:
     try:
         dotenv_module = importlib.import_module("dotenv")
@@ -41,9 +94,7 @@ def load_llm_config(config_path: str | Path = "config/llm.toml", *, require_embe
         pass
     path = Path(config_path)
     if not path.exists():
-        raise FileNotFoundError(
-            f"LLM config not found at {path}. Copy config/llm.example.toml to config/llm.toml first."
-        )
+        return _load_llm_config_from_env(require_embeddings=require_embeddings)
 
     payload = tomllib.loads(path.read_text(encoding="utf-8"))
 

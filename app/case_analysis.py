@@ -546,8 +546,124 @@ if st.session_state.spec6_status_payload:
     else:
         st.info("No timeline events for current status filter.")
 
-    founder_fig = build_founder_graph_figure(status_payload)
-    st.plotly_chart(founder_fig, use_container_width=True)
+st.divider()
+
+if st.session_state.spec6_insight_payload:
+    insight_payload = st.session_state.spec6_insight_payload
+    st.subheader("Deep Strategic Insight")
+
+    persona = insight_payload.get("persona_insight") or {}
+    why_chain = insight_payload.get("why_chain") or []
+    gap_analysis = insight_payload.get("gap_analysis") or {}
+    process_gaps = gap_analysis.get("process_gaps") or []
+    outcome_gaps = gap_analysis.get("outcome_gaps") or []
+    learning_loop = gap_analysis.get("learning_loop") or []
+    known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
+    formation_payload = st.session_state.spec6_formation_payload
+
+    t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
+
+    with t1:
+        st.markdown("### Founder Persona")
+        st.write(persona.get("narrative", "No narrative available."))
+        st.markdown(f"**Consistency Score:** {persona.get('consistency_score', 'n/a')}")
+
+        if st.session_state.spec6_status_payload:
+            founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
+            st.plotly_chart(founder_fig, use_container_width=True)
+
+        key_traits = persona.get("key_traits") or []
+        if isinstance(key_traits, list) and key_traits:
+            st.markdown("**Key Traits**")
+            for item in key_traits:
+                if not isinstance(item, dict):
+                    continue
+                trait = str(item.get("trait") or "Unknown trait")
+                evidence_summary = str(item.get("evidence_summary") or "")
+                st.info(f"{trait}: {evidence_summary}")
+
+    with t2:
+        if formation_payload:
+            st.markdown("### Strategic Formation Chain")
+            summary = formation_payload.get("summary") or {}
+            metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+            metric_col1.metric("Perception Signals", int(summary.get("perception_signal_count") or 0))
+            metric_col2.metric("Internal Constraints", int(summary.get("internal_constraint_count") or 0))
+            metric_col3.metric("External Pressures", int(summary.get("external_pressure_count") or 0))
+            metric_col4.metric("Execution Deltas", int(summary.get("execution_delta_count") or 0))
+
+            formation_fig = build_formation_chain_figure(formation_payload)
+            st.plotly_chart(formation_fig, use_container_width=True)
+
+        st.markdown("### Why: Strategic Formation Narrative")
+        why_items = why_chain if isinstance(why_chain, list) else []
+        for index, item in enumerate(why_items, start=1):
+            if not isinstance(item, dict):
+                continue
+            question = str(item.get("question") or f"Why {index}?")
+            answer = str(item.get("answer") or "No answer available.")
+            refs = item.get("evidence_refs") or []
+            with st.expander(f"Why {index}: {question}", expanded=index == 1):
+                st.write(answer)
+                if isinstance(refs, list) and refs:
+                    st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
+
+        if formation_payload:
+            chain = formation_payload.get("formation_chain") or {}
+            with st.expander("Formation Data Details"):
+                st.markdown("**Perception**")
+                st.json(chain.get("perception") or [])
+                st.markdown("**Constraint Conflict**")
+                st.json(chain.get("constraint_conflict") or {})
+                st.markdown("**Mediation (Mental Patterns / Strategic Style)**")
+                st.json(chain.get("mediation") or {})
+                st.markdown("**Decision Logic**")
+                st.json(chain.get("decision_logic") or {})
+                st.markdown("**Execution Delta**")
+                st.json(chain.get("execution_delta") or [])
+
+    with t3:
+        st.markdown("### Process Reality Gaps")
+        process_gap_items = process_gaps if isinstance(process_gaps, list) else []
+        for gap in process_gap_items:
+            with st.expander(f"Gap: {gap.get('assumption', 'Unknown Point')}"):
+                st.write(f"**Observed Reality:** {gap.get('observation', '...')}")
+                if gap.get('gap_significance'):
+                    st.warning(f"**Significance:** {gap.get('gap_significance')}")
+                event_id = str(gap.get("event_id") or "").strip()
+                phase = str(gap.get("phase") or "").strip()
+                if event_id:
+                    st.caption(f"Event: {event_id}")
+                if phase:
+                    st.caption(f"Phase: {phase}")
+
+        if known_outcome:
+            st.markdown("### Outcome Reality Gaps")
+            st.caption(f"Known Outcome: {known_outcome}")
+            outcome_gap_items = outcome_gaps if isinstance(outcome_gaps, list) else []
+            for gap in outcome_gap_items:
+                with st.expander(f"Outcome Gap: {gap.get('assumption', 'Unknown Point')}"):
+                    st.write(f"**Observed Outcome:** {gap.get('observation', '...')}")
+                    if gap.get('gap_significance'):
+                        st.warning(f"**Significance:** {gap.get('gap_significance')}")
+                    event_id = str(gap.get("event_id") or "").strip()
+                    phase = str(gap.get("phase") or "").strip()
+                    if event_id:
+                        st.caption(f"Event: {event_id}")
+                    if phase:
+                        st.caption(f"Phase: {phase}")
+
+        if isinstance(learning_loop, list) and learning_loop:
+            st.markdown("### Learning Loop Signals")
+            for item in learning_loop:
+                if not isinstance(item, dict):
+                    continue
+                signal = str(item.get("signal") or "unknown_signal")
+                adjustment = str(item.get("adjustment") or "")
+                evidence_ref = str(item.get("evidence_ref") or "")
+                st.info(f"{signal}: {adjustment}")
+                if evidence_ref:
+                    st.caption(f"Evidence: {evidence_ref}")
 
 st.divider()
 
@@ -601,123 +717,4 @@ if st.session_state.spec6_ontology_graph_payload:
         "tech": "Tech actor reachable closure",
         "market": "Market actor reachable closure",
     }.get(st.session_state.spec6_ontology_scope, "All nodes")
-
-st.divider()
-
-if st.session_state.spec6_formation_payload:
-    formation_payload = st.session_state.spec6_formation_payload
-    st.subheader("Strategic Formation Chain")
-
-    summary = formation_payload.get("summary") or {}
-    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-    metric_col1.metric("Perception Signals", int(summary.get("perception_signal_count") or 0))
-    metric_col2.metric("Internal Constraints", int(summary.get("internal_constraint_count") or 0))
-    metric_col3.metric("External Pressures", int(summary.get("external_pressure_count") or 0))
-    metric_col4.metric("Execution Deltas", int(summary.get("execution_delta_count") or 0))
-
-    formation_fig = build_formation_chain_figure(formation_payload)
-    st.plotly_chart(formation_fig, use_container_width=True)
-
-    chain = formation_payload.get("formation_chain") or {}
-    st.markdown("**Perception**")
-    st.json(chain.get("perception") or [])
-
-    st.markdown("**Constraint Conflict**")
-    st.json(chain.get("constraint_conflict") or {})
-
-    st.markdown("**Mediation (Mental Patterns / Strategic Style)**")
-    st.json(chain.get("mediation") or {})
-
-    st.markdown("**Decision Logic**")
-    st.json(chain.get("decision_logic") or {})
-
-    st.markdown("**Execution Delta**")
-    st.json(chain.get("execution_delta") or [])
-
-st.divider()
-
-if st.session_state.spec6_insight_payload:
-    insight_payload = st.session_state.spec6_insight_payload
-    st.subheader("Deep Strategic Insight")
-    
-    persona = insight_payload.get("persona_insight") or {}
-    why_chain = insight_payload.get("why_chain") or []
-    gap_analysis = insight_payload.get("gap_analysis") or {}
-    process_gaps = gap_analysis.get("process_gaps") or []
-    outcome_gaps = gap_analysis.get("outcome_gaps") or []
-    learning_loop = gap_analysis.get("learning_loop") or []
-    known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
-    
-    t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
-    
-    with t1:
-        st.markdown("### Founder Persona")
-        st.write(persona.get("narrative", "No narrative available."))
-        st.markdown(f"**Consistency Score:** {persona.get('consistency_score', 'n/a')}")
-        key_traits = persona.get("key_traits") or []
-        if isinstance(key_traits, list) and key_traits:
-            st.markdown("**Key Traits**")
-            for item in key_traits:
-                if not isinstance(item, dict):
-                    continue
-                trait = str(item.get("trait") or "Unknown trait")
-                evidence_summary = str(item.get("evidence_summary") or "")
-                st.info(f"{trait}: {evidence_summary}")
-
-    with t2:
-        st.markdown("### Why: Strategic Formation Narrative")
-        why_items = why_chain if isinstance(why_chain, list) else []
-        for index, item in enumerate(why_items, start=1):
-            if not isinstance(item, dict):
-                continue
-            question = str(item.get("question") or f"Why {index}?")
-            answer = str(item.get("answer") or "No answer available.")
-            refs = item.get("evidence_refs") or []
-            with st.expander(f"Why {index}: {question}", expanded=index == 1):
-                st.write(answer)
-                if isinstance(refs, list) and refs:
-                    st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
-
-    with t3:
-        st.markdown("### Process Reality Gaps")
-        process_gap_items = process_gaps if isinstance(process_gaps, list) else []
-        for gap in process_gap_items:
-            with st.expander(f"Gap: {gap.get('assumption', 'Unknown Point')}"):
-                st.write(f"**Observed Reality:** {gap.get('observation', '...')}")
-                if gap.get('gap_significance'):
-                    st.warning(f"**Significance:** {gap.get('gap_significance')}")
-                event_id = str(gap.get("event_id") or "").strip()
-                phase = str(gap.get("phase") or "").strip()
-                if event_id:
-                    st.caption(f"Event: {event_id}")
-                if phase:
-                    st.caption(f"Phase: {phase}")
-        
-        if known_outcome:
-            st.markdown("### Outcome Reality Gaps")
-            st.caption(f"Known Outcome: {known_outcome}")
-            outcome_gap_items = outcome_gaps if isinstance(outcome_gaps, list) else []
-            for gap in outcome_gap_items:
-                with st.expander(f"Outcome Gap: {gap.get('assumption', 'Unknown Point')}"):
-                    st.write(f"**Observed Outcome:** {gap.get('observation', '...')}")
-                    if gap.get('gap_significance'):
-                        st.warning(f"**Significance:** {gap.get('gap_significance')}")
-                    event_id = str(gap.get("event_id") or "").strip()
-                    phase = str(gap.get("phase") or "").strip()
-                    if event_id:
-                        st.caption(f"Event: {event_id}")
-                    if phase:
-                        st.caption(f"Phase: {phase}")
-
-        if isinstance(learning_loop, list) and learning_loop:
-            st.markdown("### Learning Loop Signals")
-            for item in learning_loop:
-                if not isinstance(item, dict):
-                    continue
-                signal = str(item.get("signal") or "unknown_signal")
-                adjustment = str(item.get("adjustment") or "")
-                evidence_ref = str(item.get("evidence_ref") or "")
-                st.info(f"{signal}: {adjustment}")
-                if evidence_ref:
-                    st.caption(f"Evidence: {evidence_ref}")
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 from pathlib import Path
 from typing import Any
@@ -179,7 +180,20 @@ title = case_display_title(case_id)
 
 st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
 st.title(f"Omen · {title}")
-st.caption(f"This case is framed as **{strategy_profile['label']}**. {strategy_profile['summary']} {strategy_profile['fit']}")
+st.markdown(
+    f"""
+    <div class="omen-hero">
+        <div class="omen-kicker">Founder Research App</div>
+        <div class="omen-summary">
+            <strong>{strategy_profile['label']}</strong><br/>
+            {strategy_profile['summary']} {strategy_profile['fit']}
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown('<div class="omen-actionbar-title">Actions</div>', unsafe_allow_html=True)
 
 col_gen, col_status, col_run, col_insight = st.columns(4)
 
@@ -333,6 +347,155 @@ def _pick_formation_target_event_id(founder_payload: dict[str, Any], status_payl
     return None
 
 
+def _inject_app_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        :root {
+            --omen-ink: #172033;
+            --omen-muted: #5b6475;
+            --omen-line: rgba(23, 32, 51, 0.10);
+            --omen-panel: linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 100%);
+            --omen-accent: #0f766e;
+            --omen-accent-soft: rgba(15, 118, 110, 0.10);
+        }
+        .stApp {
+            background:
+                radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 28%),
+                radial-gradient(circle at top right, rgba(194, 65, 12, 0.08), transparent 24%),
+                linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+        }
+        .omen-hero {
+            padding: 1.15rem 1.25rem;
+            border: 1px solid var(--omen-line);
+            border-radius: 20px;
+            background: var(--omen-panel);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+            margin-bottom: 1rem;
+        }
+        .omen-kicker {
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--omen-accent);
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+        .omen-summary {
+            color: var(--omen-muted);
+            font-size: 0.96rem;
+            line-height: 1.55;
+        }
+        .omen-actionbar-title {
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--omen-muted);
+            margin: 0.75rem 0 0.65rem;
+            font-weight: 700;
+        }
+        .omen-timeline {
+            position: relative;
+            margin-top: 0.5rem;
+            padding-left: 1.1rem;
+            border-left: 2px solid rgba(15, 118, 110, 0.18);
+        }
+        .omen-timeline-item {
+            position: relative;
+            margin: 0 0 1rem 0.35rem;
+            padding: 0.85rem 1rem 0.9rem;
+            border: 1px solid var(--omen-line);
+            border-radius: 16px;
+            background: rgba(255,255,255,0.86);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+        }
+        .omen-timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -1.2rem;
+            top: 1rem;
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: var(--omen-accent);
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+        }
+        .omen-time {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--omen-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.35rem;
+        }
+        .omen-event {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--omen-ink);
+            margin-bottom: 0.35rem;
+        }
+        .omen-meta {
+            color: #5b6475;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .omen-badge {
+            display: inline-block;
+            margin-top: 0.55rem;
+            padding: 0.22rem 0.55rem;
+            border-radius: 999px;
+            background: var(--omen-accent-soft);
+            color: var(--omen-accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        div[data-testid="stButton"] button {
+            border-radius: 14px;
+            min-height: 2.8rem;
+            border: 1px solid rgba(23, 32, 51, 0.12);
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
+        }
+        div[data-testid="stButton"] button[kind="primary"] {
+            background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+            border: none;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_timeline_cards(timeline_rows: list[dict[str, Any]]) -> None:
+    if not timeline_rows:
+        st.info("No timeline events for current status filter.")
+        return
+
+    items: list[str] = []
+    for row in timeline_rows:
+        if not isinstance(row, dict):
+            continue
+        time_text = html.escape(str(row.get("time") or row.get("date") or "Unknown Time"))
+        name_text = html.escape(str(row.get("name") or row.get("event") or "Event"))
+        evidence_text = html.escape(str(row.get("evidence") or row.get("description") or "No evidence summary."))
+        strategic = bool(row.get("strategic") or row.get("is_strategy_related"))
+        badge = '<div class="omen-badge">Strategic signal</div>' if strategic else ""
+        items.append(
+            f"""
+            <div class="omen-timeline-item">
+                <div class="omen-time">{time_text}</div>
+                <div class="omen-event">{name_text}</div>
+                <div class="omen-meta">{evidence_text}</div>
+                {badge}
+            </div>
+            """
+        )
+
+    st.markdown('<div class="omen-timeline">' + "".join(items) + "</div>", unsafe_allow_html=True)
+
+
+_inject_app_styles()
+
+
 if st.session_state.spec6_loaded_case_id != case_id:
     st.session_state.spec6_generation_result = None
     st.session_state.spec6_ontology_graph_payload = None
@@ -346,6 +509,7 @@ if st.session_state.spec6_loaded_case_id != case_id:
     st.rerun()
 
 with col_gen:
+    st.caption("Build evidence package")
     if st.button("Generate Ontology", type="primary", use_container_width=True):
         try:
             # Step 1: Ensure directory exists BEFORE running LLM
@@ -419,6 +583,7 @@ with col_gen:
             st.session_state.spec6_output_note = f"Generate failed: {exc}"
 
 with col_status:
+    st.caption("Load timeline + founder state")
     if st.button("Analyze Founder", use_container_width=True):
         paths = _artifact_paths(case_id)
         if not paths["ontology"].exists() or not paths["founder"].exists():
@@ -449,6 +614,7 @@ with col_status:
                 st.session_state.spec6_output_note = f"Analyze status failed: {exc}"
 
 with col_run:
+    st.caption("Trace strategic formation")
     if st.button("Analyze Formation", use_container_width=True):
         paths = _artifact_paths(case_id)
         if not paths["founder"].exists():
@@ -476,6 +642,7 @@ with col_run:
             except Exception as exc:  # pragma: no cover - UI surfaced exception
                 st.session_state.spec6_output_note = f"Analyze formation failed: {exc}"
 with col_insight:
+    st.caption("Generate narrative insight")
     if st.button("Deep Insight", use_container_width=True):
         paths = _artifact_paths(case_id)
         if not paths["founder"].exists() or not paths["analyze_formation"].exists():
@@ -528,122 +695,102 @@ with st.sidebar:
 st.divider()
 
 if st.session_state.spec6_status_payload:
-    status_payload = st.session_state.spec6_status_payload
-    st.subheader("Analyze Status")
+    with st.container(border=True):
+        status_payload = st.session_state.spec6_status_payload
+        st.subheader("Timeline")
 
-    summary = status_payload.get("summary") or {}
+        summary = status_payload.get("summary") or {}
+        metric1, metric2, metric3 = st.columns(3)
+        metric1.metric("Events", int(summary.get("timeline_event_count") or 0))
+        metric2.metric("Founder Nodes", int(summary.get("founder_node_count") or 0))
+        metric3.metric("Founder Edges", int(summary.get("founder_edge_count") or 0))
 
-    timeline_rows = status_payload.get("timeline") or []
-    if timeline_rows:
-        st.markdown("**Timeline**")
-        import pandas as pd
-        df_timeline = pd.DataFrame(timeline_rows)
-        # Display only requested columns in specific order
-        requested_cols = ["time", "name", "evidence", "strategic"]
-        available_cols = [c for c in requested_cols if c in df_timeline.columns]
-        df_timeline = df_timeline[available_cols]
-        st.dataframe(df_timeline, use_container_width=True)
-    else:
-        st.info("No timeline events for current status filter.")
+        timeline_rows = status_payload.get("timeline") or []
+        _render_timeline_cards(timeline_rows)
 
 st.divider()
 
 if st.session_state.spec6_insight_payload:
-    insight_payload = st.session_state.spec6_insight_payload
-    st.subheader("Deep Strategic Insight")
+    with st.container(border=True):
+        insight_payload = st.session_state.spec6_insight_payload
+        st.subheader("Deep Strategic Insight")
 
-    persona = insight_payload.get("persona_insight") or {}
-    why_chain = insight_payload.get("why_chain") or []
-    gap_analysis = insight_payload.get("gap_analysis") or {}
-    process_gaps = gap_analysis.get("process_gaps") or []
-    outcome_gaps = gap_analysis.get("outcome_gaps") or []
-    learning_loop = gap_analysis.get("learning_loop") or []
-    known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
-    formation_payload = st.session_state.spec6_formation_payload
+        persona = insight_payload.get("persona_insight") or {}
+        why_chain = insight_payload.get("why_chain") or []
+        gap_analysis = insight_payload.get("gap_analysis") or {}
+        process_gaps = gap_analysis.get("process_gaps") or []
+        outcome_gaps = gap_analysis.get("outcome_gaps") or []
+        learning_loop = gap_analysis.get("learning_loop") or []
+        known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
+        formation_payload = st.session_state.spec6_formation_payload
 
-    t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
+        t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
 
-    with t1:
-        st.markdown("### Founder Persona")
-        st.write(persona.get("narrative", "No narrative available."))
-        st.markdown(f"**Consistency Score:** {persona.get('consistency_score', 'n/a')}")
+        with t1:
+            st.markdown("### Founder Persona")
+            st.write(persona.get("narrative", "No narrative available."))
+            st.markdown(f"**Consistency Score:** {persona.get('consistency_score', 'n/a')}")
 
-        if st.session_state.spec6_status_payload:
-            founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
-            st.plotly_chart(founder_fig, use_container_width=True)
+            if st.session_state.spec6_status_payload:
+                founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
+                st.plotly_chart(founder_fig, use_container_width=True)
 
-        key_traits = persona.get("key_traits") or []
-        if isinstance(key_traits, list) and key_traits:
-            st.markdown("**Key Traits**")
-            for item in key_traits:
+            key_traits = persona.get("key_traits") or []
+            if isinstance(key_traits, list) and key_traits:
+                st.markdown("**Key Traits**")
+                for item in key_traits:
+                    if not isinstance(item, dict):
+                        continue
+                    trait = str(item.get("trait") or "Unknown trait")
+                    evidence_summary = str(item.get("evidence_summary") or "")
+                    st.info(f"{trait}: {evidence_summary}")
+
+        with t2:
+            if formation_payload:
+                st.markdown("### Strategic Formation Chain")
+                summary = formation_payload.get("summary") or {}
+                metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+                metric_col1.metric("Perception Signals", int(summary.get("perception_signal_count") or 0))
+                metric_col2.metric("Internal Constraints", int(summary.get("internal_constraint_count") or 0))
+                metric_col3.metric("External Pressures", int(summary.get("external_pressure_count") or 0))
+                metric_col4.metric("Execution Deltas", int(summary.get("execution_delta_count") or 0))
+
+                formation_fig = build_formation_chain_figure(formation_payload)
+                st.plotly_chart(formation_fig, use_container_width=True)
+
+            st.markdown("### Why: Strategic Formation Narrative")
+            why_items = why_chain if isinstance(why_chain, list) else []
+            for index, item in enumerate(why_items, start=1):
                 if not isinstance(item, dict):
                     continue
-                trait = str(item.get("trait") or "Unknown trait")
-                evidence_summary = str(item.get("evidence_summary") or "")
-                st.info(f"{trait}: {evidence_summary}")
+                question = str(item.get("question") or f"Why {index}?")
+                answer = str(item.get("answer") or "No answer available.")
+                refs = item.get("evidence_refs") or []
+                with st.expander(f"Why {index}: {question}", expanded=index == 1):
+                    st.write(answer)
+                    if isinstance(refs, list) and refs:
+                        st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
 
-    with t2:
-        if formation_payload:
-            st.markdown("### Strategic Formation Chain")
-            summary = formation_payload.get("summary") or {}
-            metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-            metric_col1.metric("Perception Signals", int(summary.get("perception_signal_count") or 0))
-            metric_col2.metric("Internal Constraints", int(summary.get("internal_constraint_count") or 0))
-            metric_col3.metric("External Pressures", int(summary.get("external_pressure_count") or 0))
-            metric_col4.metric("Execution Deltas", int(summary.get("execution_delta_count") or 0))
+            if formation_payload:
+                chain = formation_payload.get("formation_chain") or {}
+                with st.expander("Formation Data Details"):
+                    st.markdown("**Perception**")
+                    st.json(chain.get("perception") or [])
+                    st.markdown("**Constraint Conflict**")
+                    st.json(chain.get("constraint_conflict") or {})
+                    st.markdown("**Mediation (Mental Patterns / Strategic Style)**")
+                    st.json(chain.get("mediation") or {})
+                    st.markdown("**Decision Logic**")
+                    st.json(chain.get("decision_logic") or {})
+                    st.markdown("**Execution Delta**")
+                    st.json(chain.get("execution_delta") or [])
 
-            formation_fig = build_formation_chain_figure(formation_payload)
-            st.plotly_chart(formation_fig, use_container_width=True)
-
-        st.markdown("### Why: Strategic Formation Narrative")
-        why_items = why_chain if isinstance(why_chain, list) else []
-        for index, item in enumerate(why_items, start=1):
-            if not isinstance(item, dict):
-                continue
-            question = str(item.get("question") or f"Why {index}?")
-            answer = str(item.get("answer") or "No answer available.")
-            refs = item.get("evidence_refs") or []
-            with st.expander(f"Why {index}: {question}", expanded=index == 1):
-                st.write(answer)
-                if isinstance(refs, list) and refs:
-                    st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
-
-        if formation_payload:
-            chain = formation_payload.get("formation_chain") or {}
-            with st.expander("Formation Data Details"):
-                st.markdown("**Perception**")
-                st.json(chain.get("perception") or [])
-                st.markdown("**Constraint Conflict**")
-                st.json(chain.get("constraint_conflict") or {})
-                st.markdown("**Mediation (Mental Patterns / Strategic Style)**")
-                st.json(chain.get("mediation") or {})
-                st.markdown("**Decision Logic**")
-                st.json(chain.get("decision_logic") or {})
-                st.markdown("**Execution Delta**")
-                st.json(chain.get("execution_delta") or [])
-
-    with t3:
-        st.markdown("### Process Reality Gaps")
-        process_gap_items = process_gaps if isinstance(process_gaps, list) else []
-        for gap in process_gap_items:
-            with st.expander(f"Gap: {gap.get('assumption', 'Unknown Point')}"):
-                st.write(f"**Observed Reality:** {gap.get('observation', '...')}")
-                if gap.get('gap_significance'):
-                    st.warning(f"**Significance:** {gap.get('gap_significance')}")
-                event_id = str(gap.get("event_id") or "").strip()
-                phase = str(gap.get("phase") or "").strip()
-                if event_id:
-                    st.caption(f"Event: {event_id}")
-                if phase:
-                    st.caption(f"Phase: {phase}")
-
-        if known_outcome:
-            st.markdown("### Outcome Reality Gaps")
-            st.caption(f"Known Outcome: {known_outcome}")
-            outcome_gap_items = outcome_gaps if isinstance(outcome_gaps, list) else []
-            for gap in outcome_gap_items:
-                with st.expander(f"Outcome Gap: {gap.get('assumption', 'Unknown Point')}"):
-                    st.write(f"**Observed Outcome:** {gap.get('observation', '...')}")
+        with t3:
+            st.markdown("### Process Reality Gaps")
+            process_gap_items = process_gaps if isinstance(process_gaps, list) else []
+            for gap in process_gap_items:
+                with st.expander(f"Gap: {gap.get('assumption', 'Unknown Point')}"):
+                    st.write(f"**Observed Reality:** {gap.get('observation', '...')}")
                     if gap.get('gap_significance'):
                         st.warning(f"**Significance:** {gap.get('gap_significance')}")
                     event_id = str(gap.get("event_id") or "").strip()
@@ -653,68 +800,65 @@ if st.session_state.spec6_insight_payload:
                     if phase:
                         st.caption(f"Phase: {phase}")
 
-        if isinstance(learning_loop, list) and learning_loop:
-            st.markdown("### Learning Loop Signals")
-            for item in learning_loop:
-                if not isinstance(item, dict):
-                    continue
-                signal = str(item.get("signal") or "unknown_signal")
-                adjustment = str(item.get("adjustment") or "")
-                evidence_ref = str(item.get("evidence_ref") or "")
-                st.info(f"{signal}: {adjustment}")
-                if evidence_ref:
-                    st.caption(f"Evidence: {evidence_ref}")
+            if known_outcome:
+                st.markdown("### Outcome Reality Gaps")
+                st.caption(f"Known Outcome: {known_outcome}")
+                outcome_gap_items = outcome_gaps if isinstance(outcome_gaps, list) else []
+                for gap in outcome_gap_items:
+                    with st.expander(f"Outcome Gap: {gap.get('assumption', 'Unknown Point')}"):
+                        st.write(f"**Observed Outcome:** {gap.get('observation', '...')}")
+                        if gap.get('gap_significance'):
+                            st.warning(f"**Significance:** {gap.get('gap_significance')}")
+                        event_id = str(gap.get("event_id") or "").strip()
+                        phase = str(gap.get("phase") or "").strip()
+                        if event_id:
+                            st.caption(f"Event: {event_id}")
+                        if phase:
+                            st.caption(f"Phase: {phase}")
+
+            if isinstance(learning_loop, list) and learning_loop:
+                st.markdown("### Learning Loop Signals")
+                for item in learning_loop:
+                    if not isinstance(item, dict):
+                        continue
+                    signal = str(item.get("signal") or "unknown_signal")
+                    adjustment = str(item.get("adjustment") or "")
+                    evidence_ref = str(item.get("evidence_ref") or "")
+                    st.info(f"{signal}: {adjustment}")
+                    if evidence_ref:
+                        st.caption(f"Evidence: {evidence_ref}")
 
 st.divider()
 
 if st.session_state.spec6_ontology_graph_payload:
-    ontology_payload = st.session_state.spec6_ontology_graph_payload
-    st.subheader("Ontology Graph")
+    with st.container(border=True):
+        ontology_payload = st.session_state.spec6_ontology_graph_payload
+        st.subheader("Ontology Graph")
 
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stButton"] button[kind="secondary"] {
-            border-radius: 999px;
-            min-width: 2.75rem;
-            min-height: 2.75rem;
-            padding: 0 0.8rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+        ontology_fig = build_ontology_graph_figure(
+            ontology_payload,
+            actor_scope=st.session_state.spec6_ontology_scope,
+        )
+        st.plotly_chart(ontology_fig, use_container_width=True)
 
-    ontology_fig = build_ontology_graph_figure(
-        ontology_payload,
-        actor_scope=st.session_state.spec6_ontology_scope,
-    )
-    st.plotly_chart(ontology_fig, use_container_width=True)
-
-    space_summary = _build_space_summary(ontology_payload)
-    reset_col, col1, col2, col3, col4 = st.columns(5)
-    with reset_col:
-        st.caption("Show")
-        if st.button("All", key="ontology_scope_all"):
-            st.session_state.spec6_ontology_scope = "all"
-            st.rerun()
-    with col1:
-        st.caption("Tech Actors")
-        if st.button(str(space_summary.get("tech_space_actor_count", 0)), key="tech_actor_scope_count"):
-            st.session_state.spec6_ontology_scope = "tech"
-            st.rerun()
-    with col2:
-        st.caption("Market Actors")
-        if st.button(str(space_summary.get("market_space_actor_count", 0)), key="market_actor_scope_count"):
-            st.session_state.spec6_ontology_scope = "market"
-            st.rerun()
-    col3.metric("Shared Actors", space_summary.get("shared_actor_count", 0))
-    adoption_resistance = space_summary.get("adoption_resistance")
-    col4.metric("Adoption Resistance", "n/a" if adoption_resistance is None else str(adoption_resistance))
-
-    current_scope_label = {
-        "all": "All nodes",
-        "tech": "Tech actor reachable closure",
-        "market": "Market actor reachable closure",
-    }.get(st.session_state.spec6_ontology_scope, "All nodes")
+        space_summary = _build_space_summary(ontology_payload)
+        reset_col, col1, col2, col3, col4 = st.columns(5)
+        with reset_col:
+            st.caption("Show")
+            if st.button("All", key="ontology_scope_all"):
+                st.session_state.spec6_ontology_scope = "all"
+                st.rerun()
+        with col1:
+            st.caption("Tech Actors")
+            if st.button(str(space_summary.get("tech_space_actor_count", 0)), key="tech_actor_scope_count"):
+                st.session_state.spec6_ontology_scope = "tech"
+                st.rerun()
+        with col2:
+            st.caption("Market Actors")
+            if st.button(str(space_summary.get("market_space_actor_count", 0)), key="market_actor_scope_count"):
+                st.session_state.spec6_ontology_scope = "market"
+                st.rerun()
+        col3.metric("Shared Actors", space_summary.get("shared_actor_count", 0))
+        adoption_resistance = space_summary.get("adoption_resistance")
+        col4.metric("Adoption Resistance", "n/a" if adoption_resistance is None else str(adoption_resistance))
 

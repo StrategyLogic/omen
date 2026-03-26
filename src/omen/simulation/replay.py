@@ -62,6 +62,70 @@ def run_counterfactual(
     return variation, run_simulation(variation, ontology_setup=ontology_setup)
 
 
+def _parse_failure_activation_rules(result: dict[str, Any]) -> list[dict[str, Any]]:
+    ontology_setup = result.get("ontology_setup", {}) or {}
+    applied_axioms = ontology_setup.get("applied_axioms", {}) or {}
+    counterfactual_rules = list(applied_axioms.get("counterfactual") or [])
+
+    rules: list[dict[str, Any]] = []
+    for rule_id in counterfactual_rules:
+        rules.append(
+            {
+                "rule_id": str(rule_id),
+                "rule_type": "failure_activation",
+                "trigger": {
+                    "metric": "adoption_resistance",
+                    "operator": ">=",
+                    "threshold": 0.7,
+                },
+                "min_steps": 6,
+            }
+        )
+    return rules
+
+
+def _evaluate_failure_activation(
+    variation_result: dict[str, Any],
+    rules: list[dict[str, Any]],
+) -> dict[str, Any]:
+    ontology_setup = variation_result.get("ontology_setup", {}) or {}
+    adoption_resistance = (
+        ((ontology_setup.get("space_summary") or {}).get("adoption_resistance"))
+        if isinstance(ontology_setup, dict)
+        else None
+    )
+
+    evaluations: list[dict[str, Any]] = []
+    for rule in rules:
+        trigger = rule.get("trigger", {})
+        threshold = trigger.get("threshold")
+        try:
+            threshold_value = float(threshold)
+        except (TypeError, ValueError):
+            threshold_value = 0.7
+
+        triggered = isinstance(adoption_resistance, (int, float)) and adoption_resistance >= threshold_value
+        evaluations.append(
+            {
+                "rule_id": rule.get("rule_id"),
+                "triggered": triggered,
+                "observation": {
+                    "adoption_resistance": adoption_resistance,
+                    "threshold": threshold_value,
+                },
+            }
+        )
+
+    return {
+        "rules": rules,
+        "evaluations": evaluations,
+        "triggered": any(item.get("triggered") for item in evaluations),
+        "triggered_rule_ids": [
+            str(item.get("rule_id")) for item in evaluations if item.get("triggered")
+        ],
+    }
+
+
 def compare_run_results(
     baseline_result: dict[str, Any],
     variation_result: dict[str, Any],
@@ -93,6 +157,8 @@ def compare_run_results(
         },
     ]
     semantic_conditions = normalize_semantic_conditions(conditions or [])
+    failure_rules = _parse_failure_activation_rules(variation_result)
+    failure_activation = _evaluate_failure_activation(variation_result, failure_rules)
     comparison = {
         "baseline_run_id": baseline_result.get("run_id"),
         "variation_run_id": variation_result.get("run_id"),
@@ -102,6 +168,7 @@ def compare_run_results(
         != variation_result.get("winner", {}).get("actor_id"),
         "conditions": semantic_conditions,
         "deltas": deltas,
+        "failure_activation": failure_activation,
     }
     comparison["explanation"] = build_explanation_report(variation_result, comparison=comparison)
     directional = evaluate_directional_correctness(

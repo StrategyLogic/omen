@@ -18,6 +18,7 @@ def test_explanation_payload_fields_present() -> None:
     assert explanation["run_id"] == result["run_id"]
     assert isinstance(explanation["branch_points"], list)
     assert isinstance(explanation["causal_chain"], list)
+    assert isinstance(explanation["reality_gap_analysis"], list)
     assert isinstance(explanation["narrative_summary"], str)
 
 
@@ -30,3 +31,25 @@ def test_explanation_includes_counterfactual_deltas_when_provided() -> None:
     explanation = build_explanation_report(variation_result, comparison=comparison)
     assert explanation["counterfactual_deltas"]
     assert any(delta["metric"] == "competition_edge_count" for delta in explanation["counterfactual_deltas"])
+
+
+def test_explanation_reality_gap_analysis_populates_high_resistance_case() -> None:
+    result = {
+        "run_id": "run-1",
+        "outcome_class": "convergence",
+        "winner": {"actor_id": "x_developer_startup"},
+        "snapshots": [],
+        "ontology_setup": {
+            "space_summary": {
+                "adoption_resistance": 0.75,
+            }
+        },
+        "real_world_outcome": "market_entry_failure",
+    }
+
+    explanation = build_explanation_report(result)
+    gaps = explanation["reality_gap_analysis"]
+
+    assert gaps
+    assert any(gap["factor"] == "simulated_vs_real_outcome" for gap in gaps)
+    assert any(gap["factor"] == "adoption_resistance" for gap in gaps)

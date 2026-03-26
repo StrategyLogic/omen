@@ -23,9 +23,9 @@ dist/
 *.log
 .idea/
 .vscode/
+.VSCodeCounter/
 .github/agents/
 .github/prompts/
-.specify/
 
 # OS generated files
 .DS_Store
@@ -37,6 +37,7 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*TEST*
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -48,7 +49,7 @@ htmlcov/
 *.pyo
 *.~ 
 .env*
-solution*.md
+config/llm.toml
 .local.md
 output/
 *legacy*

@@ -74,7 +74,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "status_snapshot_date": "Status Snapshot Date",
         "model_config_path": "Model Config Path",
         "page_title": "Founder Research",
-        "page_intro": "Upload a source case file and Omen automatically builds visual founder personas and relationship graphs, then analyzes decision style and strategy-reality gaps to deliver deep, one-click insights.",
+        "page_intro": "Select a case and Omen automatically builds founder personas and relationship graph, then analyzes decision style and strategy-reality gaps to deliver deep, one-click insights.",
         "case_summary": "Case Summary",
         "unknown": "Please run Omen first.",
         "pipeline_title": "Research Workflow",
@@ -148,7 +148,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "status_snapshot_date": "状态快照日期",
         "model_config_path": "模型配置路径",
         "page_title": "创始人研究",
-        "page_intro": "只需上传案例源文件，Omen 即可为您自动构建可视化的创始人画像与关系图谱，更能深度解析其决策风格及“战略—现实”偏差，助您一键获取穿透表象的深度洞察。",
+        "page_intro": "选择案例点击开始，Omen 为您构建可视化的创始人画像与关系图谱，更能深度解析其决策风格及“战略—现实”偏差，助您一键获取穿透表象的深度洞察。",
         "case_summary": "案例摘要",
         "unknown": "尚未完成分析。",
         "pipeline_title": "研究流程",
@@ -408,8 +408,94 @@ def _artifact_paths(case_id: str) -> dict[str, Path]:
     }
 
 
+def _coerce_timeline_bool(value: Any, *, default: bool = True) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        token = value.strip().lower()
+        if token in {"yes", "true", "1"}:
+            return True
+        if token in {"no", "false", "0"}:
+            return False
+    if value is None:
+        return default
+    return bool(value)
+
+
+def _coalesce_timeline_description(row: dict[str, Any]) -> str:
+    for key in ("description", "content", "summary", "event_excerpt", "event", "name", "type", "evidence"):
+        text = str(row.get(key) or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _build_founder_event_description_map(founder_payload: dict[str, Any] | None) -> dict[str, str]:
+    if not isinstance(founder_payload, dict):
+        return {}
+    events = founder_payload.get("events")
+    if not isinstance(events, list):
+        return {}
+    mapping: dict[str, str] = {}
+    for item in events:
+        if not isinstance(item, dict):
+            continue
+        event_id = str(item.get("id") or item.get("event_id") or "").strip()
+        if not event_id:
+            continue
+        description = str(item.get("description") or item.get("content") or item.get("summary") or "").strip()
+        if description:
+            mapping[event_id] = description
+    return mapping
+
+
+def _normalize_timeline_row(row: dict[str, Any], *, founder_event_descriptions: dict[str, str] | None = None) -> dict[str, Any]:
+    event_id = str(row.get("id") or row.get("event_id") or "").strip() or "unknown"
+    name_text = str(row.get("name") or row.get("event") or row.get("type") or "").strip() or _t("event")
+    description = str((founder_event_descriptions or {}).get(event_id) or "").strip() or _coalesce_timeline_description(row)
+    strategic = _coerce_timeline_bool(
+        row.get("is_strategy_related", row.get("strategic")),
+        default=True,
+    )
+    return {
+        **row,
+        "id": event_id,
+        "event_id": event_id,
+        "time": str(row.get("time") or row.get("date") or "").strip() or _t("unknown_time"),
+        "name": name_text,
+        "event": str(row.get("event") or name_text).strip() or name_text,
+        "description": description,
+        "content": str(row.get("content") or description).strip() or description,
+        "strategic": strategic,
+        "is_strategy_related": strategic,
+    }
+
+
+def _normalize_status_payload(
+    payload: dict[str, Any] | None,
+    *,
+    founder_payload: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+    timeline = payload.get("timeline")
+    if not isinstance(timeline, list):
+        return payload
+    founder_event_descriptions = _build_founder_event_description_map(founder_payload)
+    normalized_timeline = [
+        _normalize_timeline_row(row, founder_event_descriptions=founder_event_descriptions)
+        for row in timeline
+        if isinstance(row, dict)
+    ]
+    return {
+        **payload,
+        "timeline": normalized_timeline,
+    }
+
+
 def _load_existing_outputs(case_id: str) -> None:
     paths = _artifact_paths(case_id)
+    founder_payload: dict[str, Any] | None = None
 
     if paths["ontology"].exists():
         try:
@@ -435,7 +521,16 @@ def _load_existing_outputs(case_id: str) -> None:
     if paths["analyze_status"].exists():
         try:
             status_payload = json.loads(paths["analyze_status"].read_text(encoding="utf-8"))
-            st.session_state.spec6_status_payload = status_payload if isinstance(status_payload, dict) else None
+            if paths["founder"].exists():
+                try:
+                    founder_raw = json.loads(paths["founder"].read_text(encoding="utf-8"))
+                    founder_payload = founder_raw if isinstance(founder_raw, dict) else None
+                except Exception:
+                    founder_payload = None
+            st.session_state.spec6_status_payload = _normalize_status_payload(
+                status_payload,
+                founder_payload=founder_payload,
+            )
         except Exception:
             st.session_state.spec6_status_payload = None
 
@@ -628,6 +723,7 @@ def _run_omen_pipeline(
         year=None,
         date=parsed_date,
     )
+    status_payload = _normalize_status_payload(status_payload, founder_payload=founder_payload)
     paths["analyze_status"].write_text(
         json.dumps(status_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -845,8 +941,8 @@ def _render_timeline_cards(timeline_rows: list[dict[str, Any]]) -> None:
             continue
         time_text = html.escape(str(row.get("time") or row.get("date") or _t("unknown_time")))
         name_text = html.escape(str(row.get("name") or row.get("event") or _t("event")))
-        evidence_text = html.escape(str(row.get("description") or _t("no_evidence_summary")))
-        strategic = bool(row.get("strategic") or row.get("is_strategy_related"))
+        evidence_text = html.escape(str(_coalesce_timeline_description(row) or _t("no_evidence_summary")))
+        strategic = _coerce_timeline_bool(row.get("is_strategy_related", row.get("strategic")), default=True)
         badge = f'<div class="omen-badge">{html.escape(_t("strategic_signal"))}</div>' if strategic else ""
         items.append(
             textwrap.dedent(

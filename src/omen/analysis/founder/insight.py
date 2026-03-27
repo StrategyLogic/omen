@@ -71,6 +71,30 @@ def _invoke_json_prompt(llm_client: Any, prompt: str, *, expect: str) -> Any:
         return _extract_json_array(retry_content)
 
 
+def _localize_known_outcome_with_llm(
+    llm_client: Any,
+    *,
+    known_outcome: str,
+    output_language: str,
+) -> str:
+    text = str(known_outcome or "").strip()
+    if not text:
+        return ""
+    prompt = (
+        "You are a precise translator for product analytics text.\n"
+        + _language_instruction(output_language)
+        + "\nReturn JSON object only with key: localized_text."
+        + " Keep meaning accurate and concise; do not add extra facts.\n\n"
+        + f"Source text: {json.dumps(text, ensure_ascii=False)}"
+    )
+    try:
+        payload = _invoke_json_prompt(llm_client, prompt, expect="object")
+        localized = str(payload.get("localized_text") or "").strip()
+        return localized or text
+    except Exception:
+        return text
+
+
 def _build_insight_evidence_package(
     *,
     case_id: str,
@@ -568,11 +592,6 @@ def generate_unified_insight(
         output_language=language,
     )
     known_outcome = _extract_known_outcome(founder_ontology, strategy_ontology)
-    fallback_outcome_gaps = _build_outcome_gaps(
-        known_outcome=known_outcome,
-        process_gaps=fallback_process_gaps,
-        output_language=language,
-    )
     fallback_learning_loop = _extract_learning_loop(events, output_language=language)
 
     effective_llm_client = llm_client
@@ -583,13 +602,27 @@ def generate_unified_insight(
         except Exception:
             effective_llm_client = None
 
+    output_known_outcome = known_outcome
+    if effective_llm_client is not None and known_outcome and language == "zh":
+        output_known_outcome = _localize_known_outcome_with_llm(
+            effective_llm_client,
+            known_outcome=known_outcome,
+            output_language=language,
+        )
+
+    fallback_outcome_gaps = _build_outcome_gaps(
+        known_outcome=output_known_outcome,
+        process_gaps=fallback_process_gaps,
+        output_language=language,
+    )
+
     evidence_package = _build_insight_evidence_package(
         case_id=case_id,
         founder_name=founder_name,
         founder_ontology=founder_ontology,
         strategy_ontology=strategy_ontology,
         formation_payload=formation_payload,
-        known_outcome=known_outcome,
+        known_outcome=output_known_outcome,
     )
 
     persona_narrative = fallback_persona_narrative
@@ -645,7 +678,7 @@ def generate_unified_insight(
             "process_gaps": process_gaps,
             "outcome_gaps": outcome_gaps,
             "learning_loop": learning_loop,
-            "known_outcome": known_outcome,
+            "known_outcome": output_known_outcome,
         },
         "run_meta": {
             "timestamp": datetime.datetime.now().isoformat(),

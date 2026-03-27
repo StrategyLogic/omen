@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import html
+import importlib
 import json
+import os
 import re
 import textwrap
 from pathlib import Path
@@ -29,6 +31,17 @@ from omen.ui.case_catalog import (
 from omen.ui.formation_graph import build_formation_chain_figure
 from omen.ui.founder_graph import build_founder_graph_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
+
+
+def _load_app_dotenv() -> None:
+    try:
+        dotenv_module = importlib.import_module("dotenv")
+        dotenv_module.load_dotenv(override=False)
+    except Exception:
+        pass
+
+
+_load_app_dotenv()
 
 if "spec6_generation_result" not in st.session_state:
     st.session_state.spec6_generation_result = None
@@ -74,7 +87,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "status_snapshot_date": "Status Snapshot Date",
         "model_config_path": "Model Config Path",
         "page_title": "Founder Research",
-        "page_intro": "Upload a source case file and Omen automatically builds visual founder personas and relationship graphs, then analyzes decision style and strategy-reality gaps to deliver deep, one-click insights.",
+        "page_intro": "Select a case and Omen automatically builds founder personas and relationship graph, then analyzes decision style and strategy-reality gaps to deliver deep, one-click insights.",
         "case_summary": "Case Summary",
         "unknown": "Please run Omen first.",
         "pipeline_title": "Research Workflow",
@@ -148,7 +161,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "status_snapshot_date": "状态快照日期",
         "model_config_path": "模型配置路径",
         "page_title": "创始人研究",
-        "page_intro": "只需上传案例源文件，Omen 即可为您自动构建可视化的创始人画像与关系图谱，更能深度解析其决策风格及“战略—现实”偏差，助您一键获取穿透表象的深度洞察。",
+        "page_intro": "选择案例点击开始，Omen 为您构建可视化的创始人画像与关系图谱，更能深度解析其决策风格及“战略—现实”偏差，助您一键获取穿透表象的深度洞察。",
         "case_summary": "案例摘要",
         "unknown": "尚未完成分析。",
         "pipeline_title": "研究流程",
@@ -338,14 +351,12 @@ def _update_pipeline_journey(container: Any, stage: str, paths: dict[str, Path])
         _render_pipeline_journey(stage, paths)
 
 with st.sidebar:
-    lang_options = ["中文", "English"]
-    current_lang = str(st.session_state.get("spec6_ui_lang", "zh"))
-    selected_lang = st.selectbox(
+    st.selectbox(
         _t("language_selector"),
-        options=lang_options,
-        index=0 if current_lang == "zh" else 1,
+        options=["zh", "en"],
+        format_func=lambda code: "中文" if code == "zh" else "English",
+        key="spec6_ui_lang",
     )
-    st.session_state.spec6_ui_lang = "zh" if selected_lang == "中文" else "en"
 
     st.markdown(f"## {_t('sidebar_title')}")
     st.caption(_t("sidebar_intro"))
@@ -372,6 +383,13 @@ with st.sidebar:
 active_ontology_payload = _active_ontology_payload()
 strategy = _extract_strategy_name(active_ontology_payload, suggest_strategy(case_id))
 known_outcome = _extract_known_outcome(active_ontology_payload, suggest_known_outcome(case_id))
+insight_payload_for_summary = st.session_state.spec6_insight_payload
+if isinstance(insight_payload_for_summary, dict):
+    gap_analysis = insight_payload_for_summary.get("gap_analysis")
+    if isinstance(gap_analysis, dict):
+        localized_known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
+        if localized_known_outcome:
+            known_outcome = localized_known_outcome
 title = case_display_title(case_id)
 
 st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
@@ -403,8 +421,116 @@ def _artifact_paths(case_id: str) -> dict[str, Path]:
     }
 
 
+def _has_case_json_outputs(case_dir: Path) -> bool:
+    if not case_dir.exists() or not case_dir.is_dir():
+        return False
+    return any(case_dir.glob("*.json"))
+
+
+def _read_control_variable(name: str) -> str:
+    try:
+        secret_value = st.secrets.get(name)
+        if secret_value is not None:
+            return str(secret_value).strip()
+    except Exception:
+        pass
+
+    return str(os.getenv(name, "")).strip()
+
+
+def _allow_reanalysis_enabled() -> bool:
+    token = _read_control_variable("ALLOW_REANALYSIS").lower()
+    return token in {"1", "true", "yes", "on"}
+
+
+def _coerce_timeline_bool(value: Any, *, default: bool = True) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        token = value.strip().lower()
+        if token in {"yes", "true", "1"}:
+            return True
+        if token in {"no", "false", "0"}:
+            return False
+    if value is None:
+        return default
+    return bool(value)
+
+
+def _coalesce_timeline_description(row: dict[str, Any]) -> str:
+    for key in ("description", "content", "summary", "event_excerpt", "event", "name", "type", "evidence"):
+        text = str(row.get(key) or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _build_founder_event_description_map(founder_payload: dict[str, Any] | None) -> dict[str, str]:
+    if not isinstance(founder_payload, dict):
+        return {}
+    events = founder_payload.get("events")
+    if not isinstance(events, list):
+        return {}
+    mapping: dict[str, str] = {}
+    for item in events:
+        if not isinstance(item, dict):
+            continue
+        event_id = str(item.get("id") or item.get("event_id") or "").strip()
+        if not event_id:
+            continue
+        description = str(item.get("description") or item.get("content") or item.get("summary") or "").strip()
+        if description:
+            mapping[event_id] = description
+    return mapping
+
+
+def _normalize_timeline_row(row: dict[str, Any], *, founder_event_descriptions: dict[str, str] | None = None) -> dict[str, Any]:
+    event_id = str(row.get("id") or row.get("event_id") or "").strip() or "unknown"
+    name_text = str(row.get("name") or row.get("event") or row.get("type") or "").strip() or _t("event")
+    description = str((founder_event_descriptions or {}).get(event_id) or "").strip() or _coalesce_timeline_description(row)
+    strategic = _coerce_timeline_bool(
+        row.get("is_strategy_related", row.get("strategic")),
+        default=True,
+    )
+    return {
+        **row,
+        "id": event_id,
+        "event_id": event_id,
+        "time": str(row.get("time") or row.get("date") or "").strip() or _t("unknown_time"),
+        "name": name_text,
+        "event": str(row.get("event") or name_text).strip() or name_text,
+        "description": description,
+        "content": str(row.get("content") or description).strip() or description,
+        "strategic": strategic,
+        "is_strategy_related": strategic,
+    }
+
+
+def _normalize_status_payload(
+    payload: dict[str, Any] | None,
+    *,
+    founder_payload: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+    timeline = payload.get("timeline")
+    if not isinstance(timeline, list):
+        return payload
+    founder_event_descriptions = _build_founder_event_description_map(founder_payload)
+    normalized_timeline = [
+        _normalize_timeline_row(row, founder_event_descriptions=founder_event_descriptions)
+        for row in timeline
+        if isinstance(row, dict)
+    ]
+    return {
+        **payload,
+        "timeline": normalized_timeline,
+    }
+
+
 def _load_existing_outputs(case_id: str) -> None:
     paths = _artifact_paths(case_id)
+    founder_payload: dict[str, Any] | None = None
 
     if paths["ontology"].exists():
         try:
@@ -430,7 +556,16 @@ def _load_existing_outputs(case_id: str) -> None:
     if paths["analyze_status"].exists():
         try:
             status_payload = json.loads(paths["analyze_status"].read_text(encoding="utf-8"))
-            st.session_state.spec6_status_payload = status_payload if isinstance(status_payload, dict) else None
+            if paths["founder"].exists():
+                try:
+                    founder_raw = json.loads(paths["founder"].read_text(encoding="utf-8"))
+                    founder_payload = founder_raw if isinstance(founder_raw, dict) else None
+                except Exception:
+                    founder_payload = None
+            st.session_state.spec6_status_payload = _normalize_status_payload(
+                status_payload,
+                founder_payload=founder_payload,
+            )
         except Exception:
             st.session_state.spec6_status_payload = None
 
@@ -623,6 +758,7 @@ def _run_omen_pipeline(
         year=None,
         date=parsed_date,
     )
+    status_payload = _normalize_status_payload(status_payload, founder_payload=founder_payload)
     paths["analyze_status"].write_text(
         json.dumps(status_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -840,8 +976,8 @@ def _render_timeline_cards(timeline_rows: list[dict[str, Any]]) -> None:
             continue
         time_text = html.escape(str(row.get("time") or row.get("date") or _t("unknown_time")))
         name_text = html.escape(str(row.get("name") or row.get("event") or _t("event")))
-        evidence_text = html.escape(str(row.get("description") or _t("no_evidence_summary")))
-        strategic = bool(row.get("strategic") or row.get("is_strategy_related"))
+        evidence_text = html.escape(str(_coalesce_timeline_description(row) or _t("no_evidence_summary")))
+        strategic = _coerce_timeline_bool(row.get("is_strategy_related", row.get("strategic")), default=True)
         badge = f'<div class="omen-badge">{html.escape(_t("strategic_signal"))}</div>' if strategic else ""
         items.append(
             textwrap.dedent(
@@ -1079,7 +1215,8 @@ if st.session_state.spec6_loaded_case_id != case_id:
 st.markdown(f"#### {_t('pipeline_title')}")
 journey_placeholder = st.empty()
 journey_paths = _artifact_paths(case_id)
-has_existing_outputs = any(path.exists() for key, path in journey_paths.items() if key != "root")
+has_existing_outputs = _has_case_json_outputs(journey_paths["root"])
+show_analysis_button = (not has_existing_outputs) or _allow_reanalysis_enabled()
 _update_pipeline_journey(
     journey_placeholder,
     st.session_state.spec6_pipeline_stage,
@@ -1089,12 +1226,14 @@ st.markdown('<div class="omen-cta-spacer"></div>', unsafe_allow_html=True)
 show_runtime_status = st.session_state.spec6_pipeline_running or st.session_state.spec6_pipeline_progress > 0
 progress_placeholder = st.empty()
 cta_label = _t("cta_again") if has_existing_outputs else _t("cta_start")
-start_clicked = st.button(
-    cta_label,
-    type="primary",
-    use_container_width=True,
-    disabled=st.session_state.spec6_pipeline_running,
-)
+start_clicked = False
+if show_analysis_button:
+    start_clicked = st.button(
+        cta_label,
+        type="primary",
+        use_container_width=True,
+        disabled=st.session_state.spec6_pipeline_running,
+    )
 
 if start_clicked and not st.session_state.spec6_pipeline_running:
     st.session_state.spec6_pipeline_running = True
@@ -1103,6 +1242,7 @@ if start_clicked and not st.session_state.spec6_pipeline_running:
 
 if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_autorun:
     progress_bar = progress_placeholder.progress(10, text=_t("starting"))
+    should_rerun_after_pipeline = False
     try:
         _run_omen_pipeline(
             case_id=case_id,
@@ -1127,6 +1267,9 @@ if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_a
     finally:
         st.session_state.spec6_pipeline_running = False
         st.session_state.spec6_pipeline_autorun = False
+        should_rerun_after_pipeline = True
+    if should_rerun_after_pipeline:
+        st.rerun()
 else:
     if show_runtime_status:
         progress_placeholder.progress(

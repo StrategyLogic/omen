@@ -52,7 +52,8 @@ def test_build_status_snapshot_filters_timeline_and_builds_graph():
     )
 
     assert payload["summary"]["timeline_event_count"] == 1
-    assert payload["timeline"][0]["event_id"] == "event.2016.pivot"
+    assert payload["timeline"][0]["event_id"] == "decision.2016.pivot"
+    assert payload["timeline"][0]["event"] == "pivot_decision"
 
     graph = payload["founder_graph"]
     node_ids = {node["id"] for node in graph["nodes"]}
@@ -97,6 +98,35 @@ def test_build_status_snapshot_falls_back_to_founder_timeline_when_strategy_even
     assert payload["summary"]["timeline_event_count"] == 1
     assert payload["timeline"][0]["event_id"] == "xd-1"
     assert payload["timeline"][0]["event"] == "launch"
+
+
+def test_build_status_snapshot_uses_legacy_content_when_description_missing():
+    strategy_ontology = {"abox": {"events": []}}
+    founder_ontology = {
+        "actors": [{"id": "actor_xd", "name": "X-Developer team", "type": "company"}],
+        "events": [
+            {
+                "id": "xd-legacy-1",
+                "time": "2016",
+                "name": "Product launch",
+                "content": "Founder shipped the first product after repeated market tests.",
+                "actors_involved": ["actor_xd"],
+                "is_strategy_related": True,
+            }
+        ],
+        "constraints": [],
+        "influences": [],
+    }
+
+    payload = build_status_snapshot(
+        strategy_ontology=strategy_ontology,
+        founder_ontology=founder_ontology,
+        year=2016,
+    )
+
+    assert payload["timeline"][0]["description"] == "Founder shipped the first product after repeated market tests."
+    assert payload["timeline"][0]["content"] == "Founder shipped the first product after repeated market tests."
+    assert payload["timeline"][0]["is_strategy_related"] is True
 
 
 def test_build_founder_graph_uses_only_explicit_edges_and_keeps_all_nodes():

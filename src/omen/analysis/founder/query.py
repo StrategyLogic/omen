@@ -43,6 +43,64 @@ def _normalize_event_type(value: Any, description: str) -> str:
     return candidate
 
 
+def _coerce_bool(value: Any, *, default: bool = True) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        token = value.strip().lower()
+        if token in {"yes", "true", "1"}:
+            return True
+        if token in {"no", "false", "0"}:
+            return False
+    if value is None:
+        return default
+    return bool(value)
+
+
+def _event_description_text(event: dict[str, Any]) -> str:
+    candidates = (
+        event.get("description"),
+        event.get("summary"),
+        event.get("content"),
+        event.get("event_excerpt"),
+        event.get("evidence"),
+        event.get("event"),
+        event.get("name"),
+        event.get("type"),
+    )
+    for candidate in candidates:
+        text = str(candidate or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _timeline_row(
+    *,
+    event_id: str,
+    time_text: str,
+    event_name: str,
+    description: str,
+    evidence_refs: list[Any],
+    strategic: bool,
+) -> dict[str, Any]:
+    normalized_event = _normalize_event_type(event_name, description or event_name)
+    evidence_text = " | ".join(str(ref) for ref in evidence_refs)
+    return {
+        "id": event_id or "unknown",
+        "event_id": event_id or "unknown",
+        "time": time_text or "unknown",
+        "name": event_name or "unknown",
+        "event": normalized_event,
+        "description": description,
+        "content": description,
+        "evidence": evidence_text,
+        "evidence_refs": evidence_refs,
+        "strategic": strategic,
+        "is_strategy_related": strategic,
+    }
+
+
 def _time_matches(value: str, year: int | None, date: str | None) -> bool:
     if not value:
         return year is None and not date
@@ -68,15 +126,18 @@ def _filter_strategy_events(
         time_text = _as_time_text(event.get("time") or event.get("date"))
         if not _time_matches(time_text, year, date):
             continue
+        event_name = str(event.get("name") or event.get("event") or event.get("type") or "").strip() or "unknown"
+        description = _event_description_text(event)
+        evidence_refs = event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else []
         items.append(
-            {
-                "id": str(event.get("id") or event.get("event_id") or "").strip() or "unknown",
-                "time": time_text or "unknown",
-                "name": str(event.get("name") or event.get("event") or event.get("type") or "").strip() or "unknown",
-                "description": str(event.get("description") or event.get("content") or "").strip(),
-                "evidence": " | ".join(str(ref) for ref in (event.get("evidence_refs") or [])),
-                "strategic": "Yes" if bool(event.get("is_strategy_related", True)) else "No",
-            }
+            _timeline_row(
+                event_id=str(event.get("id") or event.get("event_id") or "").strip() or "unknown",
+                time_text=time_text or "unknown",
+                event_name=event_name,
+                description=description,
+                evidence_refs=evidence_refs,
+                strategic=_coerce_bool(event.get("is_strategy_related"), default=True),
+            )
         )
     return items
 
@@ -86,23 +147,26 @@ def _timeline_from_founder_events(founder_events: list[dict[str, Any]]) -> list[
     for event in founder_events:
         event_id = str(event.get("id") or "").strip()
         event_name = str(event.get("name") or "").strip()
+        event_description = _event_description_text(event)
         
         if not event_name:
-            raw_text = str(event.get("event") or event.get("description") or "").strip()
+            raw_text = str(event.get("event") or event_description or "").strip()
             event_type = _normalize_event_type(
                 event.get("type") or event.get("label") or event.get("event"),
                 raw_text,
             )
             event_name = event_type
 
+        evidence_refs = event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else []
         timeline.append(
-            {
-                "id": event_id or "unknown",
-                "time": _as_time_text(event.get("date") or event.get("time")) or "unknown",
-                "name": event_name or "unknown",
-                "evidence": " | ".join(str(ref) for ref in (event.get("evidence_refs") or [])),
-                "strategic": "Yes" if bool(event.get("is_strategy_related", True)) else "No",
-            }
+            _timeline_row(
+                event_id=event_id or "unknown",
+                time_text=_as_time_text(event.get("date") or event.get("time")) or "unknown",
+                event_name=event_name or "unknown",
+                description=event_description,
+                evidence_refs=evidence_refs,
+                strategic=_coerce_bool(event.get("is_strategy_related"), default=True),
+            )
         )
     return timeline
 

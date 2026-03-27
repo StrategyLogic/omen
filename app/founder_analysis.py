@@ -154,7 +154,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "pipeline_title": "研究流程",
         "cta_start": "开始分析",
         "cta_again": "重新分析",
-        "starting": "开始生成中...",
+        "starting": "生成中...",
         "progress_step1": "第 1 步完成 · 本体已生成",
         "progress_step2": "第 2 步完成 · 时间线已生成",
         "progress_done": "Omen 已完成",
@@ -645,6 +645,7 @@ def _run_omen_pipeline(
         strategy_ontology=strategy_payload,
         formation_payload=formation_payload,
         config_path=config_path,
+        output_language=str(st.session_state.get("spec6_ui_lang", "zh")),
     )
     paths["analyze_insight"].write_text(
         json.dumps(insight_payload, ensure_ascii=False, indent=2),

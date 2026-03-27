@@ -16,6 +16,19 @@ from omen.ingest.llm_ontology.prompts import (
 )
 
 
+def _normalize_output_language(value: str | None) -> str:
+    lang = str(value or "").strip().lower()
+    if lang.startswith("zh"):
+        return "zh"
+    return "en"
+
+
+def _language_instruction(output_language: str) -> str:
+    if output_language == "zh":
+        return "Output language requirement: All natural-language fields must be written in Simplified Chinese (简体中文)."
+    return "Output language requirement: All natural-language fields must be written in English."
+
+
 def _extract_json_object(text: str) -> dict[str, Any]:
     decoder = json.JSONDecoder()
     start = text.find("{")
@@ -91,9 +104,12 @@ def _enhance_persona_with_llm(
     profile: dict[str, Any],
     fallback_narrative: str,
     fallback_traits: list[dict[str, Any]],
+    output_language: str,
 ) -> tuple[str, list[dict[str, Any]], float]:
     prompt = (
         build_persona_insight_prompt()
+        + "\n"
+        + _language_instruction(output_language)
         + "\n\nReturn JSON object only with keys: narrative, key_traits, consistency_score."
         + " key_traits must be an array of objects with trait and evidence_summary."
         + " consistency_score must be a number in [0,1].\n\n"
@@ -121,9 +137,12 @@ def _enhance_why_chain_with_llm(
     *,
     evidence_package: dict[str, Any],
     fallback_items: list[dict[str, Any]],
+    output_language: str,
 ) -> list[dict[str, Any]]:
     prompt = (
         build_founder_why_prompt()
+        + "\n"
+        + _language_instruction(output_language)
         + "\n\nReturn JSON array only. Each item must contain: question, answer, evidence_refs."
         + " Generate at least 3 items focused on key founder decisions and why they formed that way.\n\n"
         + f"Evidence package JSON: {json.dumps(evidence_package, ensure_ascii=False)}"
@@ -152,9 +171,12 @@ def _enhance_gap_analysis_with_llm(
     fallback_process_gaps: list[dict[str, Any]],
     fallback_outcome_gaps: list[dict[str, Any]],
     fallback_learning_loop: list[dict[str, Any]],
+    output_language: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     prompt = (
         build_founder_gap_prompt()
+        + "\n"
+        + _language_instruction(output_language)
         + "\n\nReturn JSON object only with keys: process_gaps, outcome_gaps, learning_loop."
         + " process_gaps must have at least 3 items. Each gap item must contain assumption, observation, gap_significance, event_id, phase."
         + " outcome_gaps may be empty when evidence is insufficient. learning_loop may be empty when not supported.\n\n"
@@ -245,6 +267,7 @@ def _build_why_chain(
     non_negotiables: list[str],
     constraints: list[str],
     events: list[dict[str, Any]],
+    output_language: str,
 ) -> list[dict[str, Any]]:
     first_event = events[0] if events else {}
     second_event = events[1] if len(events) > 1 else first_event
@@ -253,38 +276,67 @@ def _build_why_chain(
     def _event_ref(event: dict[str, Any]) -> str:
         return str(event.get("id") or event.get("event_id") or event.get("name") or "unknown_event")
 
-    why_items = [
-        {
-            "question": f"Why did {founder_name} prioritize this strategic path instead of standard process-first tooling?",
-            "answer": (
-                f"Because core beliefs such as '{core_beliefs[0] if core_beliefs else 'data-driven management'}' "
-                f"and decision style '{decision_style or 'principle-driven'}' pushed choices toward evidence-first execution."
-            ),
-            "evidence_refs": [_event_ref(first_event)],
-        },
-        {
-            "question": f"Why were constraints not treated as blockers but as filters for decision scope?",
-            "answer": (
-                "The founder framed constraints as boundary conditions and protected non-negotiables "
-                f"like '{non_negotiables[0] if non_negotiables else 'low process overhead'}' to maintain strategic coherence."
-            ),
-            "evidence_refs": [_event_ref(second_event)],
-        },
-        {
-            "question": "Why did execution still diverge from the initial strategic assumption?",
-            "answer": (
-                "External adoption pressure and organizational friction introduced reality adjustments, "
-                f"especially under constraints: {', '.join(constraints[:2]) if constraints else 'market resistance'}"
-            ),
-            "evidence_refs": [_event_ref(third_event)],
-        },
-    ]
+    if output_language == "zh":
+        why_items = [
+            {
+                "question": f"为什么 {founder_name} 会优先选择这条战略路径，而不是标准的流程优先方案？",
+                "answer": (
+                    f"因为其核心信念（如“{core_beliefs[0] if core_beliefs else '数据驱动管理'}”）"
+                    f"与决策风格（“{decision_style or '原则驱动'}”）共同推动其采用证据优先的执行方式。"
+                ),
+                "evidence_refs": [_event_ref(first_event)],
+            },
+            {
+                "question": "为什么这些约束没有被当作阻碍，而是被当作决策边界？",
+                "answer": (
+                    "创始人将约束视为边界条件，并优先守住关键非妥协项，"
+                    f"如“{non_negotiables[0] if non_negotiables else '低流程负担'}”，以保持战略一致性。"
+                ),
+                "evidence_refs": [_event_ref(second_event)],
+            },
+            {
+                "question": "为什么执行结果仍然会偏离最初的战略假设？",
+                "answer": (
+                    "外部采用压力与组织摩擦带来了现实修正，"
+                    f"尤其在这些约束下：{', '.join(constraints[:2]) if constraints else '市场阻力'}。"
+                ),
+                "evidence_refs": [_event_ref(third_event)],
+            },
+        ]
+    else:
+        why_items = [
+            {
+                "question": f"Why did {founder_name} prioritize this strategic path instead of standard process-first tooling?",
+                "answer": (
+                    f"Because core beliefs such as '{core_beliefs[0] if core_beliefs else 'data-driven management'}' "
+                    f"and decision style '{decision_style or 'principle-driven'}' pushed choices toward evidence-first execution."
+                ),
+                "evidence_refs": [_event_ref(first_event)],
+            },
+            {
+                "question": f"Why were constraints not treated as blockers but as filters for decision scope?",
+                "answer": (
+                    "The founder framed constraints as boundary conditions and protected non-negotiables "
+                    f"like '{non_negotiables[0] if non_negotiables else 'low process overhead'}' to maintain strategic coherence."
+                ),
+                "evidence_refs": [_event_ref(second_event)],
+            },
+            {
+                "question": "Why did execution still diverge from the initial strategic assumption?",
+                "answer": (
+                    "External adoption pressure and organizational friction introduced reality adjustments, "
+                    f"especially under constraints: {', '.join(constraints[:2]) if constraints else 'market resistance'}"
+                ),
+                "evidence_refs": [_event_ref(third_event)],
+            },
+        ]
     return why_items
 
 
 def _build_process_gaps(
     formation_payload: dict[str, Any] | None,
     events: list[dict[str, Any]],
+    output_language: str,
 ) -> list[dict[str, Any]]:
     process_gaps: list[dict[str, Any]] = []
     if formation_payload:
@@ -300,65 +352,117 @@ def _build_process_gaps(
         ]
         affected_targets = [name for name in affected_targets if name]
 
-        process_gaps.append(
-            {
-                "assumption": "Initial strategic formation would validate linearly through early execution.",
-                "observation": (
-                    f"Execution produced {len(exec_delta)} delta points"
-                    + (f" affecting {', '.join(affected_targets[:2])}." if affected_targets else ".")
-                ),
-                "gap_significance": "Indicates mismatch between initial formation certainty and field adaptation complexity.",
-                "event_id": target_event_id,
-                "phase": phase,
-            }
-        )
-        process_gaps.append(
-            {
-                "assumption": "Principle-based filtering would maintain consistency without speed tradeoff.",
-                "observation": (
-                    "Decision logic remained coherent, but execution required additional adaptation cycles."
-                    if decision_logic
-                    else "Execution traces show adaptation pressure beyond original decision frame."
-                ),
-                "gap_significance": "Shows strategy coherence can coexist with delivery friction.",
-                "event_id": target_event_id,
-                "phase": phase,
-            }
-        )
+        if output_language == "zh":
+            process_gaps.append(
+                {
+                    "assumption": "初始战略形成能够在线性执行中快速验证。",
+                    "observation": (
+                        f"执行阶段出现了 {len(exec_delta)} 个偏差点"
+                        + (f"，主要影响 {', '.join(affected_targets[:2])}。" if affected_targets else "。")
+                    ),
+                    "gap_significance": "说明初始形成确定性与现实适配复杂度之间存在错位。",
+                    "event_id": target_event_id,
+                    "phase": phase,
+                }
+            )
+            process_gaps.append(
+                {
+                    "assumption": "基于原则的筛选可以在不牺牲速度的前提下保持一致性。",
+                    "observation": (
+                        "决策逻辑保持一致，但执行仍需要额外适配迭代。"
+                        if decision_logic
+                        else "执行轨迹显示现实压力超出了原始决策框架。"
+                    ),
+                    "gap_significance": "表明战略一致性与交付摩擦可以同时存在。",
+                    "event_id": target_event_id,
+                    "phase": phase,
+                }
+            )
+        else:
+            process_gaps.append(
+                {
+                    "assumption": "Initial strategic formation would validate linearly through early execution.",
+                    "observation": (
+                        f"Execution produced {len(exec_delta)} delta points"
+                        + (f" affecting {', '.join(affected_targets[:2])}." if affected_targets else ".")
+                    ),
+                    "gap_significance": "Indicates mismatch between initial formation certainty and field adaptation complexity.",
+                    "event_id": target_event_id,
+                    "phase": phase,
+                }
+            )
+            process_gaps.append(
+                {
+                    "assumption": "Principle-based filtering would maintain consistency without speed tradeoff.",
+                    "observation": (
+                        "Decision logic remained coherent, but execution required additional adaptation cycles."
+                        if decision_logic
+                        else "Execution traces show adaptation pressure beyond original decision frame."
+                    ),
+                    "gap_significance": "Shows strategy coherence can coexist with delivery friction.",
+                    "event_id": target_event_id,
+                    "phase": phase,
+                }
+            )
 
     fallback_events = events[:3] if events else []
     while len(process_gaps) < 3:
         event = fallback_events[len(process_gaps)] if len(fallback_events) > len(process_gaps) else {}
-        process_gaps.append(
-            {
-                "assumption": "Customer adoption would follow product logic once value proposition is clear.",
-                "observation": "Observed event sequence suggests adoption required staged validation and trust-building.",
-                "gap_significance": "Highlights non-linear translation from strategic logic to customer behavior.",
-                "event_id": str(event.get("id") or event.get("event_id") or "unknown_event"),
-                "phase": str(event.get("phase") or "unknown_phase"),
-            }
-        )
+        if output_language == "zh":
+            process_gaps.append(
+                {
+                    "assumption": "价值主张清晰后，客户采用会自然跟随产品逻辑。",
+                    "observation": "事件序列显示，采用过程仍需分阶段验证与信任建立。",
+                    "gap_significance": "揭示了战略逻辑到客户行为转化的非线性特征。",
+                    "event_id": str(event.get("id") or event.get("event_id") or "unknown_event"),
+                    "phase": str(event.get("phase") or "unknown_phase"),
+                }
+            )
+        else:
+            process_gaps.append(
+                {
+                    "assumption": "Customer adoption would follow product logic once value proposition is clear.",
+                    "observation": "Observed event sequence suggests adoption required staged validation and trust-building.",
+                    "gap_significance": "Highlights non-linear translation from strategic logic to customer behavior.",
+                    "event_id": str(event.get("id") or event.get("event_id") or "unknown_event"),
+                    "phase": str(event.get("phase") or "unknown_phase"),
+                }
+            )
 
     return process_gaps[:3]
 
 
-def _build_outcome_gaps(known_outcome: str, process_gaps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_outcome_gaps(known_outcome: str, process_gaps: list[dict[str, Any]], output_language: str) -> list[dict[str, Any]]:
     if not known_outcome:
         return []
 
-    template = [
-        "Expected strategic position and actual market adoption speed were not perfectly aligned.",
-        "Planned scaling rhythm diverged from observed customer readiness in target segments.",
-        "Strategic intent remained stable, while realized outcomes reflected incremental convergence.",
-    ]
+    if output_language == "zh":
+        template = [
+            "预期战略位置与实际市场采用速度并未完全一致。",
+            "计划中的扩张节奏与目标客群真实准备度存在偏差。",
+            "战略意图保持稳定，但结果呈现为渐进式收敛。",
+        ]
+        assumption_text = "过程层面的战略成功会直接转化为结果层面的市场成功。"
+        significance_text = "用于区分执行成功与结果兑现的速度和幅度。"
+        observation_prefix = "已知结果显示："
+    else:
+        template = [
+            "Expected strategic position and actual market adoption speed were not perfectly aligned.",
+            "Planned scaling rhythm diverged from observed customer readiness in target segments.",
+            "Strategic intent remained stable, while realized outcomes reflected incremental convergence.",
+        ]
+        assumption_text = "Process-level strategic wins would transfer directly to outcome-level market results."
+        significance_text = "Separates execution success from outcome realization speed and magnitude."
+        observation_prefix = "Known outcome indicates:"
+
     result: list[dict[str, Any]] = []
     for index, statement in enumerate(template):
         base_gap = process_gaps[index] if len(process_gaps) > index else {}
         result.append(
             {
-                "assumption": "Process-level strategic wins would transfer directly to outcome-level market results.",
-                "observation": f"Known outcome indicates: {known_outcome}. {statement}",
-                "gap_significance": "Separates execution success from outcome realization speed and magnitude.",
+                "assumption": assumption_text,
+                "observation": f"{observation_prefix} {known_outcome}。 {statement}" if output_language == "zh" else f"{observation_prefix} {known_outcome}. {statement}",
+                "gap_significance": significance_text,
                 "event_id": str(base_gap.get("event_id") or "unknown_event"),
                 "phase": str(base_gap.get("phase") or "unknown_phase"),
             }
@@ -366,17 +470,22 @@ def _build_outcome_gaps(known_outcome: str, process_gaps: list[dict[str, Any]]) 
     return result
 
 
-def _extract_learning_loop(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _extract_learning_loop(events: list[dict[str, Any]], output_language: str) -> list[dict[str, Any]]:
     loops: list[dict[str, Any]] = []
     for event in events:
         text = (
             f"{event.get('name', '')} {event.get('event', '')} {event.get('description', '')}"
         ).lower()
         if any(keyword in text for keyword in ("pivot", "adjust", "iteration", "commercial", "pilot")):
+            adjustment_text = (
+                "创始人通过分阶段验证与商业包装调整来修正策略。"
+                if output_language == "zh"
+                else "Founder adjusted strategy through phased validation and packaging choices."
+            )
             loops.append(
                 {
                     "signal": str(event.get("name") or event.get("event") or "event_signal"),
-                    "adjustment": "Founder adjusted strategy through phased validation and packaging choices.",
+                    "adjustment": adjustment_text,
                     "evidence_ref": str(event.get("id") or event.get("event_id") or "unknown_event"),
                 }
             )
@@ -390,6 +499,7 @@ def generate_unified_insight(
     formation_payload: dict[str, Any] | None = None,
     llm_client: Any = None,
     config_path: str | None = None,
+    output_language: str = "en",
 ) -> dict[str, Any]:
     """
     Generate a unified insight JSON containing:
@@ -415,18 +525,32 @@ def generate_unified_insight(
     constraints = [item for item in constraints if item]
     events = [item for item in (founder_ontology.get("events") or []) if isinstance(item, dict)]
 
-    fallback_persona_narrative = (
-        f"{founder_name} is characterized by a strong alignment with their core beliefs: "
-        f"'{', '.join(core_beliefs[:2])}'. "
-        f"Their strategic style reflects a '{decision_style}' approach, "
-        f"often prioritizing '{', '.join(non_negotiables[:1])}' over external pressures. "
-        "This indicates a founder persona that is deeply principle-driven, favoring evidence and internal logic over conventional process."
-    )
-    
-    fallback_key_traits = [
-        {"trait": "Principle-Driven", "evidence_summary": "Prioritizes non-negotiables in strategic decisions."},
-        {"trait": "Evidence-Based", "evidence_summary": "Uses data/signals for market perception."}
-    ]
+    language = _normalize_output_language(output_language)
+
+    if language == "zh":
+        fallback_persona_narrative = (
+            f"{founder_name} 的决策风格与其核心信念保持高度一致："
+            f"“{', '.join(core_beliefs[:2])}”。"
+            f"其战略风格体现为“{decision_style}”，"
+            f"在外部压力下仍优先守住“{', '.join(non_negotiables[:1])}”等非妥协项。"
+            "这体现出其创始人画像具备明显的原则驱动特征，更强调证据与内在逻辑而非传统流程惯性。"
+        )
+        fallback_key_traits = [
+            {"trait": "原则驱动", "evidence_summary": "在关键战略决策中优先守住非妥协项。"},
+            {"trait": "证据导向", "evidence_summary": "通过数据与信号构建市场认知与判断。"},
+        ]
+    else:
+        fallback_persona_narrative = (
+            f"{founder_name} is characterized by a strong alignment with their core beliefs: "
+            f"'{', '.join(core_beliefs[:2])}'. "
+            f"Their strategic style reflects a '{decision_style}' approach, "
+            f"often prioritizing '{', '.join(non_negotiables[:1])}' over external pressures. "
+            "This indicates a founder persona that is deeply principle-driven, favoring evidence and internal logic over conventional process."
+        )
+        fallback_key_traits = [
+            {"trait": "Principle-Driven", "evidence_summary": "Prioritizes non-negotiables in strategic decisions."},
+            {"trait": "Evidence-Based", "evidence_summary": "Uses data/signals for market perception."},
+        ]
     
     fallback_why_chain = _build_why_chain(
         founder_name=founder_name,
@@ -435,12 +559,21 @@ def generate_unified_insight(
         non_negotiables=non_negotiables,
         constraints=constraints,
         events=events,
+        output_language=language,
     )
 
-    fallback_process_gaps = _build_process_gaps(formation_payload=formation_payload, events=events)
+    fallback_process_gaps = _build_process_gaps(
+        formation_payload=formation_payload,
+        events=events,
+        output_language=language,
+    )
     known_outcome = _extract_known_outcome(founder_ontology, strategy_ontology)
-    fallback_outcome_gaps = _build_outcome_gaps(known_outcome=known_outcome, process_gaps=fallback_process_gaps)
-    fallback_learning_loop = _extract_learning_loop(events)
+    fallback_outcome_gaps = _build_outcome_gaps(
+        known_outcome=known_outcome,
+        process_gaps=fallback_process_gaps,
+        output_language=language,
+    )
+    fallback_learning_loop = _extract_learning_loop(events, output_language=language)
 
     effective_llm_client = llm_client
     if effective_llm_client is None and config_path:
@@ -474,11 +607,13 @@ def generate_unified_insight(
             profile=profile if isinstance(profile, dict) else {},
             fallback_narrative=fallback_persona_narrative,
             fallback_traits=fallback_key_traits,
+            output_language=language,
         )
         why_chain = _enhance_why_chain_with_llm(
             effective_llm_client,
             evidence_package=evidence_package,
             fallback_items=fallback_why_chain,
+            output_language=language,
         )
         process_gaps, outcome_gaps, learning_loop = _enhance_gap_analysis_with_llm(
             effective_llm_client,
@@ -486,6 +621,7 @@ def generate_unified_insight(
             fallback_process_gaps=fallback_process_gaps,
             fallback_outcome_gaps=fallback_outcome_gaps,
             fallback_learning_loop=fallback_learning_loop,
+            output_language=language,
         )
 
     query_payload: dict[str, Any] = {

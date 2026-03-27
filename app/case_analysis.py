@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +65,12 @@ if "spec6_pending_known_outcome_updates" not in st.session_state:
     st.session_state.spec6_pending_known_outcome_updates = {}
 if "spec6_pending_strategy_updates" not in st.session_state:
     st.session_state.spec6_pending_strategy_updates = {}
+if "spec6_pipeline_stage" not in st.session_state:
+    st.session_state.spec6_pipeline_stage = "idle"
+if "spec6_pipeline_progress" not in st.session_state:
+    st.session_state.spec6_pipeline_progress = 0
+if "spec6_pipeline_message" not in st.session_state:
+    st.session_state.spec6_pipeline_message = "Waiting to start"
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -117,8 +124,81 @@ def _strategy_profile(strategy_name: str) -> dict[str, str]:
         "fit": "Use when this case should become a repeatable strategic template instead of a one-off replay artifact.",
     }
 
+
+def _render_case_brief_panel(*, case_id: str, title: str, strategy_profile: dict[str, str], known_outcome: str) -> None:
+    st.markdown("### Case Brief")
+    with st.container(border=True):
+        st.markdown(f"**{title}**")
+        st.caption(case_id)
+        st.caption(strategy_profile["label"])
+        outcome_text = known_outcome.strip() or "Outcome not anchored"
+        st.write(f"Outcome Anchor: {outcome_text}")
+
+
+def _render_pipeline_journey(stage: str, message: str) -> None:
+    stage_order = ["ontology", "timeline", "insight"]
+    labels = {
+        "ontology": ("01", "Generate Ontologies", "Build the strategy and founder evidence base."),
+        "timeline": ("02", "Get Timeline", "Resolve founder state and event progression."),
+        "insight": ("03", "Generate Insights", "Synthesize formation, persona, and reality gaps."),
+    }
+
+    if stage == "done":
+        current_index = len(stage_order)
+    else:
+        current_index = stage_order.index(stage) if stage in stage_order else -1
+    cols = st.columns(3)
+    for idx, key in enumerate(stage_order):
+        number, title, subtitle = labels[key]
+        if current_index > idx:
+            state = "done"
+            badge = "Complete"
+        elif current_index == idx:
+            state = "active"
+            badge = "In progress"
+        else:
+            state = "idle"
+            badge = "Pending"
+        with cols[idx]:
+            st.markdown(
+                textwrap.dedent(
+                    f"""
+                    <div class="omen-step-card omen-step-{state}">
+                        <div class="omen-step-number">{number}</div>
+                        <div class="omen-step-title">{title}</div>
+                        <div class="omen-step-copy">{subtitle}</div>
+                        <div class="omen-step-badge">{badge}</div>
+                    </div>
+                    """
+                ).strip(),
+                unsafe_allow_html=True,
+            )
+    st.caption(message)
+
+
+def _update_pipeline_journey(container: Any, stage: str, message: str) -> None:
+    with container.container():
+        _render_pipeline_journey(stage, message)
+
+
+def _render_artifact_status_panel(*, case_id: str, paths: dict[str, Path]) -> None:
+    st.markdown("### Artifact Panel")
+    st.caption(f"Output Workspace: {_display_output_subpath(case_id)}")
+    for label, key in (
+        ("Core Ontology", "ontology"),
+        ("Founder Slice", "founder"),
+        ("Status Snapshot", "analyze_status"),
+        ("Formation Chain", "analyze_formation"),
+        ("Strategic Insight", "analyze_insight"),
+    ):
+        exists = paths[key].exists()
+        badge = "Ready" if exists else "Pending"
+        with st.container(border=True):
+            st.markdown(f"**{label}**")
+            st.caption(paths[key].name)
+            st.write(badge)
+
 with st.sidebar:
-    st.header("Inputs")
     existing_case_ids = list_case_ids_from_cases()
     selected_default_case_id = default_case_id(
         existing_case_ids,
@@ -128,18 +208,9 @@ with st.sidebar:
         existing_case_ids = [selected_default_case_id]
     selected_case_index = existing_case_ids.index(selected_default_case_id) if existing_case_ids else 0
 
-    case_id = st.selectbox(
-        "Case ID",
-        options=existing_case_ids,
-        index=selected_case_index,
-        help="Select a case document from cases/*.md to switch context.",
-    )
+    case_id = st.selectbox("Case Context", options=existing_case_ids, index=selected_case_index)
 
-    document_path = st.text_input(
-        "Case document path",
-        value=suggest_document_path(case_id),
-        key=f"spec6_document_path_{case_id}",
-    )
+    document_path = st.text_input("Source Document", value=suggest_document_path(case_id), key=f"spec6_document_path_{case_id}")
     strategy_key = f"spec6_strategy_{case_id}"
     pending_strategy_updates = st.session_state.spec6_pending_strategy_updates
     if isinstance(pending_strategy_updates, dict):
@@ -151,10 +222,7 @@ with st.sidebar:
         st.session_state[strategy_key] = ontology_strategy or suggest_strategy(case_id)
     elif ontology_strategy and not str(st.session_state.get(strategy_key) or "").strip():
         st.session_state[strategy_key] = ontology_strategy
-    strategy = st.text_input(
-        "Strategy",
-        key=strategy_key,
-    )
+    strategy = st.text_input("Strategy Profile", key=strategy_key)
     known_outcome_key = f"spec6_known_outcome_{case_id}"
     pending_known_outcome_updates = st.session_state.spec6_pending_known_outcome_updates
     if isinstance(pending_known_outcome_updates, dict):
@@ -166,12 +234,10 @@ with st.sidebar:
         st.session_state[known_outcome_key] = ontology_known_outcome or suggest_known_outcome(case_id)
     elif ontology_known_outcome and str(st.session_state.get(known_outcome_key) or "").strip().lower() in {"", "unknown"}:
         st.session_state[known_outcome_key] = ontology_known_outcome
-    known_outcome = st.text_input(
-        "Known Outcome",
-        key=known_outcome_key,
-    )
-    status_date = st.text_input("Analyze Status Date", value="")
-    config_path = st.text_input("LLM Config", value="config/llm.toml")
+    known_outcome = st.text_input("Outcome Anchor", key=known_outcome_key)
+    with st.expander("Journey Settings", expanded=False):
+        status_date = st.text_input("Status Snapshot Date", value="")
+        config_path = st.text_input("Model Config Path", value="config/llm.toml")
 
 active_ontology_payload = _active_ontology_payload()
 active_strategy = _extract_strategy_name(active_ontology_payload, strategy)
@@ -195,7 +261,13 @@ st.markdown(
 
 st.markdown('<div class="omen-actionbar-title">Actions</div>', unsafe_allow_html=True)
 
-col_gen, col_status, col_run, col_insight = st.columns(4)
+with st.sidebar:
+    _render_case_brief_panel(
+        case_id=case_id,
+        title=title,
+        strategy_profile=strategy_profile,
+        known_outcome=known_outcome,
+    )
 
 
 def _artifact_paths(case_id: str) -> dict[str, Path]:
@@ -347,6 +419,141 @@ def _pick_formation_target_event_id(founder_payload: dict[str, Any], status_payl
     return None
 
 
+def _run_omen_pipeline(
+    *,
+    case_id: str,
+    title: str,
+    document_path: str,
+    strategy: str,
+    known_outcome: str,
+    status_date: str,
+    config_path: str,
+    progress_bar: Any,
+    status_box: Any,
+    journey_box: Any,
+) -> None:
+    paths = _artifact_paths(case_id)
+    st.session_state.spec6_pipeline_stage = "ontology"
+    st.session_state.spec6_pipeline_progress = 0
+    st.session_state.spec6_pipeline_message = "Step 1/3 · Generate Ontologies"
+    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message)
+    progress_bar.progress(0, text="Omen ready")
+
+    status_box.info("Step 1/3 · Generate Ontologies")
+    case_dir = ensure_case_output_dir(case_id)
+    generation = generate_strategy_ontology_from_document(
+        document_path=document_path,
+        case_id=case_id,
+        title=title,
+        strategy=strategy,
+        known_outcome=known_outcome,
+        config_path=config_path,
+    )
+    known_outcome_effective = generation.inferred_known_outcome or known_outcome
+    if generation.inferred_known_outcome:
+        st.session_state.spec6_pending_known_outcome_updates[case_id] = generation.inferred_known_outcome
+
+    founder_payload, timeline_events = generate_founder_and_events_from_document(
+        document_path=document_path,
+        case_id=case_id,
+        title=title,
+        known_outcome=known_outcome_effective,
+        config_path=config_path,
+    )
+
+    strategy_payload = attach_timeline_events(generation.strategy_ontology, timeline_events)
+    founder_path = case_dir / "founder_ontology.json"
+    strategy_payload = attach_founder_ref(
+        strategy_payload,
+        founder_payload,
+        founder_filename=founder_path.name,
+    )
+
+    payload = generation.model_dump(mode="python")
+    strategy_payload.setdefault("meta", {})
+    strategy_payload["meta"]["strategy"] = _normalize_strategy_name(strategy)
+    strategy_payload["meta"]["known_outcome"] = known_outcome_effective
+    payload["strategy_ontology"] = strategy_payload
+    payload["ontology_path"] = str(case_dir / "strategy_ontology.json")
+    st.session_state.spec6_generation_result = payload
+    st.session_state.spec6_pending_strategy_updates[case_id] = _normalize_strategy_name(strategy)
+
+    ontology_path = save_strategy_ontology(strategy_payload, case_dir / "strategy_ontology.json")
+    founder_path.write_text(json.dumps(founder_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    report = {
+        "case_id": case_id,
+        "strategy_ontology_path": str(ontology_path),
+        "founder_ontology_path": str(founder_path),
+        "validation_passed": generation.validation_passed,
+        "validation_issues": generation.validation_issues,
+        "reused_existing": False,
+    }
+    (case_dir / "generation.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, default=str),
+        encoding="utf-8",
+    )
+    st.session_state.spec6_ontology_graph_payload = strategy_payload
+    st.session_state.spec6_pipeline_stage = "timeline"
+    st.session_state.spec6_pipeline_progress = 34
+    st.session_state.spec6_pipeline_message = "Step 2/3 · Get Timeline"
+    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message)
+    progress_bar.progress(34, text="Step 1 complete · Ontologies ready")
+
+    status_box.info("Step 2/3 · Get Timeline")
+    parsed_date = status_date.strip() or None
+    status_payload = build_status_snapshot(
+        strategy_ontology=strategy_payload,
+        founder_ontology=founder_payload,
+        year=None,
+        date=parsed_date,
+    )
+    paths["analyze_status"].write_text(
+        json.dumps(status_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    st.session_state.spec6_status_payload = status_payload
+    st.session_state.spec6_pipeline_stage = "insight"
+    st.session_state.spec6_pipeline_progress = 67
+    st.session_state.spec6_pipeline_message = "Step 3/3 · Generate Insights"
+    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message)
+    progress_bar.progress(67, text="Step 2 complete · Timeline loaded")
+
+    status_box.info("Step 3/3 · Generate Insights")
+    target_event_id = _pick_formation_target_event_id(founder_payload, status_payload)
+    if not target_event_id:
+        raise ValueError("No event id available for formation analysis.")
+
+    formation_payload = build_strategic_formation_chain(
+        founder_ontology=founder_payload,
+        target_event_id=target_event_id,
+    )
+    paths["analyze_formation"].write_text(
+        json.dumps(formation_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    st.session_state.spec6_formation_payload = formation_payload
+
+    insight_payload = generate_unified_insight(
+        case_id=case_id,
+        founder_ontology=founder_payload,
+        strategy_ontology=strategy_payload,
+        formation_payload=formation_payload,
+        config_path=config_path,
+    )
+    paths["analyze_insight"].write_text(
+        json.dumps(insight_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    st.session_state.spec6_insight_payload = insight_payload
+    st.session_state.spec6_pipeline_stage = "done"
+    st.session_state.spec6_pipeline_progress = 100
+    st.session_state.spec6_pipeline_message = "Omen complete"
+    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message)
+    progress_bar.progress(100, text="Omen complete")
+    status_box.success("Omen finished · Timeline and strategic insights are ready.")
+    st.session_state.spec6_output_note = "Omen pipeline completed: ontologies, timeline, formation, and insights generated."
+
+
 def _inject_app_styles() -> None:
     st.markdown(
         """
@@ -449,6 +656,52 @@ def _inject_app_styles() -> None:
             font-size: 0.75rem;
             font-weight: 700;
         }
+        .omen-step-card {
+            min-height: 170px;
+            padding: 0.95rem 1rem;
+            border-radius: 18px;
+            border: 1px solid var(--omen-line);
+            background: rgba(255,255,255,0.88);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+            margin-bottom: 0.5rem;
+        }
+        .omen-step-active {
+            border-color: rgba(15, 118, 110, 0.32);
+            background: linear-gradient(180deg, rgba(240,253,250,0.95) 0%, rgba(255,255,255,0.98) 100%);
+        }
+        .omen-step-done {
+            border-color: rgba(15, 118, 110, 0.18);
+            background: linear-gradient(180deg, rgba(248,250,252,0.95) 0%, rgba(255,255,255,0.98) 100%);
+        }
+        .omen-step-number {
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--omen-accent);
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+        .omen-step-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--omen-ink);
+            margin-bottom: 0.4rem;
+        }
+        .omen-step-copy {
+            color: var(--omen-muted);
+            line-height: 1.45;
+            font-size: 0.92rem;
+            margin-bottom: 0.85rem;
+        }
+        .omen-step-badge {
+            display: inline-block;
+            padding: 0.22rem 0.55rem;
+            border-radius: 999px;
+            background: var(--omen-accent-soft);
+            color: var(--omen-accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
         div[data-testid="stButton"] button {
             border-radius: 14px;
             min-height: 2.8rem;
@@ -480,17 +733,69 @@ def _render_timeline_cards(timeline_rows: list[dict[str, Any]]) -> None:
         strategic = bool(row.get("strategic") or row.get("is_strategy_related"))
         badge = '<div class="omen-badge">Strategic signal</div>' if strategic else ""
         items.append(
-            f"""
-            <div class="omen-timeline-item">
-                <div class="omen-time">{time_text}</div>
-                <div class="omen-event">{name_text}</div>
-                <div class="omen-meta">{evidence_text}</div>
-                {badge}
-            </div>
-            """
+            textwrap.dedent(
+                f"""
+                <div class="omen-timeline-item">
+                    <div class="omen-time">{time_text}</div>
+                    <div class="omen-event">{name_text}</div>
+                    <div class="omen-meta">{evidence_text}</div>
+                    {badge}
+                </div>
+                """
+            ).strip()
         )
 
-    st.markdown('<div class="omen-timeline">' + "".join(items) + "</div>", unsafe_allow_html=True)
+    html_block = '<div class="omen-timeline">' + "".join(items) + "</div>"
+    st.markdown(html_block, unsafe_allow_html=True)
+
+
+def _render_gap_cards(gaps: list[dict[str, Any]], *, empty_text: str) -> None:
+    if not gaps:
+        st.caption(empty_text)
+        return
+
+    for start in range(0, len(gaps), 2):
+        left_col, right_col = st.columns(2)
+        for col, gap in zip((left_col, right_col), gaps[start : start + 2]):
+            if not isinstance(gap, dict):
+                continue
+            assumption = str(gap.get("assumption") or "Unknown Point")
+            observation = str(gap.get("observation") or "...")
+            significance = str(gap.get("gap_significance") or "").strip()
+            event_id = str(gap.get("event_id") or "").strip()
+            phase = str(gap.get("phase") or "").strip()
+            refs = gap.get("evidence_refs")
+
+            with col:
+                with st.container(border=True):
+                    st.markdown(f"**{assumption}**")
+                    st.caption(observation)
+                    meta_parts: list[str] = []
+                    if phase:
+                        meta_parts.append(f"Phase: {phase}")
+                    if event_id:
+                        meta_parts.append(f"Event: {event_id}")
+                    if meta_parts:
+                        st.caption(" · ".join(meta_parts))
+                    if significance:
+                        st.warning(significance)
+                    if isinstance(refs, list) and refs:
+                        st.caption("Evidence: " + ", ".join([str(item) for item in refs[:2]]))
+
+
+def _render_trait_cards(key_traits: list[dict[str, Any]]) -> None:
+    if not key_traits:
+        st.caption("No key traits available.")
+        return
+    for item in key_traits:
+        if not isinstance(item, dict):
+            continue
+        trait = str(item.get("trait") or "Unknown trait")
+        evidence_summary = str(item.get("evidence_summary") or "")
+        with st.container(border=True):
+            st.markdown(f"**{trait}**")
+            if evidence_summary:
+                st.caption(evidence_summary)
 
 
 _inject_app_styles()
@@ -504,190 +809,63 @@ if st.session_state.spec6_loaded_case_id != case_id:
     st.session_state.spec6_insight_payload = None
     st.session_state.spec6_output_note = ""
     st.session_state.spec6_ontology_scope = "all"
+    st.session_state.spec6_pipeline_stage = "idle"
+    st.session_state.spec6_pipeline_progress = 0
+    st.session_state.spec6_pipeline_message = "Waiting to start"
     _load_existing_outputs(case_id)
     st.session_state.spec6_loaded_case_id = case_id
     st.rerun()
 
-with col_gen:
-    st.caption("Build evidence package")
-    if st.button("Generate Ontology", type="primary", use_container_width=True):
-        try:
-            # Step 1: Ensure directory exists BEFORE running LLM
-            case_dir = ensure_case_output_dir(case_id)
-            st.session_state.spec6_output_note = f"Directory verified: {case_dir}"
-            
-            generation = generate_strategy_ontology_from_document(
-                document_path=document_path,
-                case_id=case_id,
-                title=title,
-                strategy=strategy,
-                known_outcome=known_outcome,
-                config_path=config_path,
-            )
-            known_outcome_effective = generation.inferred_known_outcome or known_outcome
-            if generation.inferred_known_outcome:
-                st.session_state.spec6_pending_known_outcome_updates[case_id] = generation.inferred_known_outcome
-
-            founder_payload, timeline_events = generate_founder_and_events_from_document(
-                document_path=document_path,
-                case_id=case_id,
-                title=title,
-                known_outcome=known_outcome_effective,
-                config_path=config_path,
-            )
-
-            strategy_payload = attach_timeline_events(generation.strategy_ontology, timeline_events)
-
-            case_dir = ensure_case_output_dir(case_id)
-            founder_path = case_dir / "founder_ontology.json"
-            strategy_payload = attach_founder_ref(
-                strategy_payload,
-                founder_payload,
-                founder_filename=founder_path.name,
-            )
-
-            payload = generation.model_dump(mode="python")
-            strategy_payload.setdefault("meta", {})
-            strategy_payload["meta"]["strategy"] = _normalize_strategy_name(strategy)
-            strategy_payload["meta"]["known_outcome"] = known_outcome_effective
-            payload["strategy_ontology"] = strategy_payload
-            st.session_state.spec6_generation_result = payload
-            st.session_state.spec6_pending_strategy_updates[case_id] = _normalize_strategy_name(strategy)
-
-            ontology_path = save_strategy_ontology(
-                strategy_payload,
-                case_dir / "strategy_ontology.json",
-            )
-            founder_path.write_text(json.dumps(founder_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-            # Generate and save generation.json to match CLI behavior
-            report = {
-                "case_id": case_id,
-                "strategy_ontology_path": str(ontology_path),
-                "founder_ontology_path": str(founder_path),
-                "validation_passed": generation.validation_passed,
-                "validation_issues": generation.validation_issues,
-                "reused_existing": False,
-            }
-            (case_dir / "generation.json").write_text(
-                json.dumps(report, ensure_ascii=False, indent=2, default=str),
-                encoding="utf-8",
-            )
-
-            payload["ontology_path"] = str(ontology_path)
-            st.session_state.spec6_generation_result = payload
-            st.session_state.spec6_ontology_graph_payload = strategy_payload
-            st.session_state.spec6_output_note = "Ontology + founder slice generated and saved."
-            st.rerun()
-        except Exception as exc:  # pragma: no cover - UI surfaced exception
-            st.session_state.spec6_output_note = f"Generate failed: {exc}"
-
-with col_status:
-    st.caption("Load timeline + founder state")
-    if st.button("Analyze Founder", use_container_width=True):
-        paths = _artifact_paths(case_id)
-        if not paths["ontology"].exists() or not paths["founder"].exists():
-            st.session_state.spec6_output_note = (
-                "Analyze founder requires existing strategy_ontology.json and founder_ontology.json."
-            )
-        else:
-            try:
-                strategy_payload = json.loads(paths["ontology"].read_text(encoding="utf-8"))
-                founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
-                parsed_date = status_date.strip() or None
-                status_payload = build_status_snapshot(
-                    strategy_ontology=strategy_payload,
-                    founder_ontology=founder_payload,
-                    year=None,
-                    date=parsed_date,
-                )
-                st.session_state.spec6_ontology_graph_payload = strategy_payload
-                paths["analyze_status"].write_text(
-                    json.dumps(status_payload, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-                st.session_state.spec6_status_payload = status_payload
-                st.session_state.spec6_output_note = (
-                    "Analyze status loaded from existing artifacts (strategy ontology graph included)."
-                )
-            except Exception as exc:  # pragma: no cover - UI surfaced exception
-                st.session_state.spec6_output_note = f"Analyze status failed: {exc}"
-
-with col_run:
-    st.caption("Trace strategic formation")
-    if st.button("Analyze Formation", use_container_width=True):
-        paths = _artifact_paths(case_id)
-        if not paths["founder"].exists():
-            st.session_state.spec6_output_note = "Analyze formation requires existing founder_ontology.json."
-        else:
-            try:
-                founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
-                target_event_id = _pick_formation_target_event_id(
-                    founder_payload,
-                    st.session_state.spec6_status_payload,
-                )
-                if not target_event_id:
-                    st.session_state.spec6_output_note = "No event id available for formation analysis."
-                else:
-                    formation_payload = build_strategic_formation_chain(
-                        founder_ontology=founder_payload,
-                        target_event_id=target_event_id,
-                    )
-                    paths["analyze_formation"].write_text(
-                        json.dumps(formation_payload, ensure_ascii=False, indent=2),
-                        encoding="utf-8",
-                    )
-                    st.session_state.spec6_formation_payload = formation_payload
-                    st.session_state.spec6_output_note = f"Analyze formation generated for event: {target_event_id}"
-            except Exception as exc:  # pragma: no cover - UI surfaced exception
-                st.session_state.spec6_output_note = f"Analyze formation failed: {exc}"
-with col_insight:
-    st.caption("Generate narrative insight")
-    if st.button("Deep Insight", use_container_width=True):
-        paths = _artifact_paths(case_id)
-        if not paths["founder"].exists() or not paths["analyze_formation"].exists():
-            st.session_state.spec6_output_note = "Deep Insight requires existing founder_ontology.json and analyze_formation.json."
-        else:
-            try:
-                founder_payload = json.loads(paths["founder"].read_text(encoding="utf-8"))
-                formation_payload = json.loads(paths["analyze_formation"].read_text(encoding="utf-8"))
-                strategy_payload = None
-                if paths["ontology"].exists():
-                    strategy_payload = json.loads(paths["ontology"].read_text(encoding="utf-8"))
-                insight_payload = generate_unified_insight(
-                    case_id=case_id,
-                    founder_ontology=founder_payload,
-                    strategy_ontology=strategy_payload,
-                    formation_payload=formation_payload,
-                    config_path=config_path,
-                )
-                paths["analyze_insight"].write_text(
-                    json.dumps(insight_payload, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-                st.session_state.spec6_insight_payload = insight_payload
-                st.session_state.spec6_output_note = "Deep Insight (Narrative + Gaps) generated."
-            except Exception as exc:
-                st.session_state.spec6_output_note = f"Deep Insight failed: {exc}"
+st.markdown(
+    """
+    <div class="omen-summary" style="margin-bottom:0.75rem;">
+        One action runs the full Omen flow: ontology generation, timeline assembly, and strategic insight synthesis.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+journey_placeholder = st.empty()
+_update_pipeline_journey(
+    journey_placeholder,
+    st.session_state.spec6_pipeline_stage,
+    st.session_state.spec6_pipeline_message,
+)
+progress_placeholder = st.empty()
+status_placeholder = st.empty()
+if st.button("Start Omen", type="primary", use_container_width=True):
+    progress_bar = progress_placeholder.progress(0, text="Starting Omen")
+    try:
+        _run_omen_pipeline(
+            case_id=case_id,
+            title=title,
+            document_path=document_path,
+            strategy=strategy,
+            known_outcome=known_outcome,
+            status_date=status_date,
+            config_path=config_path,
+            progress_bar=progress_bar,
+            status_box=status_placeholder,
+            journey_box=journey_placeholder,
+        )
+    except Exception as exc:  # pragma: no cover - UI surfaced exception
+        st.session_state.spec6_pipeline_progress = 100
+        st.session_state.spec6_pipeline_message = f"Omen failed: {exc}"
+        _update_pipeline_journey(
+            journey_placeholder,
+            st.session_state.spec6_pipeline_stage,
+            st.session_state.spec6_pipeline_message,
+        )
+        progress_bar.progress(100, text="Omen stopped")
+        status_placeholder.error(f"Omen failed: {exc}")
+        st.session_state.spec6_output_note = f"Omen failed: {exc}"
+else:
+    progress_placeholder.progress(st.session_state.spec6_pipeline_progress, text=st.session_state.spec6_pipeline_message)
 
 
 with st.sidebar:
     st.divider()
-    st.header("Output")
     paths = _artifact_paths(case_id)
-    st.caption(_display_output_subpath(case_id))
-
-    for label, key in (
-        ("Ontology", "ontology"),
-        ("Founder", "founder"),
-        ("AnalyzeStatus", "analyze_status"),
-        ("AnalyzeFormation", "analyze_formation"),
-        ("AnalyzeInsight", "analyze_insight"),
-    ):
-        filename = paths[key].name
-        exists = paths[key].exists()
-        prefix = "✅" if exists else "⬜"
-        st.write(f"{prefix} {filename}")
+    _render_artifact_status_panel(case_id=case_id, paths=paths)
 
     if st.session_state.spec6_output_note:
         st.info(st.session_state.spec6_output_note)
@@ -727,23 +905,23 @@ if st.session_state.spec6_insight_payload:
         t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
 
         with t1:
-            st.markdown("### Founder Persona")
-            st.write(persona.get("narrative", "No narrative available."))
-            st.markdown(f"**Consistency Score:** {persona.get('consistency_score', 'n/a')}")
+            left_col, right_col = st.columns([1.05, 1.35])
+            with left_col:
+                st.markdown("### Founder Persona")
+                st.write(persona.get("narrative", "No narrative available."))
+                score_val = persona.get("consistency_score", "n/a")
+                st.metric("Consistency Score", str(score_val))
 
-            if st.session_state.spec6_status_payload:
-                founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
-                st.plotly_chart(founder_fig, use_container_width=True)
+                key_traits = persona.get("key_traits") or []
+                if isinstance(key_traits, list):
+                    st.markdown("**Key Traits**")
+                    _render_trait_cards(key_traits)
 
-            key_traits = persona.get("key_traits") or []
-            if isinstance(key_traits, list) and key_traits:
-                st.markdown("**Key Traits**")
-                for item in key_traits:
-                    if not isinstance(item, dict):
-                        continue
-                    trait = str(item.get("trait") or "Unknown trait")
-                    evidence_summary = str(item.get("evidence_summary") or "")
-                    st.info(f"{trait}: {evidence_summary}")
+            with right_col:
+                if st.session_state.spec6_status_payload:
+                    st.markdown("### Founder Influence Graph")
+                    founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
+                    st.plotly_chart(founder_fig, use_container_width=True)
 
         with t2:
             if formation_payload:
@@ -766,8 +944,9 @@ if st.session_state.spec6_insight_payload:
                 question = str(item.get("question") or f"Why {index}?")
                 answer = str(item.get("answer") or "No answer available.")
                 refs = item.get("evidence_refs") or []
-                with st.expander(f"Why {index}: {question}", expanded=index == 1):
-                    st.write(answer)
+                with st.container(border=True):
+                    st.markdown(f"**Why {index}: {question}**")
+                    st.caption(answer)
                     if isinstance(refs, list) and refs:
                         st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
 
@@ -788,45 +967,31 @@ if st.session_state.spec6_insight_payload:
         with t3:
             st.markdown("### Process Reality Gaps")
             process_gap_items = process_gaps if isinstance(process_gaps, list) else []
-            for gap in process_gap_items:
-                with st.expander(f"Gap: {gap.get('assumption', 'Unknown Point')}"):
-                    st.write(f"**Observed Reality:** {gap.get('observation', '...')}")
-                    if gap.get('gap_significance'):
-                        st.warning(f"**Significance:** {gap.get('gap_significance')}")
-                    event_id = str(gap.get("event_id") or "").strip()
-                    phase = str(gap.get("phase") or "").strip()
-                    if event_id:
-                        st.caption(f"Event: {event_id}")
-                    if phase:
-                        st.caption(f"Phase: {phase}")
+            _render_gap_cards(process_gap_items, empty_text="No process gaps available.")
 
             if known_outcome:
                 st.markdown("### Outcome Reality Gaps")
                 st.caption(f"Known Outcome: {known_outcome}")
                 outcome_gap_items = outcome_gaps if isinstance(outcome_gaps, list) else []
-                for gap in outcome_gap_items:
-                    with st.expander(f"Outcome Gap: {gap.get('assumption', 'Unknown Point')}"):
-                        st.write(f"**Observed Outcome:** {gap.get('observation', '...')}")
-                        if gap.get('gap_significance'):
-                            st.warning(f"**Significance:** {gap.get('gap_significance')}")
-                        event_id = str(gap.get("event_id") or "").strip()
-                        phase = str(gap.get("phase") or "").strip()
-                        if event_id:
-                            st.caption(f"Event: {event_id}")
-                        if phase:
-                            st.caption(f"Phase: {phase}")
+                _render_gap_cards(outcome_gap_items, empty_text="No outcome gaps available.")
 
             if isinstance(learning_loop, list) and learning_loop:
                 st.markdown("### Learning Loop Signals")
-                for item in learning_loop:
-                    if not isinstance(item, dict):
-                        continue
-                    signal = str(item.get("signal") or "unknown_signal")
-                    adjustment = str(item.get("adjustment") or "")
-                    evidence_ref = str(item.get("evidence_ref") or "")
-                    st.info(f"{signal}: {adjustment}")
-                    if evidence_ref:
-                        st.caption(f"Evidence: {evidence_ref}")
+                for start in range(0, len(learning_loop), 2):
+                    lc1, lc2 = st.columns(2)
+                    for col, item in zip((lc1, lc2), learning_loop[start : start + 2]):
+                        if not isinstance(item, dict):
+                            continue
+                        signal = str(item.get("signal") or "unknown_signal")
+                        adjustment = str(item.get("adjustment") or "")
+                        evidence_ref = str(item.get("evidence_ref") or "")
+                        with col:
+                            with st.container(border=True):
+                                st.markdown(f"**{signal}**")
+                                if adjustment:
+                                    st.caption(adjustment)
+                                if evidence_ref:
+                                    st.caption(f"Evidence: {evidence_ref}")
 
 st.divider()
 

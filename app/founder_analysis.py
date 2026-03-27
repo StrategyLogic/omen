@@ -56,6 +56,10 @@ if "spec6_pipeline_stage" not in st.session_state:
     st.session_state.spec6_pipeline_stage = "idle"
 if "spec6_pipeline_progress" not in st.session_state:
     st.session_state.spec6_pipeline_progress = 0
+if "spec6_pipeline_running" not in st.session_state:
+    st.session_state.spec6_pipeline_running = False
+if "spec6_pipeline_autorun" not in st.session_state:
+    st.session_state.spec6_pipeline_autorun = False
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -148,7 +152,7 @@ def _render_pipeline_journey(stage: str, message: str, paths: dict[str, Path]) -
                 ).strip(),
                 unsafe_allow_html=True,
             )
-    st.caption(message)
+    return
 
 
 def _update_pipeline_journey(container: Any, stage: str, message: str, paths: dict[str, Path]) -> None:
@@ -168,7 +172,7 @@ with st.sidebar:
 
     case_id = st.selectbox("Case Context", options=existing_case_ids, index=selected_case_index)
 
-    with st.expander("Journey Settings", expanded=False):
+    with st.expander("Settings", expanded=False):
         document_path = st.text_input("Source Document", value=suggest_document_path(case_id), key=f"spec6_document_path_{case_id}")
         status_date = st.text_input("Status Snapshot Date", value="")
         config_path = st.text_input("Model Config Path", value="config/llm.toml")
@@ -486,10 +490,7 @@ def _inject_app_styles() -> None:
             --omen-accent-soft: rgba(15, 118, 110, 0.10);
         }
         .stApp {
-            background:
-                radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 28%),
-                radial-gradient(circle at top right, rgba(194, 65, 12, 0.08), transparent 24%),
-                linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+            background: #ffffff;
         }
         .omen-summary {
             color: var(--omen-muted);
@@ -605,6 +606,9 @@ def _inject_app_styles() -> None:
             font-size: 0.75rem;
             font-weight: 700;
         }
+        .omen-cta-spacer {
+            height: 0.95rem;
+        }
         div[data-testid="stButton"] button {
             border-radius: 14px;
             min-height: 2.8rem;
@@ -719,6 +723,7 @@ if st.session_state.spec6_loaded_case_id != case_id:
     st.session_state.spec6_loaded_case_id = case_id
     st.rerun()
 
+st.markdown("#### Omen Pipeline")
 journey_placeholder = st.empty()
 journey_paths = _artifact_paths(case_id)
 has_existing_outputs = any(path.exists() for key, path in journey_paths.items() if key != "root")
@@ -728,10 +733,26 @@ _update_pipeline_journey(
     st.session_state.spec6_pipeline_message,
     journey_paths,
 )
+st.markdown('<div class="omen-cta-spacer"></div>', unsafe_allow_html=True)
+show_runtime_status = st.session_state.spec6_pipeline_running or st.session_state.spec6_pipeline_progress > 0
+if show_runtime_status:
+    st.markdown("#### Omen Status")
 progress_placeholder = st.empty()
 status_placeholder = st.empty()
 cta_label = "Analysis Again" if has_existing_outputs else "Start Omen"
-if st.button(cta_label, type="primary", use_container_width=True):
+start_clicked = st.button(
+    cta_label,
+    type="primary",
+    use_container_width=True,
+    disabled=st.session_state.spec6_pipeline_running,
+)
+
+if start_clicked and not st.session_state.spec6_pipeline_running:
+    st.session_state.spec6_pipeline_running = True
+    st.session_state.spec6_pipeline_autorun = True
+    st.rerun()
+
+if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_autorun:
     progress_bar = progress_placeholder.progress(0, text="Starting Omen")
     try:
         _run_omen_pipeline(
@@ -758,23 +779,19 @@ if st.button(cta_label, type="primary", use_container_width=True):
         progress_bar.progress(100, text="Omen stopped")
         status_placeholder.error(f"Omen failed: {exc}")
         st.session_state.spec6_output_note = f"Omen failed: {exc}"
+    finally:
+        st.session_state.spec6_pipeline_running = False
+        st.session_state.spec6_pipeline_autorun = False
 else:
-    progress_placeholder.progress(st.session_state.spec6_pipeline_progress, text=st.session_state.spec6_pipeline_message)
+    if show_runtime_status:
+        progress_placeholder.progress(
+            st.session_state.spec6_pipeline_progress,
+            text=st.session_state.spec6_pipeline_message,
+        )
 
 with st.sidebar:
     if st.session_state.spec6_output_note:
         st.info(st.session_state.spec6_output_note)
-
-if st.session_state.spec6_status_payload:
-    status_payload = st.session_state.spec6_status_payload
-    st.subheader("Timeline")
-
-    summary = status_payload.get("summary") or {}
-
-    timeline_rows = status_payload.get("timeline") or []
-    _render_timeline_cards(timeline_rows)
-
-st.divider()
 
 if st.session_state.spec6_insight_payload:
     insight_payload = st.session_state.spec6_insight_payload
@@ -792,23 +809,15 @@ if st.session_state.spec6_insight_payload:
     t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
 
     with t1:
-        left_col, right_col = st.columns([1.05, 1.35])
-        with left_col:
-            st.markdown("### Founder Persona")
-            st.write(persona.get("narrative", "No narrative available."))
-            score_val = persona.get("consistency_score", "n/a")
-            st.metric("Consistency Score", str(score_val))
+        st.markdown("### Founder Persona")
+        st.write(persona.get("narrative", "No narrative available."))
+        score_val = persona.get("consistency_score", "n/a")
+        st.metric("Consistency Score", str(score_val))
 
-            key_traits = persona.get("key_traits") or []
-            if isinstance(key_traits, list):
-                st.markdown("**Key Traits**")
-                _render_trait_cards(key_traits)
-
-        with right_col:
-            if st.session_state.spec6_status_payload:
-                st.markdown("### Founder Influence Graph")
-                founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
-                st.plotly_chart(founder_fig, use_container_width=True)
+        key_traits = persona.get("key_traits") or []
+        if isinstance(key_traits, list):
+            st.markdown("**Key Traits**")
+            _render_trait_cards(key_traits)
 
     with t2:
         if formation_payload:
@@ -879,3 +888,16 @@ if st.session_state.spec6_insight_payload:
                                 st.caption(adjustment)
                             if evidence_ref:
                                 st.caption(f"Evidence: {evidence_ref}")
+
+if st.session_state.spec6_status_payload:
+    st.divider()
+    st.subheader("Founder Influence Graph")
+    founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
+    st.plotly_chart(founder_fig, use_container_width=True)
+
+if st.session_state.spec6_status_payload:
+    st.divider()
+    status_payload = st.session_state.spec6_status_payload
+    st.subheader("Timeline")
+    timeline_rows = status_payload.get("timeline") or []
+    _render_timeline_cards(timeline_rows)

@@ -277,7 +277,9 @@ def _extract_known_outcome(ontology_payload: dict[str, Any] | None, fallback: st
     return fallback
 
 
-def _render_case_brief_panel(*, case_id: str, title: str, known_outcome: str) -> None:
+def _render_case_brief_panel(*, case_id: str, title: str, known_outcome: str, visible: bool) -> None:
+    if not visible:
+        return
     st.divider()
     st.markdown(f"### {_t('case_summary')}")
     outcome_text = known_outcome.strip() or _t("unknown")
@@ -377,10 +379,15 @@ st.title(_t("page_title"))
 st.caption(_t("page_intro"))
 
 with st.sidebar:
+    case_summary_visible = bool(
+        isinstance(st.session_state.spec6_insight_payload, dict)
+        or st.session_state.spec6_pipeline_stage == "done"
+    )
     _render_case_brief_panel(
         case_id=case_id,
         title=title,
         known_outcome=known_outcome,
+        visible=case_summary_visible,
     )
 
 
@@ -833,7 +840,7 @@ def _render_timeline_cards(timeline_rows: list[dict[str, Any]]) -> None:
             continue
         time_text = html.escape(str(row.get("time") or row.get("date") or _t("unknown_time")))
         name_text = html.escape(str(row.get("name") or row.get("event") or _t("event")))
-        evidence_text = html.escape(str(row.get("evidence") or row.get("description") or _t("no_evidence_summary")))
+        evidence_text = html.escape(str(row.get("description") or _t("no_evidence_summary")))
         strategic = bool(row.get("strategic") or row.get("is_strategy_related"))
         badge = f'<div class="omen-badge">{html.escape(_t("strategic_signal"))}</div>' if strategic else ""
         items.append(

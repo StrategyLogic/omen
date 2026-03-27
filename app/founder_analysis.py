@@ -76,7 +76,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "page_title": "Founder Research",
         "page_intro": "Upload a source case file and Omen automatically builds visual founder personas and relationship graphs, then analyzes decision style and strategy-reality gaps to deliver deep, one-click insights.",
         "case_summary": "Case Summary",
-        "unknown": "Unknown",
+        "unknown": "Please run Omen first.",
         "pipeline_title": "Research Workflow",
         "cta_start": "Start Analysis",
         "cta_again": "Analysis Again",
@@ -150,7 +150,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "page_title": "创始人研究",
         "page_intro": "只需上传案例源文件，Omen 即可为您自动构建可视化的创始人画像与关系图谱，更能深度解析其决策风格及“战略—现实”偏差，助您一键获取穿透表象的深度洞察。",
         "case_summary": "案例摘要",
-        "unknown": "未知",
+        "unknown": "尚未完成分析。",
         "pipeline_title": "研究流程",
         "cta_start": "开始分析",
         "cta_again": "重新分析",
@@ -277,7 +277,9 @@ def _extract_known_outcome(ontology_payload: dict[str, Any] | None, fallback: st
     return fallback
 
 
-def _render_case_brief_panel(*, case_id: str, title: str, known_outcome: str) -> None:
+def _render_case_brief_panel(*, case_id: str, title: str, known_outcome: str, visible: bool) -> None:
+    if not visible:
+        return
     st.divider()
     st.markdown(f"### {_t('case_summary')}")
     outcome_text = known_outcome.strip() or _t("unknown")
@@ -377,10 +379,15 @@ st.title(_t("page_title"))
 st.caption(_t("page_intro"))
 
 with st.sidebar:
+    case_summary_visible = bool(
+        isinstance(st.session_state.spec6_insight_payload, dict)
+        or st.session_state.spec6_pipeline_stage == "done"
+    )
     _render_case_brief_panel(
         case_id=case_id,
         title=title,
         known_outcome=known_outcome,
+        visible=case_summary_visible,
     )
 
 
@@ -833,7 +840,7 @@ def _render_timeline_cards(timeline_rows: list[dict[str, Any]]) -> None:
             continue
         time_text = html.escape(str(row.get("time") or row.get("date") or _t("unknown_time")))
         name_text = html.escape(str(row.get("name") or row.get("event") or _t("event")))
-        evidence_text = html.escape(str(row.get("evidence") or row.get("description") or _t("no_evidence_summary")))
+        evidence_text = html.escape(str(row.get("description") or _t("no_evidence_summary")))
         strategic = bool(row.get("strategic") or row.get("is_strategy_related"))
         badge = f'<div class="omen-badge">{html.escape(_t("strategic_signal"))}</div>' if strategic else ""
         items.append(

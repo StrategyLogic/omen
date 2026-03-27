@@ -21,6 +21,7 @@ def generate_founder_and_events_from_document(
     title: str,
     known_outcome: str,
     config_path: str = "config/llm.toml",
+    require_embeddings: bool = True,
     logger: LogFn | None = None,
 ) -> tuple[dict, list[dict]]:
     def emit(step: str, status: str, message: str) -> None:
@@ -28,7 +29,7 @@ def generate_founder_and_events_from_document(
             logger(step, status, message)
 
     emit("founder_config", "STARTED", f"loading llm config from {config_path}")
-    llm_config = load_llm_config(config_path)
+    llm_config = load_llm_config(config_path, require_embeddings=require_embeddings)
     emit(
         "founder_config",
         "PASSED",

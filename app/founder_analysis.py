@@ -371,7 +371,6 @@ def _run_omen_pipeline(
     status_date: str,
     config_path: str,
     progress_bar: Any,
-    status_box: Any,
     journey_box: Any,
 ) -> None:
     paths = _artifact_paths(case_id)
@@ -379,9 +378,6 @@ def _run_omen_pipeline(
     st.session_state.spec6_pipeline_progress = 0
     st.session_state.spec6_pipeline_message = "Step 1/3 · Generate Ontologies"
     _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
-    progress_bar.progress(0, text="Omen ready")
-
-    status_box.info("Step 1/3 · Generate Ontologies")
     case_dir = ensure_case_output_dir(case_id)
     generation = generate_strategy_ontology_from_document(
         document_path=document_path,
@@ -390,6 +386,8 @@ def _run_omen_pipeline(
         strategy=strategy,
         known_outcome=known_outcome,
         config_path=config_path,
+        require_embeddings=False,
+        use_embeddings=False,
     )
     known_outcome_effective = generation.inferred_known_outcome or known_outcome
     if generation.inferred_known_outcome:
@@ -401,6 +399,7 @@ def _run_omen_pipeline(
         title=title,
         known_outcome=known_outcome_effective,
         config_path=config_path,
+        require_embeddings=False,
     )
 
     strategy_payload = attach_timeline_events(generation.strategy_ontology, timeline_events)
@@ -440,8 +439,6 @@ def _run_omen_pipeline(
     st.session_state.spec6_pipeline_message = "Step 2/3 · Get Timeline"
     _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
     progress_bar.progress(34, text="Step 1 complete · Ontologies ready")
-
-    status_box.info("Step 2/3 · Get Timeline")
     parsed_date = status_date.strip() or None
     status_payload = build_status_snapshot(
         strategy_ontology=strategy_payload,
@@ -459,8 +456,6 @@ def _run_omen_pipeline(
     st.session_state.spec6_pipeline_message = "Step 3/3 · Generate Insights"
     _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
     progress_bar.progress(67, text="Step 2 complete · Timeline loaded")
-
-    status_box.info("Step 3/3 · Generate Insights")
     target_event_id = _pick_formation_target_event_id(founder_payload, status_payload)
     if not target_event_id:
         raise ValueError("No event id available for formation analysis.")
@@ -492,7 +487,6 @@ def _run_omen_pipeline(
     st.session_state.spec6_pipeline_message = "Omen complete"
     _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
     progress_bar.progress(100, text="Omen complete")
-    status_box.success("Omen finished · Timeline and strategic insights are ready.")
     st.session_state.spec6_output_note = "Omen pipeline completed: ontologies, timeline, formation, and insights generated."
 
 
@@ -923,10 +917,7 @@ _update_pipeline_journey(
 )
 st.markdown('<div class="omen-cta-spacer"></div>', unsafe_allow_html=True)
 show_runtime_status = st.session_state.spec6_pipeline_running or st.session_state.spec6_pipeline_progress > 0
-if show_runtime_status:
-    st.markdown("#### Omen Status")
 progress_placeholder = st.empty()
-status_placeholder = st.empty()
 cta_label = "Analysis Again" if has_existing_outputs else "Start Omen"
 start_clicked = st.button(
     cta_label,
@@ -941,7 +932,7 @@ if start_clicked and not st.session_state.spec6_pipeline_running:
     st.rerun()
 
 if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_autorun:
-    progress_bar = progress_placeholder.progress(0, text="Starting Omen")
+    progress_bar = progress_placeholder.progress(10, text="Starting Omen")
     try:
         _run_omen_pipeline(
             case_id=case_id,
@@ -952,7 +943,6 @@ if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_a
             status_date=status_date,
             config_path=config_path,
             progress_bar=progress_bar,
-            status_box=status_placeholder,
             journey_box=journey_placeholder,
         )
     except Exception as exc:  # pragma: no cover - UI surfaced exception
@@ -965,7 +955,6 @@ if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_a
             journey_paths,
         )
         progress_bar.progress(100, text="Omen stopped")
-        status_placeholder.error(f"Omen failed: {exc}")
         st.session_state.spec6_output_note = f"Omen failed: {exc}"
     finally:
         st.session_state.spec6_pipeline_running = False

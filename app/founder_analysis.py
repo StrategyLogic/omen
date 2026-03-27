@@ -127,7 +127,7 @@ def _render_pipeline_journey(stage: str, message: str, paths: dict[str, Path]) -
         stage_outputs = [path for path in outputs[key] if path.exists()]
         if stage_outputs:
             state = "done"
-            badge = "Outputs Ready"
+            badge = "Ready"
         elif current_index == idx:
             state = "active"
             badge = "In progress"
@@ -879,38 +879,3 @@ if st.session_state.spec6_insight_payload:
                                 st.caption(adjustment)
                             if evidence_ref:
                                 st.caption(f"Evidence: {evidence_ref}")
-
-st.divider()
-
-if st.session_state.spec6_ontology_graph_payload:
-    with st.container(border=True):
-        ontology_payload = st.session_state.spec6_ontology_graph_payload
-        st.subheader("Ontology Graph")
-
-        ontology_fig = build_ontology_graph_figure(
-            ontology_payload,
-            actor_scope=st.session_state.spec6_ontology_scope,
-        )
-        st.plotly_chart(ontology_fig, use_container_width=True)
-
-        space_summary = _build_space_summary(ontology_payload)
-        reset_col, col1, col2, col3, col4 = st.columns(5)
-        with reset_col:
-            st.caption("Show")
-            if st.button("All", key="ontology_scope_all"):
-                st.session_state.spec6_ontology_scope = "all"
-                st.rerun()
-        with col1:
-            st.caption("Tech Actors")
-            if st.button(str(space_summary.get("tech_space_actor_count", 0)), key="tech_actor_scope_count"):
-                st.session_state.spec6_ontology_scope = "tech"
-                st.rerun()
-        with col2:
-            st.caption("Market Actors")
-            if st.button(str(space_summary.get("market_space_actor_count", 0)), key="market_actor_scope_count"):
-                st.session_state.spec6_ontology_scope = "market"
-                st.rerun()
-        col3.metric("Shared Actors", space_summary.get("shared_actor_count", 0))
-        adoption_resistance = space_summary.get("adoption_resistance")
-        col4.metric("Adoption Resistance", "n/a" if adoption_resistance is None else str(adoption_resistance))
-

@@ -86,6 +86,7 @@ def _timeline_from_founder_events(founder_events: list[dict[str, Any]]) -> list[
     for event in founder_events:
         event_id = str(event.get("id") or "").strip()
         event_name = str(event.get("name") or "").strip()
+        event_description = str(event.get("description") or event.get("content") or "").strip()
         
         if not event_name:
             raw_text = str(event.get("event") or event.get("description") or "").strip()
@@ -100,6 +101,7 @@ def _timeline_from_founder_events(founder_events: list[dict[str, Any]]) -> list[
                 "id": event_id or "unknown",
                 "time": _as_time_text(event.get("date") or event.get("time")) or "unknown",
                 "name": event_name or "unknown",
+                "description": event_description,
                 "evidence": " | ".join(str(ref) for ref in (event.get("evidence_refs") or [])),
                 "strategic": "Yes" if bool(event.get("is_strategy_related", True)) else "No",
             }

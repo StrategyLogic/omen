@@ -338,14 +338,12 @@ def _update_pipeline_journey(container: Any, stage: str, paths: dict[str, Path])
         _render_pipeline_journey(stage, paths)
 
 with st.sidebar:
-    lang_options = ["中文", "English"]
-    current_lang = str(st.session_state.get("spec6_ui_lang", "zh"))
-    selected_lang = st.selectbox(
+    st.selectbox(
         _t("language_selector"),
-        options=lang_options,
-        index=0 if current_lang == "zh" else 1,
+        options=["zh", "en"],
+        format_func=lambda code: "中文" if code == "zh" else "English",
+        key="spec6_ui_lang",
     )
-    st.session_state.spec6_ui_lang = "zh" if selected_lang == "中文" else "en"
 
     st.markdown(f"## {_t('sidebar_title')}")
     st.caption(_t("sidebar_intro"))
@@ -372,6 +370,13 @@ with st.sidebar:
 active_ontology_payload = _active_ontology_payload()
 strategy = _extract_strategy_name(active_ontology_payload, suggest_strategy(case_id))
 known_outcome = _extract_known_outcome(active_ontology_payload, suggest_known_outcome(case_id))
+insight_payload_for_summary = st.session_state.spec6_insight_payload
+if isinstance(insight_payload_for_summary, dict):
+    gap_analysis = insight_payload_for_summary.get("gap_analysis")
+    if isinstance(gap_analysis, dict):
+        localized_known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
+        if localized_known_outcome:
+            known_outcome = localized_known_outcome
 title = case_display_title(case_id)
 
 st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
@@ -1103,6 +1108,7 @@ if start_clicked and not st.session_state.spec6_pipeline_running:
 
 if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_autorun:
     progress_bar = progress_placeholder.progress(10, text=_t("starting"))
+    should_rerun_after_pipeline = False
     try:
         _run_omen_pipeline(
             case_id=case_id,
@@ -1127,6 +1133,9 @@ if st.session_state.spec6_pipeline_running and st.session_state.spec6_pipeline_a
     finally:
         st.session_state.spec6_pipeline_running = False
         st.session_state.spec6_pipeline_autorun = False
+        should_rerun_after_pipeline = True
+    if should_rerun_after_pipeline:
+        st.rerun()
 else:
     if show_runtime_status:
         progress_placeholder.progress(

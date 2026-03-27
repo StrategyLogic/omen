@@ -23,6 +23,8 @@ def generate_strategy_ontology_from_document(
     known_outcome: str,
     strategy: str | None = None,
     config_path: str = "config/llm.toml",
+    require_embeddings: bool = True,
+    use_embeddings: bool = True,
     logger: LogFn | None = None,
 ) -> OntologyGenerationResult:
     def emit(step: str, status: str, message: str) -> None:
@@ -30,7 +32,7 @@ def generate_strategy_ontology_from_document(
             logger(step, status, message)
 
     emit("config", "STARTED", f"loading llm config from {config_path}")
-    llm_config = load_llm_config(config_path)
+    llm_config = load_llm_config(config_path, require_embeddings=require_embeddings)
     emit(
         "config",
         "PASSED",
@@ -60,6 +62,7 @@ def generate_strategy_ontology_from_document(
         chunks=chunks,
         config=llm_config,
         strategy=strategy,
+        use_embeddings=use_embeddings,
     )
     inferred_known_outcome = str(payload.pop("known_outcome", "") or "").strip() or None
     payload.setdefault("meta", {})

@@ -59,8 +59,9 @@ def generate_ontology_payload(
     chunks: list[str],
     config: LLMConfig,
     strategy: str | None = None,
+    use_embeddings: bool = True,
 ) -> dict[str, Any]:
-    selected_chunks = _select_chunks_with_embeddings(chunks, config)
+    selected_chunks = _select_chunks_with_embeddings(chunks, config) if use_embeddings else chunks[: config.max_chunks]
     chat = create_chat_client(config)
     prompt = f"{build_system_prompt()}\n\n{build_user_prompt(case_doc, selected_chunks, strategy=strategy)}"
     response = chat.invoke(prompt)

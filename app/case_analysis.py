@@ -835,7 +835,7 @@ if st.session_state.spec6_insight_payload:
                 st.markdown(f"**Why {index}: {question}**")
                 st.caption(answer)
                 if isinstance(refs, list) and refs:
-                    st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
+                    st.caption("Evidence: " + ", ".join([str(ref) for ref in refs[:3]]))
 
         if formation_payload:
             chain = formation_payload.get("formation_chain") or {}

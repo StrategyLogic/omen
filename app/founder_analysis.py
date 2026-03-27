@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import textwrap
 from pathlib import Path
 from typing import Any
@@ -21,10 +22,7 @@ from omen.ui.artifacts import ensure_case_output_dir
 from omen.ui.case_catalog import (
     case_display_title,
     case_output_dir,
-    default_case_id,
-    list_case_ids_from_cases,
     resolve_existing_case_output_dir,
-    suggest_document_path,
     suggest_known_outcome,
     suggest_strategy,
 )
@@ -60,6 +58,22 @@ if "spec6_pipeline_running" not in st.session_state:
     st.session_state.spec6_pipeline_running = False
 if "spec6_pipeline_autorun" not in st.session_state:
     st.session_state.spec6_pipeline_autorun = False
+
+
+FOUNDER_CASES_DIR = Path("cases/founder")
+
+
+def _list_founder_case_ids() -> list[str]:
+    if not FOUNDER_CASES_DIR.exists():
+        return []
+    return sorted([path.stem for path in FOUNDER_CASES_DIR.glob("*.md")])
+
+
+def _suggest_founder_document_path(case_id: str) -> str:
+    candidate = FOUNDER_CASES_DIR / f"{case_id}.md"
+    if candidate.exists():
+        return str(candidate)
+    return str(candidate)
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -101,19 +115,19 @@ def _extract_known_outcome(ontology_payload: dict[str, Any] | None, fallback: st
     return fallback
 
 
-def _render_case_brief_panel(*, case_id: str, title: str) -> None:
+def _render_case_brief_panel(*, case_id: str, title: str, known_outcome: str) -> None:
+    st.divider()
     st.markdown("### Case Brief")
-    with st.container(border=True):
-        st.markdown(f"**{title}**")
-        st.caption(case_id)
+    outcome_text = known_outcome.strip() or "Unknown"
+    st.caption(f"{outcome_text}")
 
 
 def _render_pipeline_journey(stage: str, message: str, paths: dict[str, Path]) -> None:
     stage_order = ["ontology", "timeline", "insight"]
     labels = {
-        "ontology": ("01", "Generate Ontologies", "Build the strategy and founder evidence base."),
-        "timeline": ("02", "Get Timeline", "Resolve founder state and event progression."),
-        "insight": ("03", "Generate Insights", "Synthesize formation, persona, and reality gaps."),
+        "ontology": ("01", "Generate Ontologies", "Build the strategy and founder ontologies."),
+        "timeline": ("02", "Evidence Base", "Resolve founder relationships and event progression."),
+        "insight": ("03", "Deep Insights", "Synthesize strategy formation, persona, and reality gaps."),
     }
     outputs = {
         "ontology": [paths["ontology"], paths["founder"]],
@@ -131,7 +145,7 @@ def _render_pipeline_journey(stage: str, message: str, paths: dict[str, Path]) -
         stage_outputs = [path for path in outputs[key] if path.exists()]
         if stage_outputs:
             state = "done"
-            badge = "Ready"
+            badge = "Completed"
         elif current_index == idx:
             state = "active"
             badge = "In progress"
@@ -160,20 +174,24 @@ def _update_pipeline_journey(container: Any, stage: str, message: str, paths: di
         _render_pipeline_journey(stage, message, paths)
 
 with st.sidebar:
-    st.markdown("### Founder Research App")
-    existing_case_ids = list_case_ids_from_cases()
-    selected_default_case_id = default_case_id(
-        existing_case_ids,
-        st.session_state.spec6_loaded_case_id,
-    )
-    if not existing_case_ids and selected_default_case_id:
-        existing_case_ids = [selected_default_case_id]
-    selected_case_index = existing_case_ids.index(selected_default_case_id) if existing_case_ids else 0
+    st.markdown("## Founder Research")
+    existing_case_ids = _list_founder_case_ids()
+    if not existing_case_ids:
+        st.error("No founder cases found under cases/founder/*.md")
+        st.stop()
+
+    loaded_case_id = st.session_state.spec6_loaded_case_id
+    selected_default_case_id = loaded_case_id if loaded_case_id in existing_case_ids else existing_case_ids[0]
+    selected_case_index = existing_case_ids.index(selected_default_case_id)
 
     case_id = st.selectbox("Case Context", options=existing_case_ids, index=selected_case_index)
 
     with st.expander("Settings", expanded=False):
-        document_path = st.text_input("Source Document", value=suggest_document_path(case_id), key=f"spec6_document_path_{case_id}")
+        document_path = st.text_input(
+            "Source Document",
+            value=_suggest_founder_document_path(case_id),
+            key=f"spec6_document_path_{case_id}",
+        )
         status_date = st.text_input("Status Snapshot Date", value="")
         config_path = st.text_input("Model Config Path", value="config/llm.toml")
 
@@ -190,6 +208,7 @@ with st.sidebar:
     _render_case_brief_panel(
         case_id=case_id,
         title=title,
+        known_outcome=known_outcome,
     )
 
 
@@ -606,6 +625,25 @@ def _inject_app_styles() -> None:
             font-size: 0.75rem;
             font-weight: 700;
         }
+        .omen-evidence-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #1d4ed8;
+            margin-bottom: 0.35rem;
+            letter-spacing: 0.02em;
+        }
+        .omen-evidence-list {
+            margin: 0;
+            padding-left: 1rem;
+            padding-bottom: 1rem;
+            color: #1e3a8a;
+            font-size: 0.75rem;
+            line-height: 1.45;
+        }
+        .omen-evidence-list li {
+            margin: 0.08rem 0;
+            font-size: 0.8rem;
+        }
         .omen-cta-spacer {
             height: 0.95rem;
         }
@@ -703,6 +741,156 @@ def _render_trait_cards(key_traits: list[dict[str, Any]]) -> None:
             st.markdown(f"**{trait}**")
             if evidence_summary:
                 st.caption(evidence_summary)
+
+
+_SEGMENT_PATTERN = re.compile(r"^(?P<name>[^\[\]]+?)(?:\[(?P<selectors>[^\]]+)\])?$")
+
+
+def _pick_founder_actor_payload(founder_ontology: dict[str, Any] | None) -> dict[str, Any]:
+    actors = founder_ontology.get("actors") if isinstance(founder_ontology, dict) else None
+    if not isinstance(actors, list):
+        return {}
+    for actor in actors:
+        if not isinstance(actor, dict):
+            continue
+        actor_type = str(actor.get("type") or actor.get("role") or "").strip().lower()
+        actor_id = str(actor.get("id") or "").strip().lower()
+        actor_name = str(actor.get("name") or "").strip().lower()
+        if "founder" in actor_type or "founder" in actor_id or "founder" in actor_name:
+            return actor
+    return actors[0] if actors and isinstance(actors[0], dict) else {}
+
+
+def _value_to_text(value: Any) -> str:
+    if isinstance(value, list):
+        parts = [_value_to_text(item) for item in value]
+        parts = [part for part in parts if part]
+        return ", ".join(parts)
+    if isinstance(value, dict):
+        for key in ("value", "text", "summary", "label", "name", "description"):
+            text = str(value.get(key) or "").strip()
+            if text:
+                return text
+        parts = [_value_to_text(item) for item in value.values()]
+        parts = [part for part in parts if part]
+        return ", ".join(parts)
+    text = str(value or "").strip()
+    return text
+
+
+def _select_from_list(items: list[Any], selectors: str) -> Any:
+    selected: list[Any] = []
+    for token in selectors.split(","):
+        pick = token.strip()
+        if not pick:
+            continue
+        if pick.isdigit():
+            index = int(pick)
+            if 0 <= index < len(items):
+                selected.append(items[index])
+            continue
+
+        lower_pick = pick.lower()
+        matched = False
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            for key in ("id", "event_id", "name"):
+                candidate = str(item.get(key) or "").strip().lower()
+                if candidate == lower_pick:
+                    selected.append(item)
+                    matched = True
+                    break
+            if matched:
+                break
+
+    if not selected:
+        return None
+    return selected if len(selected) > 1 else selected[0]
+
+
+def _apply_selector(current: Any, selectors: str) -> Any:
+    if isinstance(current, list):
+        return _select_from_list(current, selectors)
+    if isinstance(current, dict):
+        token = selectors.split(",", 1)[0].strip()
+        if token in current:
+            return current[token]
+    return None
+
+
+def _resolve_ref_path(path: str, context: dict[str, Any]) -> str:
+    current: Any = context
+    segments = [segment.strip() for segment in path.split(".") if segment.strip()]
+    if not segments:
+        return path
+
+    for segment in segments:
+        match = _SEGMENT_PATTERN.match(segment)
+        if not match:
+            return path
+
+        name = str(match.group("name") or "").strip()
+        selectors = str(match.group("selectors") or "").strip()
+
+        if not isinstance(current, dict) or name not in current:
+            return path
+        current = current[name]
+
+        if selectors:
+            selected = _apply_selector(current, selectors)
+            if selected is None:
+                return path
+            current = selected
+
+    resolved = _value_to_text(current)
+    return resolved if resolved else path
+
+
+def _build_evidence_ref_context(
+    *,
+    case_id: str,
+    formation_payload: dict[str, Any] | None,
+    strategy_ontology: dict[str, Any] | None,
+) -> dict[str, Any]:
+    founder_payload: dict[str, Any] = {}
+    founder_path = _artifact_paths(case_id)["founder"]
+    if founder_path.exists():
+        try:
+            payload = json.loads(founder_path.read_text(encoding="utf-8"))
+            founder_payload = payload if isinstance(payload, dict) else {}
+        except Exception:
+            founder_payload = {}
+
+    founder_actor = _pick_founder_actor_payload(founder_payload)
+    founder_profile = founder_actor.get("profile") if isinstance(founder_actor, dict) else {}
+    return {
+        "founder_profile": founder_profile if isinstance(founder_profile, dict) else {},
+        "formation": formation_payload or {},
+        "strategy_meta": (strategy_ontology or {}).get("meta") if isinstance(strategy_ontology, dict) else {},
+        "events": founder_payload.get("events") if isinstance(founder_payload, dict) else [],
+        "influences": founder_payload.get("influences") if isinstance(founder_payload, dict) else [],
+    }
+
+
+def _format_evidence_ref(ref: Any, context: dict[str, Any] | None = None) -> str:
+    if isinstance(ref, dict):
+        for key in ("value", "text", "summary", "label", "evidence", "content", "ref"):
+            value = str(ref.get(key) or "").strip()
+            if value:
+                return value
+        for value in ref.values():
+            text = str(value or "").strip()
+            if text:
+                return text
+        return ""
+
+    text = str(ref).strip()
+    if context and text and ("." in text or "[" in text):
+        resolved = _resolve_ref_path(text, context)
+        if resolved and resolved != text:
+            return resolved
+    return text
 
 
 _inject_app_styles()
@@ -805,19 +993,29 @@ if st.session_state.spec6_insight_payload:
     learning_loop = gap_analysis.get("learning_loop") or []
     known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
     formation_payload = st.session_state.spec6_formation_payload
+    evidence_ref_context = _build_evidence_ref_context(
+        case_id=case_id,
+        formation_payload=formation_payload,
+        strategy_ontology=st.session_state.spec6_ontology_graph_payload,
+    )
 
     t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
 
     with t1:
-        st.markdown("### Founder Persona")
-        st.write(persona.get("narrative", "No narrative available."))
-        score_val = persona.get("consistency_score", "n/a")
-        st.metric("Consistency Score", str(score_val))
+        left_col, right_col = st.columns([1.0, 1.0])
 
-        key_traits = persona.get("key_traits") or []
-        if isinstance(key_traits, list):
-            st.markdown("**Key Traits**")
-            _render_trait_cards(key_traits)
+        with left_col:
+            st.markdown("### Founder Persona")
+            st.write(persona.get("narrative", "No narrative available."))
+            score_val = persona.get("consistency_score", "n/a")
+            st.write(f"##### Consistency Score: {score_val}")
+
+        with right_col:
+
+            key_traits = persona.get("key_traits") or []
+            if isinstance(key_traits, list):
+                st.markdown("### Key Traits")
+                _render_trait_cards(key_traits)
 
     with t2:
         if formation_payload:
@@ -844,21 +1042,19 @@ if st.session_state.spec6_insight_payload:
                 st.markdown(f"**Why {index}: {question}**")
                 st.caption(answer)
                 if isinstance(refs, list) and refs:
-                    st.caption("Evidence refs: " + ", ".join([str(ref) for ref in refs[:3]]))
-
-        if formation_payload:
-            chain = formation_payload.get("formation_chain") or {}
-            with st.expander("Formation Data Details"):
-                st.markdown("**Perception**")
-                st.json(chain.get("perception") or [])
-                st.markdown("**Constraint Conflict**")
-                st.json(chain.get("constraint_conflict") or {})
-                st.markdown("**Mediation (Mental Patterns / Strategic Style)**")
-                st.json(chain.get("mediation") or {})
-                st.markdown("**Decision Logic**")
-                st.json(chain.get("decision_logic") or {})
-                st.markdown("**Execution Delta**")
-                st.json(chain.get("execution_delta") or [])
+                    ref_texts = [_format_evidence_ref(ref, evidence_ref_context) for ref in refs[:3]]
+                    ref_texts = [text for text in ref_texts if text]
+                    if ref_texts:
+                        evidence_items = "".join([f"<li>{html.escape(text)}</li>" for text in ref_texts])
+                        st.markdown(
+                            textwrap.dedent(
+                                f"""
+                                <div class="omen-evidence-title">Evidence</div>
+                                <ul class="omen-evidence-list">{evidence_items}</ul>
+                                """
+                            ).strip(),
+                            unsafe_allow_html=True,
+                        )
 
     with t3:
         st.markdown("### Process Reality Gaps")

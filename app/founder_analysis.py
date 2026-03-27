@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import html
+import importlib
 import json
+import os
 import re
 import textwrap
 from pathlib import Path
@@ -29,6 +31,17 @@ from omen.ui.case_catalog import (
 from omen.ui.formation_graph import build_formation_chain_figure
 from omen.ui.founder_graph import build_founder_graph_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
+
+
+def _load_app_dotenv() -> None:
+    try:
+        dotenv_module = importlib.import_module("dotenv")
+        dotenv_module.load_dotenv(override=False)
+    except Exception:
+        pass
+
+
+_load_app_dotenv()
 
 if "spec6_generation_result" not in st.session_state:
     st.session_state.spec6_generation_result = None
@@ -406,6 +419,28 @@ def _artifact_paths(case_id: str) -> dict[str, Path]:
         "analyze_formation": case_dir / "analyze_formation.json",
         "analyze_insight": case_dir / "analyze_insight.json",
     }
+
+
+def _has_case_json_outputs(case_dir: Path) -> bool:
+    if not case_dir.exists() or not case_dir.is_dir():
+        return False
+    return any(case_dir.glob("*.json"))
+
+
+def _read_control_variable(name: str) -> str:
+    try:
+        secret_value = st.secrets.get(name)
+        if secret_value is not None:
+            return str(secret_value).strip()
+    except Exception:
+        pass
+
+    return str(os.getenv(name, "")).strip()
+
+
+def _allow_reanalysis_enabled() -> bool:
+    token = _read_control_variable("ALLOW_REANALYSIS").lower()
+    return token in {"1", "true", "yes", "on"}
 
 
 def _coerce_timeline_bool(value: Any, *, default: bool = True) -> bool:
@@ -1180,7 +1215,8 @@ if st.session_state.spec6_loaded_case_id != case_id:
 st.markdown(f"#### {_t('pipeline_title')}")
 journey_placeholder = st.empty()
 journey_paths = _artifact_paths(case_id)
-has_existing_outputs = any(path.exists() for key, path in journey_paths.items() if key != "root")
+has_existing_outputs = _has_case_json_outputs(journey_paths["root"])
+show_analysis_button = (not has_existing_outputs) or _allow_reanalysis_enabled()
 _update_pipeline_journey(
     journey_placeholder,
     st.session_state.spec6_pipeline_stage,
@@ -1190,12 +1226,14 @@ st.markdown('<div class="omen-cta-spacer"></div>', unsafe_allow_html=True)
 show_runtime_status = st.session_state.spec6_pipeline_running or st.session_state.spec6_pipeline_progress > 0
 progress_placeholder = st.empty()
 cta_label = _t("cta_again") if has_existing_outputs else _t("cta_start")
-start_clicked = st.button(
-    cta_label,
-    type="primary",
-    use_container_width=True,
-    disabled=st.session_state.spec6_pipeline_running,
-)
+start_clicked = False
+if show_analysis_button:
+    start_clicked = st.button(
+        cta_label,
+        type="primary",
+        use_container_width=True,
+        disabled=st.session_state.spec6_pipeline_running,
+    )
 
 if start_clicked and not st.session_state.spec6_pipeline_running:
     st.session_state.spec6_pipeline_running = True

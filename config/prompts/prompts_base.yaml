@@ -1,0 +1,11 @@
+version: 1
+prompts:
+  persona_insight: |
+    Analyze the character and mental patterns of the following founder based on provided ontology data.
+    Founder name: {founder_name}
+    Profile Facts: {profile_facts}
+    Mental Patterns: {mental_patterns}
+    Strategic Style: {strategic_style}
+
+    Generate a cohesive narrative (150-200 words) describing their "Persona".
+    Highlight their consistency between beliefs and actions.

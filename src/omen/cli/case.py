@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from omen.analysis.founder.formation import build_strategic_formation_chain
+from omen.analysis.founder.insight import generate_persona_insight, generate_unified_insight, generate_why_insight
 from omen.analysis.founder.query import build_status_snapshot
 from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
+from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.ui.artifacts import ensure_case_output_dir
@@ -69,10 +71,44 @@ def register_case_commands(subparsers: Any) -> None:
     why = analyze_sub.add_parser("why", help="show decision attribution")
     why.add_argument("--case-id", required=True, help="Case identifier")
     why.add_argument("--decision-id", required=True, help="Decision node id")
+    why.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
+    )
+    why.add_argument(
+        "--output-dir",
+        required=False,
+        default="output/case_replay",
+        help="Root output directory",
+    )
+    why.add_argument(
+        "--output",
+        required=False,
+        help="Optional output JSON path for analyze why payload",
+    )
 
     persona = analyze_sub.add_parser("persona", help="show subjective founder persona")
     persona.add_argument("--case-id", required=True, help="Case identifier")
     persona.add_argument("--year-range", required=False, help="Year range like 2014:2018")
+    persona.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
+    )
+    persona.add_argument(
+        "--output-dir",
+        required=False,
+        default="output/case_replay",
+        help="Root output directory",
+    )
+    persona.add_argument(
+        "--output",
+        required=False,
+        help="Optional output JSON path for analyze persona payload",
+    )
 
     formation = analyze_sub.add_parser("formation", help="trace strategic formation chain")
     formation.add_argument("--case-id", required=True, help="Case identifier")
@@ -87,6 +123,12 @@ def register_case_commands(subparsers: Any) -> None:
         "--output",
         required=False,
         help="Optional output JSON path for analyze formation payload",
+    )
+    formation.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
     )
 
     insight = analyze_sub.add_parser("insight", help="unified deep insight (persona + gaps)")
@@ -128,6 +170,21 @@ def _generation_report_payload(
         "validation_issues": validation_issues,
         "reused_existing": reused_existing,
     }
+
+
+def _load_analysis_artifacts(case_id: str, output_dir: str) -> tuple[Path, dict[str, Any] | None, dict[str, Any]]:
+    case_dir = ensure_case_output_dir(case_id, output_root=output_dir)
+    strategy_path = case_dir / "strategy_ontology.json"
+    founder_path = case_dir / "founder_ontology.json"
+
+    if not founder_path.exists():
+        raise FileNotFoundError(f"missing founder artifact: {founder_path}")
+
+    founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
+    strategy_payload = None
+    if strategy_path.exists():
+        strategy_payload = json.loads(strategy_path.read_text(encoding="utf-8"))
+    return case_dir, strategy_payload, founder_payload
 
 
 def handle_case_command(args: Any) -> int:
@@ -174,22 +231,73 @@ def handle_case_command(args: Any) -> int:
             )
             return 0
 
-        if args.analyze_command == "formation":
-            from omen.analysis.founder.formation import build_strategic_formation_chain
-            from omen.analysis.founder.llm_enhance import enhance_formation_with_narrative
-
-            case_id = normalize_case_id(args.case_id)
-            case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
-            founder_path = case_dir / "founder_ontology.json"
-
-            if not founder_path.exists():
-                print(
-                    "Analyze formation requires existing founder artifact. "
-                    f"Missing founder file: {founder_path}"
-                )
+        if args.analyze_command == "persona":
+            try:
+                ensure_analyze_prompt_available("persona")
+                case_id = normalize_case_id(args.case_id)
+                case_dir, strategy_payload, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
+            except Exception as exc:
+                print(f"Analyze persona is unavailable: {exc}")
                 return 2
 
-            founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
+            try:
+                persona_payload = generate_persona_insight(
+                    case_id=case_id,
+                    founder_ontology=founder_payload,
+                    strategy_ontology=strategy_payload,
+                    config_path=args.config,
+                )
+            except Exception as exc:
+                print(f"Analyze persona failed: {exc}")
+                return 2
+
+            output_path = Path(args.output) if args.output else case_dir / "analyze_persona.json"
+            output_path.write_text(
+                json.dumps(persona_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print(f"Saved analyze persona payload to {output_path}")
+            return 0
+
+        if args.analyze_command == "why":
+            try:
+                ensure_analyze_prompt_available("why")
+                case_id = normalize_case_id(args.case_id)
+                case_dir, strategy_payload, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
+            except Exception as exc:
+                print(f"Analyze why is unavailable: {exc}")
+                return 2
+
+            try:
+                why_payload = generate_why_insight(
+                    case_id=case_id,
+                    founder_ontology=founder_payload,
+                    strategy_ontology=strategy_payload,
+                    decision_id=str(args.decision_id).strip(),
+                    config_path=args.config,
+                )
+            except Exception as exc:
+                print(f"Analyze why failed: {exc}")
+                return 2
+
+            output_path = Path(args.output) if args.output else case_dir / "analyze_why.json"
+            output_path.write_text(
+                json.dumps(why_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print(f"Saved analyze why payload to {output_path}")
+            return 0
+
+        if args.analyze_command == "formation":
+            from omen.analysis.founder.llm_enhance import enhance_formation_with_narrative
+
+            try:
+                ensure_analyze_prompt_available("formation")
+                case_id = normalize_case_id(args.case_id)
+                case_dir, _, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
+            except Exception as exc:
+                print(f"Analyze formation is unavailable: {exc}")
+                return 2
             try:
                 formation_payload = build_strategic_formation_chain(
                     founder_ontology=founder_payload,
@@ -222,22 +330,16 @@ def handle_case_command(args: Any) -> int:
             return 0
 
         if args.analyze_command == "insight":
-            from omen.analysis.founder.formation import build_strategic_formation_chain
-            from omen.analysis.founder.insight import generate_unified_insight
-
-            case_id = normalize_case_id(args.case_id)
-            case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
-            strategy_path = case_dir / "strategy_ontology.json"
-            founder_path = case_dir / "founder_ontology.json"
-
-            if not founder_path.exists():
-                print(f"Analyze insight requires existing founder artifact: {founder_path}")
+            try:
+                ensure_analyze_prompt_available("why")
+                ensure_analyze_prompt_available("insight")
+                if args.event_id:
+                    ensure_analyze_prompt_available("formation")
+                case_id = normalize_case_id(args.case_id)
+                case_dir, strategy_payload, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
+            except Exception as exc:
+                print(f"Analyze insight is unavailable: {exc}")
                 return 2
-
-            founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
-            strategy_payload = None
-            if strategy_path.exists():
-                strategy_payload = json.loads(strategy_path.read_text(encoding="utf-8"))
             formation_payload = None
             if args.event_id:
                 try:

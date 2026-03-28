@@ -8,6 +8,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.config import load_llm_config
+from omen.ingest.llm_ontology.dimension_loaders import load_founder_dimensions
 from omen.ingest.llm_ontology.prompts import (
     build_founder_gap_prompt,
     build_founder_why_prompt,
@@ -524,6 +525,11 @@ def generate_unified_insight(
     llm_client: Any = None,
     config_path: str | None = None,
     output_language: str = "en",
+    include_persona: bool = True,
+    include_why: bool = True,
+    include_gap: bool = True,
+    query_type: str = "insight",
+    query_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Generate a unified insight JSON containing:
@@ -534,9 +540,11 @@ def generate_unified_insight(
 
     founder_name = founder_actor.get("name", "Unknown Founder")
     profile = founder_actor.get("profile", {})
-    
-    mental_patterns = profile.get("mental_patterns") or {}
-    strategic_style = profile.get("strategic_style") or {}
+
+    profile_dict = profile if isinstance(profile, dict) else {}
+    loaded_dimensions = load_founder_dimensions(profile_dict)
+    mental_patterns = loaded_dimensions.get("mental_patterns") or {}
+    strategic_style = loaded_dimensions.get("strategic_style") or {}
     core_beliefs = [str(item) for item in (mental_patterns.get("core_beliefs") or []) if str(item).strip()]
     decision_style = str(strategic_style.get("decision_style") or "intentional")
     non_negotiables = [str(item) for item in (strategic_style.get("non_negotiables") or []) if str(item).strip()]
@@ -634,57 +642,125 @@ def generate_unified_insight(
     learning_loop = fallback_learning_loop
 
     if effective_llm_client is not None:
-        persona_narrative, key_traits, consistency_score = _enhance_persona_with_llm(
-            effective_llm_client,
-            founder_name=founder_name,
-            profile=profile if isinstance(profile, dict) else {},
-            fallback_narrative=fallback_persona_narrative,
-            fallback_traits=fallback_key_traits,
-            output_language=language,
-        )
-        why_chain = _enhance_why_chain_with_llm(
-            effective_llm_client,
-            evidence_package=evidence_package,
-            fallback_items=fallback_why_chain,
-            output_language=language,
-        )
-        process_gaps, outcome_gaps, learning_loop = _enhance_gap_analysis_with_llm(
-            effective_llm_client,
-            evidence_package=evidence_package,
-            fallback_process_gaps=fallback_process_gaps,
-            fallback_outcome_gaps=fallback_outcome_gaps,
-            fallback_learning_loop=fallback_learning_loop,
-            output_language=language,
-        )
+        if include_persona:
+            persona_narrative, key_traits, consistency_score = _enhance_persona_with_llm(
+                effective_llm_client,
+                founder_name=founder_name,
+                profile=profile_dict,
+                fallback_narrative=fallback_persona_narrative,
+                fallback_traits=fallback_key_traits,
+                output_language=language,
+            )
+        if include_why:
+            why_chain = _enhance_why_chain_with_llm(
+                effective_llm_client,
+                evidence_package=evidence_package,
+                fallback_items=fallback_why_chain,
+                output_language=language,
+            )
+        if include_gap:
+            process_gaps, outcome_gaps, learning_loop = _enhance_gap_analysis_with_llm(
+                effective_llm_client,
+                evidence_package=evidence_package,
+                fallback_process_gaps=fallback_process_gaps,
+                fallback_outcome_gaps=fallback_outcome_gaps,
+                fallback_learning_loop=fallback_learning_loop,
+                output_language=language,
+            )
 
     query_payload: dict[str, Any] = {
-        "type": "insight",
+        "type": query_type,
         "case_id": case_id,
     }
+    if query_context:
+        query_payload.update(query_context)
     if formation_payload:
         target_event_id = (formation_payload.get("query") or {}).get("target_event_id")
         if isinstance(target_event_id, str) and target_event_id.strip():
             query_payload["target_event_id"] = target_event_id.strip()
 
+    prompt_version = "v2.0-why-gap-narrative"
+    if include_persona and not include_why and not include_gap:
+        prompt_version = "v2.0-persona-open"
+    elif include_why and not include_persona and not include_gap:
+        prompt_version = "v2.0-why-pro"
+
     insight_result = {
         "query": query_payload,
-        "persona_insight": {
+        "run_meta": {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "prompt_version": prompt_version,
+            "mode": "llm-enhanced" if effective_llm_client is not None else "skeleton-deterministic",
+        }
+    }
+
+    if include_persona:
+        insight_result["persona_insight"] = {
             "narrative": persona_narrative,
             "key_traits": key_traits,
-            "consistency_score": consistency_score
-        },
-        "why_chain": why_chain,
-        "gap_analysis": {
+            "consistency_score": consistency_score,
+        }
+
+    if include_why:
+        insight_result["why_chain"] = why_chain
+
+    if include_gap:
+        insight_result["gap_analysis"] = {
             "process_gaps": process_gaps,
             "outcome_gaps": outcome_gaps,
             "learning_loop": learning_loop,
             "known_outcome": output_known_outcome,
-        },
-        "run_meta": {
-            "timestamp": datetime.datetime.now().isoformat(),
-            "prompt_version": "v2.0-why-gap-narrative",
-            "mode": "llm-enhanced" if effective_llm_client is not None else "skeleton-deterministic",
         }
-    }
     
     return insight_result
+
+
+def generate_persona_insight(
+    *,
+    case_id: str,
+    founder_ontology: dict[str, Any],
+    strategy_ontology: dict[str, Any] | None = None,
+    llm_client: Any = None,
+    config_path: str | None = None,
+    output_language: str = "en",
+) -> dict[str, Any]:
+    return generate_unified_insight(
+        case_id=case_id,
+        founder_ontology=founder_ontology,
+        strategy_ontology=strategy_ontology,
+        llm_client=llm_client,
+        config_path=config_path,
+        output_language=output_language,
+        include_persona=True,
+        include_why=False,
+        include_gap=False,
+        query_type="persona",
+    )
+
+
+def generate_why_insight(
+    *,
+    case_id: str,
+    founder_ontology: dict[str, Any],
+    strategy_ontology: dict[str, Any] | None = None,
+    formation_payload: dict[str, Any] | None = None,
+    decision_id: str | None = None,
+    llm_client: Any = None,
+    config_path: str | None = None,
+    output_language: str = "en",
+) -> dict[str, Any]:
+    query_context = {"decision_id": decision_id} if decision_id else None
+    return generate_unified_insight(
+        case_id=case_id,
+        founder_ontology=founder_ontology,
+        strategy_ontology=strategy_ontology,
+        formation_payload=formation_payload,
+        llm_client=llm_client,
+        config_path=config_path,
+        output_language=output_language,
+        include_persona=False,
+        include_why=True,
+        include_gap=False,
+        query_type="why",
+        query_context=query_context,
+    )

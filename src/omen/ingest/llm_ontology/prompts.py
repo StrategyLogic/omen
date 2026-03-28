@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from textwrap import dedent
 
+from omen.ingest.llm_ontology.prompt_registry import get_prompt_template_or_default
 from omen.models.case_replay_models import CaseDocument
 
 
@@ -245,7 +246,7 @@ def build_actor_semantic_enhancement_prompt(actor_payload_json: str, existing_re
 
 
 def build_strategic_formation_prompt() -> str:
-    return dedent(
+    default = dedent(
         """
         You are a startup strategy analyst expert. Your task is to generate a cohesive "Strategic Formation Narrative" for a founder's decision.
 
@@ -276,10 +277,11 @@ def build_strategic_formation_prompt() -> str:
         Format the output as a JSON object with a single key "narrative".
         """
     ).strip()
+    return get_prompt_template_or_default("strategic_formation", tier="pro", default=default)
 
 
 def build_persona_insight_prompt() -> str:
-    return dedent(
+    default = dedent(
         """
         Analyze the character and mental patterns of the following founder based on provided ontology data.
         Founder name: {founder_name}
@@ -291,20 +293,22 @@ def build_persona_insight_prompt() -> str:
         Highlight their consistency between beliefs and actions.
         """
     ).strip()
+    return get_prompt_template_or_default("persona_insight", tier="base", default=default)
 
 
 def build_founder_why_prompt() -> str:
-    return dedent(
+    default = dedent(
         """
         You are an analyst. Based on ontology evidence, answer at least 3 "Why" questions around founder strategic formation.
         Each answer should connect beliefs, constraints, and observed decisions.
         Output should stay grounded in provided evidence references.
         """
     ).strip()
+    return get_prompt_template_or_default("founder_why", tier="pro", default=default)
 
 
 def build_founder_gap_prompt() -> str:
-    return dedent(
+    default = dedent(
         """
         Based on ontology evidence, extract strategy-reality gaps.
         Require at least 3 process gaps.
@@ -312,6 +316,7 @@ def build_founder_gap_prompt() -> str:
         Do not generate counterfactual validation or what-if conclusions.
         """
     ).strip()
+    return get_prompt_template_or_default("founder_gap", tier="pro", default=default)
 
 
 def build_json_retry_prompt(base_prompt: str) -> str:

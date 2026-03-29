@@ -33,6 +33,9 @@ from omen.ui.founder_graph import build_founder_graph_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
 
 
+FOUNDER_OUTPUT_ROOT = "output/founder"
+
+
 def _load_app_dotenv() -> None:
     try:
         dotenv_module = importlib.import_module("dotenv")
@@ -410,7 +413,7 @@ with st.sidebar:
 
 
 def _artifact_paths(case_id: str) -> dict[str, Path]:
-    case_dir = resolve_existing_case_output_dir(case_id)
+    case_dir = resolve_existing_case_output_dir(case_id, output_root=FOUNDER_OUTPUT_ROOT)
     return {
         "root": case_dir,
         "ontology": case_dir / "strategy_ontology.json",
@@ -648,7 +651,7 @@ def _build_space_summary(ontology_payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _display_output_subpath(case_id: str) -> str:
-    output_path = case_output_dir(case_id)
+    output_path = case_output_dir(case_id, output_root=FOUNDER_OUTPUT_ROOT)
     try:
         output_root = output_path.parents[1]
         return str(output_path.relative_to(output_root))
@@ -691,7 +694,7 @@ def _run_omen_pipeline(
     st.session_state.spec6_pipeline_stage = "ontology"
     st.session_state.spec6_pipeline_progress = 0
     _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, paths)
-    case_dir = ensure_case_output_dir(case_id)
+    case_dir = ensure_case_output_dir(case_id, output_root=FOUNDER_OUTPUT_ROOT)
     generation = generate_strategy_ontology_from_document(
         document_path=document_path,
         case_id=case_id,

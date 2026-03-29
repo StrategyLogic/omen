@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator, Draft7Validator, RefResolver
+from jsonschema import Draft202012Validator, Draft7Validator
+from referencing import Registry, Resource
 
 
 def contracts_dir() -> Path:
@@ -19,19 +20,19 @@ def load_schema(filename: str) -> tuple[dict[str, Any], Path]:
 
 def validate_with_contract(instance: dict[str, Any], filename: str) -> None:
     schema, schema_path = load_schema(filename)
-    base_uri = schema_path.resolve().as_uri()
-    store: dict[str, Any] = {}
+    resources: list[tuple[str, Resource[Any]]] = []
     for child_path in contracts_dir().glob("*.schema.json"):
         child_schema = json.loads(child_path.read_text(encoding="utf-8"))
-        store[child_path.resolve().as_uri()] = child_schema
+        resource = Resource.from_contents(child_schema)
+        resources.append((child_path.resolve().as_uri(), resource))
         child_id = str(child_schema.get("$id") or "").strip()
         if child_id:
-            store[child_id] = child_schema
+            resources.append((child_id, resource))
 
-    resolver = RefResolver(base_uri=base_uri, referrer=schema, store=store)
+    registry = Registry().with_resources(resources)
 
     schema_draft = str(schema.get("$schema") or "")
     if "draft-07" in schema_draft:
-        Draft7Validator(schema, resolver=resolver).validate(instance)
+        Draft7Validator(schema, registry=registry).validate(instance)
         return
-    Draft202012Validator(schema, resolver=resolver).validate(instance)
+    Draft202012Validator(schema, registry=registry).validate(instance)

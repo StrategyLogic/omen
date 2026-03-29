@@ -4,6 +4,3 @@
 [submodule ".specify"]
 	path = .specify
 	url = git@github.com:StrategyLogic/omen-spec-instruction.git
-[submodule "solution"]
-	path = solution
-	url = git@github.com:StrategyLogic/omen-solution.git

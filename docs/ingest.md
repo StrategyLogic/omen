@@ -56,3 +56,18 @@ omen ingest-dry-run --scenario data/scenarios/ontology.json --text-file data/ing
 
 - [快速开始](quick-start.md)
 - [精度评估](precision.md)
+
+## 7 Prompt 分层与配置
+
+Spec 6 的摄取与分析 prompt 已迁移到 YAML，并按能力层分离：
+
+- `config/prompts/prompts_base.yaml`：公开层（OPEN），用于构建与 `case analyze persona`
+- `config/prompts/prompts_pro.yaml`：增强层（PRO），用于 `case analyze why|formation|insight`
+
+运行时由 `src/omen/ingest/llm_ontology/prompt_registry.py` 完成命令到模板的映射，并从 YAML `prompt_meta` 读取版本信息，写入分析结果中的 `run_meta.prompt_version`。
+
+约束：
+
+1. 构建时与分析时都只读取模板，不在代码中硬编码提示词正文。
+2. OPEN 命令不能依赖 PRO 模板。
+3. 分析产物必须可追溯到模板版本（`<prompt_id>@<version>`）。

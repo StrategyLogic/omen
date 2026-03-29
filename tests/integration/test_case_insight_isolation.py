@@ -2,6 +2,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from omen.cli.main import main
 
 
@@ -53,7 +55,9 @@ def test_analyze_insight_is_isolated_between_cases(tmp_path: Path, monkeypatch) 
             str(output_root),
         ],
     )
-    assert main() == 0
+    with pytest.raises(SystemExit) as xd_exc:
+        main()
+    assert xd_exc.value.code == 0
 
     monkeypatch.setattr(
         sys,
@@ -69,7 +73,9 @@ def test_analyze_insight_is_isolated_between_cases(tmp_path: Path, monkeypatch) 
             str(output_root),
         ],
     )
-    assert main() == 0
+    with pytest.raises(SystemExit) as shenda_exc:
+        main()
+    assert shenda_exc.value.code == 0
 
     xd_payload = json.loads((output_root / "xd" / "analyze_insight.json").read_text(encoding="utf-8"))
     shenda_payload = json.loads((output_root / "shenda" / "analyze_insight.json").read_text(encoding="utf-8"))

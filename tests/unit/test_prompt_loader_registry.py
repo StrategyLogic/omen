@@ -1,6 +1,7 @@
 from omen.ingest.llm_ontology.prompt_loader import load_tier_prompts
 from omen.ingest.llm_ontology.prompt_registry import (
     ensure_analyze_prompt_available,
+    get_analyze_prompt_version_token,
     resolve_analyze_prompt_binding,
 )
 
@@ -23,3 +24,8 @@ def test_ensure_analyze_prompt_available_returns_binding() -> None:
 
     assert binding.command == "why"
     assert binding.template_key == "founder_why"
+
+
+def test_analyze_prompt_version_tokens_come_from_yaml_meta() -> None:
+    assert get_analyze_prompt_version_token("persona") == "base.persona_insight@1.0.0"
+    assert get_analyze_prompt_version_token("why") == "pro.founder_why@1.0.0"

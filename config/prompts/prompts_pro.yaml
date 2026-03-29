@@ -1,4 +1,14 @@
 version: 1
+prompt_meta:
+  strategic_formation:
+    id: pro.strategic_formation
+    version: 1.0.0
+  founder_why:
+    id: pro.founder_why
+    version: 1.0.0
+  founder_gap:
+    id: pro.founder_gap
+    version: 1.0.0
 prompts:
   strategic_formation: |
     You are a startup strategy analyst expert. Your task is to generate a cohesive "Strategic Formation Narrative" for a founder's decision.

@@ -11,7 +11,7 @@ from omen.ingest.llm_ontology.prompts import build_founder_ontology_prompt
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
-_DEF_QUERY_TYPES = ["status", "why", "persona", "cognitive_tracing", "decision_trade_offs"]
+_DEF_QUERY_TYPES = ["status", "why", "persona"]
 _PRODUCT_TYPES = {"product", "platform", "tool", "saas", "app", "system"}
 _ACTOR_TYPE_ALIAS = {
     "company": "organization",

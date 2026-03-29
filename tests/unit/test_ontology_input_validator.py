@@ -313,3 +313,49 @@ def test_validate_ontology_input_autofixes_capability_constraint_mismatch() -> N
 
     constraint_names = [item.name for item in package.abox.constraints]
     assert "process_compliance_burden" in constraint_names
+
+
+def test_validate_ontology_input_autofixes_legacy_event_shape() -> None:
+    payload = {
+        "meta": {
+            "version": "1.0",
+            "case_id": "legacy-event-shape",
+            "domain": "strategy",
+        },
+        "tbox": {
+            "concepts": [
+                {"name": "StartupActor", "description": "", "category": "actor"},
+                {"name": "analytics", "description": "", "category": "capability"},
+            ],
+            "relations": [
+                {
+                    "name": "has_capability",
+                    "source": "StartupActor",
+                    "target": "analytics",
+                    "description": "",
+                }
+            ],
+            "axioms": [{"id": "ax-1", "statement": "sample", "type": "activation"}],
+        },
+        "abox": {
+            "actors": [{"actor_id": "startup", "actor_type": "StartupActor"}],
+            "capabilities": [{"actor_id": "startup", "name": "analytics", "score": 0.8}],
+            "events": [
+                {
+                    "event_id": "xdev-1",
+                    "time": "2019-10",
+                    "event": "launch",
+                    "description": "launch event",
+                    "evidence_refs": ["src-1"],
+                }
+            ],
+        },
+        "reasoning_profile": {"activation_rules": [{"rule_id": "ax-1"}]},
+    }
+
+    with pytest.warns(UserWarning, match="legacy abox.events"):
+        package = validate_ontology_input_or_raise(payload)
+
+    assert len(package.abox.events) == 1
+    assert package.abox.events[0].event_type == "launch"
+    assert package.abox.events[0].payload.get("event_id") == "xdev-1"

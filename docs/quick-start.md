@@ -233,3 +233,24 @@ omen case-replay-baseline \
 ```bash
 streamlit run app/case_analysis.py
 ```
+
+### 6) Prompt 配置迁移（硬编码 -> YAML）
+
+如果你从旧版分支迁移，请确认以下变更：
+
+1. Prompt 模板文件位于：
+  - `config/prompts/prompts_base.yaml`
+  - `config/prompts/prompts_pro.yaml`
+2. 命令分层：
+  - OPEN: `omen case analyze persona`
+  - PRO: `omen case analyze why|formation|insight`
+3. 分析结果中的 `run_meta.prompt_version` 应显示为 `<prompt_id>@<version>`，例如：
+  - `base.persona_insight@1.0.0`
+  - `pro.founder_why@1.0.0`
+
+建议在迁移后执行：
+
+```bash
+pytest tests/unit/test_prompt_loader_registry.py -q
+pytest tests/integration/test_case_analyze_commands.py -q
+```

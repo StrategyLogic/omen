@@ -1,0 +1,17 @@
+templates:
+  founder_why: |
+    WHY chain synthesis template.
+  founder_gap: |
+    Gap analysis synthesis template.
+  strategic_formation: |
+    Strategic formation narrative template.
+prompt_meta:
+  founder_why:
+    id: pro.founder_why
+    version: 1.0.0
+  founder_gap:
+    id: pro.founder_gap
+    version: 1.0.0
+  strategic_formation:
+    id: pro.strategic_formation
+    version: 1.0.0

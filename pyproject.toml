@@ -12,6 +12,8 @@ authors = [{ name = "StrategyLogic" }]
 license = { text = "AGPL-3.0-or-later" }
 dependencies = [
   "pydantic>=2.8.0",
+  "pytest>=8.2",
+  "jsonschema>=4.23.0",
   # used by src/omen/ingest/pdf_extract.py
   "pypdf>=4.2.0",
   "PyYAML>=6.0",
@@ -30,7 +32,6 @@ omen = "omen.cli.main:main"
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.2",
   "ruff>=0.6.0",
   "mypy>=1.10",
 ]

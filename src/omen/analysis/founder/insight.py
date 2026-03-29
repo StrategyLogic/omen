@@ -9,6 +9,7 @@ from typing import Any
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.config import load_llm_config
 from omen.ingest.llm_ontology.dimension_loaders import load_founder_dimensions
+from omen.ingest.llm_ontology.prompt_registry import get_analyze_prompt_version_token
 from omen.ingest.llm_ontology.prompts import (
     build_founder_gap_prompt,
     build_founder_why_prompt,
@@ -679,11 +680,14 @@ def generate_unified_insight(
         if isinstance(target_event_id, str) and target_event_id.strip():
             query_payload["target_event_id"] = target_event_id.strip()
 
-    prompt_version = "v2.0-why-gap-narrative"
-    if include_persona and not include_why and not include_gap:
-        prompt_version = "v2.0-persona-open"
-    elif include_why and not include_persona and not include_gap:
-        prompt_version = "v2.0-why-pro"
+    prompt_tokens: list[str] = []
+    if include_persona:
+        prompt_tokens.append(get_analyze_prompt_version_token("persona"))
+    if include_why:
+        prompt_tokens.append(get_analyze_prompt_version_token("why"))
+    if include_gap:
+        prompt_tokens.append(get_analyze_prompt_version_token("insight"))
+    prompt_version = ",".join(prompt_tokens) if prompt_tokens else "unknown@unknown"
 
     insight_result = {
         "query": query_payload,

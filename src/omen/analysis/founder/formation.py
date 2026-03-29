@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -38,12 +39,33 @@ def _founder_actor(founder_ontology: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _event_by_id(founder_ontology: dict[str, Any], event_id: str) -> dict[str, Any] | None:
-    events = founder_ontology.get("events") or []
+    events = [event for event in (founder_ontology.get("events") or []) if isinstance(event, dict)]
+
+    normalized_target = str(event_id or "").strip()
+    if not normalized_target:
+        return None
+
+    # Primary path: exact ID match.
     for event in events:
         if not isinstance(event, dict):
             continue
-        if str(event.get("id") or "").strip() == event_id:
+        if str(event.get("id") or "").strip() == normalized_target:
             return event
+
+    # Compatibility path: accept legacy/event-index aliases like event-2, event.2, event_2.
+    alias = normalized_target.lower()
+    match = re.fullmatch(r"event[-_.]?(\d+)", alias)
+    if match:
+        index = int(match.group(1)) - 1
+        if 0 <= index < len(events):
+            return events[index]
+
+    # Secondary path: allow matching by event name token.
+    for event in events:
+        event_name = str(event.get("name") or "").strip().lower()
+        if event_name and event_name == alias:
+            return event
+
     return None
 
 

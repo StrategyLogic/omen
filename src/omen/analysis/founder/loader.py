@@ -27,9 +27,11 @@ def validate_founder_ref(
     strategy_ontology: dict[str, Any],
     founder_ontology: dict[str, Any],
 ) -> None:
-    ref = strategy_ontology.get("founder_ref")
-    if not isinstance(ref, dict):
+    # Validation must be read-only for analysis-time checks.
+    ref_raw = strategy_ontology.get("founder_ref")
+    if not isinstance(ref_raw, dict):
         raise FounderSliceLoadError("strategy ontology missing founder_ref")
+    ref = dict(ref_raw)
 
     strategy_case_id = str(((strategy_ontology.get("meta") or {}).get("case_id") or "")).strip()
     founder_case_id = str(((founder_ontology.get("meta") or {}).get("case_id") or "")).strip()

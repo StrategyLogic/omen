@@ -2,38 +2,57 @@
 
 from __future__ import annotations
 
-import html
 import json
-import textwrap
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
 
-from omen.analysis.founder.formation import build_strategic_formation_chain
-from omen.analysis.founder.insight import generate_unified_insight
-from omen.analysis.founder.query import build_status_snapshot
-from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
-from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
-from omen.scenario.case_replay_loader import save_strategy_ontology
+from omen.scenario.case_replay_loader import (
+    load_case_replay_scenario,
+    save_strategy_ontology,
+    validate_strategy_ontology,
+)
+from omen.simulation.case_replay import run_case_replay_baseline
+from omen.simulation.engine import run_simulation
+from omen.simulation.replay import compare_run_results, create_counterfactual_config, save_run_result
 from omen.ui.artifacts import ensure_case_output_dir
+from omen.ui.baseline_graph import build_baseline_path_figure
 from omen.ui.case_catalog import (
     case_display_title,
     case_output_dir,
     default_case_id,
     list_case_ids_from_cases,
+    normalize_case_id,
     resolve_existing_case_output_dir,
     suggest_document_path,
     suggest_known_outcome,
     suggest_strategy,
 )
-from omen.ui.formation_graph import build_formation_chain_figure
-from omen.ui.founder_graph import build_founder_graph_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
+
+st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
+
+STRATEGY_LIBRARY: dict[str, dict[str, str]] = {
+    "new_tech_market_entry": {
+        "label": "New Tech Market Entry",
+        "summary": "For cases where a new product enters an existing market and must overcome incumbent habits, trust gaps, and switching friction.",
+        "fit": "Use when the replay depends on adoption resistance, channel education, ecosystem leverage, and timing of market entry.",
+    },
+    "database_paradigm_competition": {
+        "label": "Database Paradigm Competition",
+        "summary": "For cases where a new data architecture challenges the incumbent database mental model and developer workflow.",
+        "fit": "Use when the replay hinges on paradigm shift, compatibility pressure, migration cost, and developer belief change.",
+    },
+}
 
 if "spec6_generation_result" not in st.session_state:
     st.session_state.spec6_generation_result = None
+if "spec6_baseline_payload" not in st.session_state:
+    st.session_state.spec6_baseline_payload = None
+if "spec6_counterfactual_payload" not in st.session_state:
+    st.session_state.spec6_counterfactual_payload = None
 if "spec6_ontology_graph_payload" not in st.session_state:
     st.session_state.spec6_ontology_graph_payload = None
 if "spec6_loaded_case_id" not in st.session_state:
@@ -42,20 +61,6 @@ if "spec6_output_note" not in st.session_state:
     st.session_state.spec6_output_note = ""
 if "spec6_ontology_scope" not in st.session_state:
     st.session_state.spec6_ontology_scope = "all"
-if "spec6_status_payload" not in st.session_state:
-    st.session_state.spec6_status_payload = None
-if "spec6_formation_payload" not in st.session_state:
-    st.session_state.spec6_formation_payload = None
-if "spec6_insight_payload" not in st.session_state:
-    st.session_state.spec6_insight_payload = None
-if "spec6_pending_known_outcome_updates" not in st.session_state:
-    st.session_state.spec6_pending_known_outcome_updates = {}
-if "spec6_pending_strategy_updates" not in st.session_state:
-    st.session_state.spec6_pending_strategy_updates = {}
-if "spec6_pipeline_stage" not in st.session_state:
-    st.session_state.spec6_pipeline_stage = "idle"
-if "spec6_pipeline_progress" not in st.session_state:
-    st.session_state.spec6_pipeline_progress = 0
 
 
 def _normalize_strategy_name(value: str | None) -> str:
@@ -87,106 +92,17 @@ def _extract_strategy_name(ontology_payload: dict[str, Any] | None, fallback: st
     return _normalize_strategy_name(fallback)
 
 
-def _extract_known_outcome(ontology_payload: dict[str, Any] | None, fallback: str = "") -> str:
-    if isinstance(ontology_payload, dict):
-        meta = ontology_payload.get("meta")
-        if isinstance(meta, dict):
-            known_outcome = str(meta.get("known_outcome") or "").strip()
-            if known_outcome:
-                return known_outcome
-    return fallback
-
-
-def _render_case_brief_panel(*, case_id: str, title: str) -> None:
-    st.markdown("### Case Brief")
-    with st.container(border=True):
-        st.markdown(f"**{title}**")
-        st.caption(case_id)
-
-
-def _render_pipeline_journey(stage: str, message: str, paths: dict[str, Path]) -> None:
-    stage_order = ["ontology", "timeline", "insight"]
-    labels = {
-        "ontology": ("01", "Generate Ontologies", "Build the strategy and founder evidence base."),
-        "timeline": ("02", "Get Timeline", "Resolve founder state and event progression."),
-        "insight": ("03", "Generate Insights", "Synthesize formation, persona, and reality gaps."),
+def _strategy_profile(strategy_name: str) -> dict[str, str]:
+    profile = STRATEGY_LIBRARY.get(_normalize_strategy_name(strategy_name))
+    if profile:
+        return profile
+    normalized = _normalize_strategy_name(strategy_name)
+    title_case = normalized.replace("_", " ").title()
+    return {
+        "label": title_case,
+        "summary": "Reusable strategy family for organizing cases, space ontologies, capability patterns, and axioms.",
+        "fit": "Use when this case should become a repeatable strategic template instead of a one-off replay artifact.",
     }
-    outputs = {
-        "ontology": [paths["ontology"], paths["founder"]],
-        "timeline": [paths["analyze_status"]],
-        "insight": [paths["analyze_formation"], paths["analyze_insight"]],
-    }
-
-    if stage == "done":
-        current_index = len(stage_order)
-    else:
-        current_index = stage_order.index(stage) if stage in stage_order else -1
-    cols = st.columns(3)
-    for idx, key in enumerate(stage_order):
-        number, title, subtitle = labels[key]
-        stage_outputs = [path for path in outputs[key] if path.exists()]
-        if stage_outputs:
-            state = "done"
-            badge = "Outputs Ready"
-        elif current_index == idx:
-            state = "active"
-            badge = "In progress"
-        else:
-            state = "idle"
-            badge = "Pending"
-        with cols[idx]:
-            st.markdown(
-                textwrap.dedent(
-                    f"""
-                    <div class="omen-step-card omen-step-{state}">
-                        <div class="omen-step-number">{number}</div>
-                        <div class="omen-step-title">{title}</div>
-                        <div class="omen-step-copy">{subtitle}</div>
-                        <div class="omen-step-badge">{badge}</div>
-                    </div>
-                    """
-                ).strip(),
-                unsafe_allow_html=True,
-            )
-    st.caption(message)
-
-
-def _update_pipeline_journey(container: Any, stage: str, message: str, paths: dict[str, Path]) -> None:
-    with container.container():
-        _render_pipeline_journey(stage, message, paths)
-
-with st.sidebar:
-    st.markdown("### Founder Research App")
-    existing_case_ids = list_case_ids_from_cases()
-    selected_default_case_id = default_case_id(
-        existing_case_ids,
-        st.session_state.spec6_loaded_case_id,
-    )
-    if not existing_case_ids and selected_default_case_id:
-        existing_case_ids = [selected_default_case_id]
-    selected_case_index = existing_case_ids.index(selected_default_case_id) if existing_case_ids else 0
-
-    case_id = st.selectbox("Case Context", options=existing_case_ids, index=selected_case_index)
-
-    with st.expander("Journey Settings", expanded=False):
-        document_path = st.text_input("Source Document", value=suggest_document_path(case_id), key=f"spec6_document_path_{case_id}")
-        status_date = st.text_input("Status Snapshot Date", value="")
-        config_path = st.text_input("Model Config Path", value="config/llm.toml")
-
-active_ontology_payload = _active_ontology_payload()
-strategy = _extract_strategy_name(active_ontology_payload, suggest_strategy(case_id))
-known_outcome = _extract_known_outcome(active_ontology_payload, suggest_known_outcome(case_id))
-title = case_display_title(case_id)
-
-st.set_page_config(page_title="Omen Strategy Reasoning Engine", layout="wide")
-st.title(f"Omen · {title}")
-st.caption("Turn case-style source materials into founder intelligence: extract decision-maker signals, reconstruct strategic logic, and generate deep insight.")
-
-with st.sidebar:
-    _render_case_brief_panel(
-        case_id=case_id,
-        title=title,
-    )
 
 
 def _artifact_paths(case_id: str) -> dict[str, Path]:
@@ -194,11 +110,32 @@ def _artifact_paths(case_id: str) -> dict[str, Path]:
     return {
         "root": case_dir,
         "ontology": case_dir / "strategy_ontology.json",
-        "founder": case_dir / "founder_ontology.json",
-        "analyze_status": case_dir / "analyze_status.json",
-        "analyze_formation": case_dir / "analyze_formation.json",
-        "analyze_insight": case_dir / "analyze_insight.json",
+        "baseline_result": case_dir / "baseline_result.json",
+        "baseline_explanation": case_dir / "baseline_explanation.json",
+        "view_model": case_dir / "view_model.json",
+        "comparison": case_dir / "comparison.json",
     }
+
+
+def _resolve_ontology_for_baseline(case_id: str) -> tuple[str | None, str | None]:
+    generation_payload = st.session_state.spec6_generation_result
+    if generation_payload and generation_payload.get("validation_passed"):
+        ontology_path = generation_payload.get("ontology_path")
+        if ontology_path and Path(ontology_path).exists():
+            return str(ontology_path), None
+
+    case_dir = resolve_existing_case_output_dir(case_id)
+    ontology_path = case_dir / "strategy_ontology.json"
+    if not ontology_path.exists():
+        return None, f"Ontology file not found: {ontology_path}"
+
+    try:
+        payload = json.loads(ontology_path.read_text(encoding="utf-8"))
+        validate_strategy_ontology(payload)
+    except Exception as exc:
+        return None, f"Existing ontology is invalid: {exc}"
+
+    return str(ontology_path), None
 
 
 def _load_existing_outputs(case_id: str) -> None:
@@ -216,36 +153,33 @@ def _load_existing_outputs(case_id: str) -> None:
                     "validation_issues": [],
                     "reused_existing": True,
                 }
-                strategy_name = _extract_strategy_name(ontology_payload, "")
-                if strategy_name:
-                    st.session_state.spec6_pending_strategy_updates[case_id] = strategy_name
-                known_outcome = _extract_known_outcome(ontology_payload)
-                if known_outcome:
-                    st.session_state.spec6_pending_known_outcome_updates[case_id] = known_outcome
         except Exception:
             st.session_state.spec6_ontology_graph_payload = None
 
-    if paths["analyze_status"].exists():
+    if paths["baseline_result"].exists() and paths["baseline_explanation"].exists() and paths["view_model"].exists():
         try:
-            status_payload = json.loads(paths["analyze_status"].read_text(encoding="utf-8"))
-            st.session_state.spec6_status_payload = status_payload if isinstance(status_payload, dict) else None
+            result_payload = json.loads(paths["baseline_result"].read_text(encoding="utf-8"))
+            explanation_payload = json.loads(paths["baseline_explanation"].read_text(encoding="utf-8"))
+            view_model_payload = json.loads(paths["view_model"].read_text(encoding="utf-8"))
+            st.session_state.spec6_baseline_payload = {
+                "result": result_payload,
+                "explanation": explanation_payload,
+                "view_model": view_model_payload,
+                "paths": {
+                    "result": str(paths["baseline_result"]),
+                    "explanation": str(paths["baseline_explanation"]),
+                    "view_model": str(paths["view_model"]),
+                },
+            }
         except Exception:
-            st.session_state.spec6_status_payload = None
+            st.session_state.spec6_baseline_payload = None
 
-    if paths["analyze_formation"].exists():
+    if paths["comparison"].exists():
         try:
-            formation_payload = json.loads(paths["analyze_formation"].read_text(encoding="utf-8"))
-            st.session_state.spec6_formation_payload = formation_payload if isinstance(formation_payload, dict) else None
+            comparison_payload = json.loads(paths["comparison"].read_text(encoding="utf-8"))
+            st.session_state.spec6_counterfactual_payload = comparison_payload if isinstance(comparison_payload, dict) else None
         except Exception:
-            st.session_state.spec6_formation_payload = None
-    st.session_state.spec6_insight_payload = None
-
-    if paths["analyze_insight"].exists():
-        try:
-            insight_payload = json.loads(paths["analyze_insight"].read_text(encoding="utf-8"))
-            st.session_state.spec6_insight_payload = insight_payload if isinstance(insight_payload, dict) else None
-        except Exception:
-            st.session_state.spec6_insight_payload = None
+            st.session_state.spec6_counterfactual_payload = None
 
 
 def _extract_actor_ids(actor_items: Any) -> set[str]:
@@ -310,607 +244,348 @@ def _build_space_summary(ontology_payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _display_output_subpath(case_id: str) -> str:
-    output_path = case_output_dir(case_id)
+def _resolve_ontology_for_graph(case_id: str) -> tuple[dict[str, Any] | None, str | None]:
+    generation_payload = st.session_state.spec6_generation_result
+    if generation_payload and generation_payload.get("strategy_ontology"):
+        payload = generation_payload.get("strategy_ontology")
+        if isinstance(payload, dict):
+            return payload, None
+
+    case_dir = resolve_existing_case_output_dir(case_id)
+    ontology_path = case_dir / "strategy_ontology.json"
+    if not ontology_path.exists():
+        return None, f"Ontology file not found: {ontology_path}"
+
     try:
-        output_root = output_path.parents[1]
-        return str(output_path.relative_to(output_root))
-    except Exception:
-        return str(output_path)
+        payload = json.loads(ontology_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return None, "Ontology JSON root must be an object"
+        return payload, None
+    except Exception as exc:
+        return None, f"Failed to load ontology: {exc}"
 
 
-def _pick_formation_target_event_id(founder_payload: dict[str, Any], status_payload: dict[str, Any] | None) -> str | None:
-    timeline = (status_payload or {}).get("timeline") if isinstance(status_payload, dict) else None
-    if isinstance(timeline, list) and timeline:
-        for item in reversed(timeline):
-            if isinstance(item, dict):
-                event_id = str(item.get("id") or "").strip()
-                if event_id:
-                    return event_id
+def _conditions_from_overrides(overrides: dict[str, Any]) -> list[dict[str, Any]]:
+    conditions: list[dict[str, Any]] = []
+    for key, value in sorted(overrides.items()):
+        conditions.append(
+            {
+                "type": "override",
+                "key": key,
+                "value": value,
+                "description": f"override `{key}` -> {value}",
+            }
+        )
+    return conditions
 
-    events = founder_payload.get("events")
-    if isinstance(events, list) and events:
-        for item in reversed(events):
-            if isinstance(item, dict):
-                event_id = str(item.get("id") or "").strip()
-                if event_id:
-                    return event_id
+
+def _resolve_baseline_result_payload(case_id: str) -> dict[str, Any] | None:
+    payload = st.session_state.spec6_baseline_payload
+    if isinstance(payload, dict):
+        result = payload.get("result")
+        if isinstance(result, dict):
+            return result
+
+    paths = _artifact_paths(case_id)
+    if paths["baseline_result"].exists():
+        try:
+            result = json.loads(paths["baseline_result"].read_text(encoding="utf-8"))
+            return result if isinstance(result, dict) else None
+        except Exception:
+            return None
     return None
 
 
-def _run_omen_pipeline(
-    *,
-    case_id: str,
-    title: str,
-    document_path: str,
-    strategy: str,
-    known_outcome: str,
-    status_date: str,
-    config_path: str,
-    progress_bar: Any,
-    status_box: Any,
-    journey_box: Any,
-) -> None:
+def _run_counterfactual(case_id: str, ontology_path: str, overrides: dict[str, Any]) -> dict[str, Any]:
+    scenario, ontology_setup = load_case_replay_scenario(ontology_path=ontology_path)
+    baseline_result = _resolve_baseline_result_payload(case_id)
+    if not isinstance(baseline_result, dict):
+        baseline_result = run_simulation(scenario, ontology_setup=ontology_setup)
+
+    variation_config = create_counterfactual_config(scenario, overrides)
+    variation_result = run_simulation(variation_config, ontology_setup=ontology_setup)
+    return compare_run_results(
+        baseline_result,
+        variation_result,
+        conditions=_conditions_from_overrides(overrides),
+    )
+
+
+with st.sidebar:
+    st.header("Inputs")
+    existing_case_ids = list_case_ids_from_cases()
+    selected_default_case_id = default_case_id(
+        existing_case_ids,
+        st.session_state.spec6_loaded_case_id,
+    )
+    if not existing_case_ids and selected_default_case_id:
+        existing_case_ids = [selected_default_case_id]
+    selected_case_index = existing_case_ids.index(selected_default_case_id) if existing_case_ids else 0
+
+    case_id = st.selectbox(
+        "Case ID",
+        options=existing_case_ids,
+        index=selected_case_index,
+        help="Select a case document from cases/*.md to switch context.",
+    )
+
+    document_path = st.text_input(
+        "Case document path",
+        value=suggest_document_path(case_id),
+        key=f"spec6_document_path_{case_id}",
+    )
+    strategy = st.text_input(
+        "Strategy",
+        value=suggest_strategy(case_id),
+        key=f"spec6_strategy_{case_id}",
+    )
+    known_outcome = st.text_input(
+        "Known Outcome",
+        value=suggest_known_outcome(case_id),
+        key=f"spec6_known_outcome_{case_id}",
+    )
+    config_path = st.text_input("LLM Config", value="config/llm.toml")
+    counterfactual_overrides_text = st.text_area(
+        "Counterfactual Overrides (JSON)",
+        value='{"user_overlap_threshold": 0.35}',
+        key=f"spec6_counterfactual_overrides_{normalize_case_id(case_id)}",
+    )
+
+active_ontology_payload = _active_ontology_payload()
+active_strategy = _extract_strategy_name(active_ontology_payload, strategy)
+strategy_profile = _strategy_profile(active_strategy)
+title = case_display_title(case_id)
+
+st.title(f"Omen · {title}")
+st.caption(
+    f"This case is framed as **{strategy_profile['label']}**. {strategy_profile['summary']} {strategy_profile['fit']}"
+)
+
+col_gen, col_graph, col_run, col_cf = st.columns(4)
+
+if st.session_state.spec6_loaded_case_id != case_id:
+    st.session_state.spec6_generation_result = None
+    st.session_state.spec6_baseline_payload = None
+    st.session_state.spec6_counterfactual_payload = None
+    st.session_state.spec6_ontology_graph_payload = None
+    st.session_state.spec6_output_note = ""
+    st.session_state.spec6_ontology_scope = "all"
+    _load_existing_outputs(case_id)
+    st.session_state.spec6_loaded_case_id = case_id
+    st.rerun()
+
+with col_gen:
+    if st.button("Generate Ontology", type="primary", use_container_width=True):
+        try:
+            generation = generate_strategy_ontology_from_document(
+                document_path=document_path,
+                case_id=case_id,
+                title=title,
+                strategy=strategy,
+                known_outcome=known_outcome,
+                config_path=config_path,
+            )
+            payload = generation.model_dump(mode="python")
+            generation.strategy_ontology.setdefault("meta", {})
+            generation.strategy_ontology["meta"]["strategy"] = _normalize_strategy_name(strategy)
+            st.session_state.spec6_generation_result = payload
+
+            case_dir = ensure_case_output_dir(case_id)
+            ontology_path = save_strategy_ontology(
+                generation.strategy_ontology,
+                case_dir / "strategy_ontology.json",
+            )
+            payload["ontology_path"] = str(ontology_path)
+            st.session_state.spec6_generation_result = payload
+            st.session_state.spec6_ontology_graph_payload = generation.strategy_ontology
+            st.session_state.spec6_output_note = "Ontology generated and saved."
+        except Exception as exc:  # pragma: no cover - UI surfaced exception
+            st.session_state.spec6_output_note = f"Generate failed: {exc}"
+
+with col_graph:
+    if st.button("Show Ontology Graph", use_container_width=True):
+        ontology_payload, resolve_error = _resolve_ontology_for_graph(case_id)
+        if resolve_error or ontology_payload is None:
+            st.session_state.spec6_output_note = resolve_error or "Ontology graph input is unavailable."
+        else:
+            st.session_state.spec6_ontology_graph_payload = ontology_payload
+            st.session_state.spec6_output_note = "Ontology graph loaded."
+
+with col_run:
+    if st.button("Run Baseline", use_container_width=True):
+        ontology_path, resolve_error = _resolve_ontology_for_baseline(case_id)
+        if resolve_error or ontology_path is None:
+            st.session_state.spec6_output_note = resolve_error or "Ontology path resolution failed."
+        else:
+            try:
+                baseline = run_case_replay_baseline(
+                    case_id=case_id,
+                    ontology_path=ontology_path,
+                    known_outcome=known_outcome,
+                )
+                st.session_state.spec6_baseline_payload = baseline
+                ontology_warnings = list(baseline.get("ontology_warnings") or [])
+                if ontology_warnings:
+                    st.session_state.spec6_output_note = (
+                        f"Baseline completed with auto-fix corrections ({len(ontology_warnings)}): "
+                        + " | ".join(ontology_warnings)
+                    )
+                else:
+                    st.session_state.spec6_output_note = (
+                        f"Baseline completed with ontology: {Path(ontology_path).name}"
+                    )
+            except Exception as exc:  # pragma: no cover - UI surfaced exception
+                st.session_state.spec6_output_note = f"Baseline run failed: {exc}"
+
+with col_cf:
+    if st.button("Run Counterfactual", use_container_width=True):
+        ontology_path, resolve_error = _resolve_ontology_for_baseline(case_id)
+        if resolve_error or ontology_path is None:
+            st.session_state.spec6_output_note = resolve_error or "Ontology path resolution failed."
+        else:
+            try:
+                overrides = json.loads(counterfactual_overrides_text)
+                if not isinstance(overrides, dict):
+                    raise ValueError("Overrides must be a JSON object.")
+                comparison = _run_counterfactual(case_id, ontology_path, overrides)
+                comparison_path = _artifact_paths(case_id)["comparison"]
+                save_run_result(comparison, comparison_path)
+                st.session_state.spec6_counterfactual_payload = comparison
+                st.session_state.spec6_output_note = f"Counterfactual completed: {comparison_path.name}"
+            except Exception as exc:  # pragma: no cover - UI surfaced exception
+                st.session_state.spec6_output_note = f"Counterfactual failed: {exc}"
+
+with st.sidebar:
+    st.divider()
+    st.header("Output")
     paths = _artifact_paths(case_id)
-    st.session_state.spec6_pipeline_stage = "ontology"
-    st.session_state.spec6_pipeline_progress = 0
-    st.session_state.spec6_pipeline_message = "Step 1/3 · Generate Ontologies"
-    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
-    progress_bar.progress(0, text="Omen ready")
+    st.caption(f"{case_output_dir(case_id)}")
 
-    status_box.info("Step 1/3 · Generate Ontologies")
-    case_dir = ensure_case_output_dir(case_id)
-    generation = generate_strategy_ontology_from_document(
-        document_path=document_path,
-        case_id=case_id,
-        title=title,
-        strategy=strategy,
-        known_outcome=known_outcome,
-        config_path=config_path,
-    )
-    known_outcome_effective = generation.inferred_known_outcome or known_outcome
-    if generation.inferred_known_outcome:
-        st.session_state.spec6_pending_known_outcome_updates[case_id] = generation.inferred_known_outcome
+    for label, key in (
+        ("Ontology", "ontology"),
+        ("Result", "baseline_result"),
+        ("Explanation", "baseline_explanation"),
+        ("ViewModel", "view_model"),
+        ("Comparison", "comparison"),
+    ):
+        filename = paths[key].name
+        exists = paths[key].exists()
+        prefix = "✅" if exists else "⬜"
+        st.write(f"{prefix} {filename}")
 
-    founder_payload, timeline_events = generate_founder_and_events_from_document(
-        document_path=document_path,
-        case_id=case_id,
-        title=title,
-        known_outcome=known_outcome_effective,
-        config_path=config_path,
-    )
+    if st.session_state.spec6_output_note:
+        st.info(st.session_state.spec6_output_note)
 
-    strategy_payload = attach_timeline_events(generation.strategy_ontology, timeline_events)
-    founder_path = case_dir / "founder_ontology.json"
-    strategy_payload = attach_founder_ref(
-        strategy_payload,
-        founder_payload,
-        founder_filename=founder_path.name,
-    )
+st.divider()
 
-    payload = generation.model_dump(mode="python")
-    strategy_payload.setdefault("meta", {})
-    strategy_payload["meta"]["strategy"] = _normalize_strategy_name(strategy)
-    strategy_payload["meta"]["known_outcome"] = known_outcome_effective
-    payload["strategy_ontology"] = strategy_payload
-    payload["ontology_path"] = str(case_dir / "strategy_ontology.json")
-    st.session_state.spec6_generation_result = payload
-    st.session_state.spec6_pending_strategy_updates[case_id] = _normalize_strategy_name(strategy)
+if st.session_state.spec6_ontology_graph_payload:
+    ontology_payload = st.session_state.spec6_ontology_graph_payload
+    st.subheader("Ontology Graph")
 
-    ontology_path = save_strategy_ontology(strategy_payload, case_dir / "strategy_ontology.json")
-    founder_path.write_text(json.dumps(founder_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    report = {
-        "case_id": case_id,
-        "strategy_ontology_path": str(ontology_path),
-        "founder_ontology_path": str(founder_path),
-        "validation_passed": generation.validation_passed,
-        "validation_issues": generation.validation_issues,
-        "reused_existing": False,
-    }
-    (case_dir / "generation.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2, default=str),
-        encoding="utf-8",
-    )
-    st.session_state.spec6_ontology_graph_payload = strategy_payload
-    st.session_state.spec6_pipeline_stage = "timeline"
-    st.session_state.spec6_pipeline_progress = 34
-    st.session_state.spec6_pipeline_message = "Step 2/3 · Get Timeline"
-    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
-    progress_bar.progress(34, text="Step 1 complete · Ontologies ready")
-
-    status_box.info("Step 2/3 · Get Timeline")
-    parsed_date = status_date.strip() or None
-    status_payload = build_status_snapshot(
-        strategy_ontology=strategy_payload,
-        founder_ontology=founder_payload,
-        year=None,
-        date=parsed_date,
-    )
-    paths["analyze_status"].write_text(
-        json.dumps(status_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    st.session_state.spec6_status_payload = status_payload
-    st.session_state.spec6_pipeline_stage = "insight"
-    st.session_state.spec6_pipeline_progress = 67
-    st.session_state.spec6_pipeline_message = "Step 3/3 · Generate Insights"
-    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
-    progress_bar.progress(67, text="Step 2 complete · Timeline loaded")
-
-    status_box.info("Step 3/3 · Generate Insights")
-    target_event_id = _pick_formation_target_event_id(founder_payload, status_payload)
-    if not target_event_id:
-        raise ValueError("No event id available for formation analysis.")
-
-    formation_payload = build_strategic_formation_chain(
-        founder_ontology=founder_payload,
-        target_event_id=target_event_id,
-    )
-    paths["analyze_formation"].write_text(
-        json.dumps(formation_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    st.session_state.spec6_formation_payload = formation_payload
-
-    insight_payload = generate_unified_insight(
-        case_id=case_id,
-        founder_ontology=founder_payload,
-        strategy_ontology=strategy_payload,
-        formation_payload=formation_payload,
-        config_path=config_path,
-    )
-    paths["analyze_insight"].write_text(
-        json.dumps(insight_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    st.session_state.spec6_insight_payload = insight_payload
-    st.session_state.spec6_pipeline_stage = "done"
-    st.session_state.spec6_pipeline_progress = 100
-    st.session_state.spec6_pipeline_message = "Omen complete"
-    _update_pipeline_journey(journey_box, st.session_state.spec6_pipeline_stage, st.session_state.spec6_pipeline_message, paths)
-    progress_bar.progress(100, text="Omen complete")
-    status_box.success("Omen finished · Timeline and strategic insights are ready.")
-    st.session_state.spec6_output_note = "Omen pipeline completed: ontologies, timeline, formation, and insights generated."
-
-
-def _inject_app_styles() -> None:
     st.markdown(
         """
         <style>
-        :root {
-            --omen-ink: #172033;
-            --omen-muted: #5b6475;
-            --omen-line: rgba(23, 32, 51, 0.10);
-            --omen-panel: linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 100%);
-            --omen-accent: #0f766e;
-            --omen-accent-soft: rgba(15, 118, 110, 0.10);
-        }
-        .stApp {
-            background:
-                radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 28%),
-                radial-gradient(circle at top right, rgba(194, 65, 12, 0.08), transparent 24%),
-                linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
-        }
-        .omen-summary {
-            color: var(--omen-muted);
-            font-size: 0.96rem;
-            line-height: 1.55;
-        }
-        .omen-actionbar-title {
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--omen-muted);
-            margin: 0.75rem 0 0.65rem;
-            font-weight: 700;
-        }
-        .omen-timeline {
-            position: relative;
-            margin-top: 0.5rem;
-            padding-left: 1.1rem;
-            border-left: 2px solid rgba(15, 118, 110, 0.18);
-        }
-        .omen-timeline-item {
-            position: relative;
-            margin: 0 0 1rem 0.35rem;
-            padding: 0.85rem 1rem 0.9rem;
-            border: 1px solid var(--omen-line);
-            border-radius: 16px;
-            background: rgba(255,255,255,0.86);
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
-        }
-        .omen-timeline-item::before {
-            content: "";
-            position: absolute;
-            left: -1.2rem;
-            top: 1rem;
-            width: 10px;
-            height: 10px;
+        div[data-testid="stButton"] button[kind="secondary"] {
             border-radius: 999px;
-            background: var(--omen-accent);
-            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
-        }
-        .omen-time {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: var(--omen-accent);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 0.35rem;
-        }
-        .omen-event {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--omen-ink);
-            margin-bottom: 0.35rem;
-        }
-        .omen-meta {
-            color: #5b6475;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-        .omen-badge {
-            display: inline-block;
-            margin-top: 0.55rem;
-            padding: 0.22rem 0.55rem;
-            border-radius: 999px;
-            background: var(--omen-accent-soft);
-            color: var(--omen-accent);
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-        .omen-step-card {
-            min-height: 170px;
-            padding: 0.95rem 1rem;
-            border-radius: 18px;
-            border: 1px solid var(--omen-line);
-            background: rgba(255,255,255,0.88);
-            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
-            margin-bottom: 0.5rem;
-        }
-        .omen-step-active {
-            border-color: rgba(15, 118, 110, 0.32);
-            background: linear-gradient(180deg, rgba(240,253,250,0.95) 0%, rgba(255,255,255,0.98) 100%);
-        }
-        .omen-step-done {
-            border-color: rgba(15, 118, 110, 0.18);
-            background: linear-gradient(180deg, rgba(248,250,252,0.95) 0%, rgba(255,255,255,0.98) 100%);
-        }
-        .omen-step-number {
-            font-size: 0.78rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--omen-accent);
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-        .omen-step-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--omen-ink);
-            margin-bottom: 0.4rem;
-        }
-        .omen-step-copy {
-            color: var(--omen-muted);
-            line-height: 1.45;
-            font-size: 0.92rem;
-            margin-bottom: 0.85rem;
-        }
-        .omen-step-badge {
-            display: inline-block;
-            padding: 0.22rem 0.55rem;
-            border-radius: 999px;
-            background: var(--omen-accent-soft);
-            color: var(--omen-accent);
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-        div[data-testid="stButton"] button {
-            border-radius: 14px;
-            min-height: 2.8rem;
-            border: 1px solid rgba(23, 32, 51, 0.12);
-            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
-        }
-        div[data-testid="stButton"] button[kind="primary"] {
-            background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
-            border: none;
+            min-width: 2.75rem;
+            min-height: 2.75rem;
+            padding: 0 0.8rem;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
+    ontology_fig = build_ontology_graph_figure(
+        ontology_payload,
+        actor_scope=st.session_state.spec6_ontology_scope,
+    )
+    st.plotly_chart(ontology_fig, use_container_width=True)
 
-def _render_timeline_cards(timeline_rows: list[dict[str, Any]]) -> None:
-    if not timeline_rows:
-        st.info("No timeline events for current status filter.")
-        return
-
-    items: list[str] = []
-    for row in timeline_rows:
-        if not isinstance(row, dict):
-            continue
-        time_text = html.escape(str(row.get("time") or row.get("date") or "Unknown Time"))
-        name_text = html.escape(str(row.get("name") or row.get("event") or "Event"))
-        evidence_text = html.escape(str(row.get("evidence") or row.get("description") or "No evidence summary."))
-        strategic = bool(row.get("strategic") or row.get("is_strategy_related"))
-        badge = '<div class="omen-badge">Strategic signal</div>' if strategic else ""
-        items.append(
-            textwrap.dedent(
-                f"""
-                <div class="omen-timeline-item">
-                    <div class="omen-time">{time_text}</div>
-                    <div class="omen-event">{name_text}</div>
-                    <div class="omen-meta">{evidence_text}</div>
-                    {badge}
-                </div>
-                """
-            ).strip()
-        )
-
-    html_block = '<div class="omen-timeline">' + "".join(items) + "</div>"
-    st.markdown(html_block, unsafe_allow_html=True)
-
-
-def _render_gap_cards(gaps: list[dict[str, Any]], *, empty_text: str) -> None:
-    if not gaps:
-        st.caption(empty_text)
-        return
-
-    for start in range(0, len(gaps), 2):
-        left_col, right_col = st.columns(2)
-        for col, gap in zip((left_col, right_col), gaps[start : start + 2]):
-            if not isinstance(gap, dict):
-                continue
-            assumption = str(gap.get("assumption") or "Unknown Point")
-            observation = str(gap.get("observation") or "...")
-            significance = str(gap.get("gap_significance") or "").strip()
-            event_id = str(gap.get("event_id") or "").strip()
-            phase = str(gap.get("phase") or "").strip()
-            refs = gap.get("evidence_refs")
-
-            with col:
-                with st.container(border=True):
-                    st.markdown(f"**{assumption}**")
-                    st.caption(observation)
-                    meta_parts: list[str] = []
-                    if phase:
-                        meta_parts.append(f"Phase: {phase}")
-                    if event_id:
-                        meta_parts.append(f"Event: {event_id}")
-                    if meta_parts:
-                        st.caption(" · ".join(meta_parts))
-                    if significance:
-                        st.warning(significance)
-                    if isinstance(refs, list) and refs:
-                        st.caption("Evidence: " + ", ".join([str(item) for item in refs[:2]]))
-
-
-def _render_trait_cards(key_traits: list[dict[str, Any]]) -> None:
-    if not key_traits:
-        st.caption("No key traits available.")
-        return
-    for item in key_traits:
-        if not isinstance(item, dict):
-            continue
-        trait = str(item.get("trait") or "Unknown trait")
-        evidence_summary = str(item.get("evidence_summary") or "")
-        with st.container(border=True):
-            st.markdown(f"**{trait}**")
-            if evidence_summary:
-                st.caption(evidence_summary)
-
-
-_inject_app_styles()
-
-
-if st.session_state.spec6_loaded_case_id != case_id:
-    st.session_state.spec6_generation_result = None
-    st.session_state.spec6_ontology_graph_payload = None
-    st.session_state.spec6_status_payload = None
-    st.session_state.spec6_formation_payload = None
-    st.session_state.spec6_insight_payload = None
-    st.session_state.spec6_output_note = ""
-    st.session_state.spec6_ontology_scope = "all"
-    st.session_state.spec6_pipeline_stage = "idle"
-    st.session_state.spec6_pipeline_progress = 0
-    st.session_state.spec6_pipeline_message = "Waiting to start"
-    _load_existing_outputs(case_id)
-    st.session_state.spec6_loaded_case_id = case_id
-    st.rerun()
-
-journey_placeholder = st.empty()
-journey_paths = _artifact_paths(case_id)
-has_existing_outputs = any(path.exists() for key, path in journey_paths.items() if key != "root")
-_update_pipeline_journey(
-    journey_placeholder,
-    st.session_state.spec6_pipeline_stage,
-    st.session_state.spec6_pipeline_message,
-    journey_paths,
-)
-progress_placeholder = st.empty()
-status_placeholder = st.empty()
-cta_label = "Analysis Again" if has_existing_outputs else "Start Omen"
-if st.button(cta_label, type="primary", use_container_width=True):
-    progress_bar = progress_placeholder.progress(0, text="Starting Omen")
-    try:
-        _run_omen_pipeline(
-            case_id=case_id,
-            title=title,
-            document_path=document_path,
-            strategy=strategy,
-            known_outcome=known_outcome,
-            status_date=status_date,
-            config_path=config_path,
-            progress_bar=progress_bar,
-            status_box=status_placeholder,
-            journey_box=journey_placeholder,
-        )
-    except Exception as exc:  # pragma: no cover - UI surfaced exception
-        st.session_state.spec6_pipeline_progress = 100
-        st.session_state.spec6_pipeline_message = f"Omen failed: {exc}"
-        _update_pipeline_journey(
-            journey_placeholder,
-            st.session_state.spec6_pipeline_stage,
-            st.session_state.spec6_pipeline_message,
-            journey_paths,
-        )
-        progress_bar.progress(100, text="Omen stopped")
-        status_placeholder.error(f"Omen failed: {exc}")
-        st.session_state.spec6_output_note = f"Omen failed: {exc}"
-else:
-    progress_placeholder.progress(st.session_state.spec6_pipeline_progress, text=st.session_state.spec6_pipeline_message)
-
-with st.sidebar:
-    if st.session_state.spec6_output_note:
-        st.info(st.session_state.spec6_output_note)
-
-if st.session_state.spec6_status_payload:
-    status_payload = st.session_state.spec6_status_payload
-    st.subheader("Timeline")
-
-    summary = status_payload.get("summary") or {}
-
-    timeline_rows = status_payload.get("timeline") or []
-    _render_timeline_cards(timeline_rows)
+    space_summary = _build_space_summary(ontology_payload)
+    reset_col, col1, col2, col3, col4 = st.columns(5)
+    with reset_col:
+        st.caption("Show")
+        if st.button("All", key="ontology_scope_all"):
+            st.session_state.spec6_ontology_scope = "all"
+            st.rerun()
+    with col1:
+        st.caption("Tech Actors")
+        if st.button(str(space_summary.get("tech_space_actor_count", 0)), key="tech_actor_scope_count"):
+            st.session_state.spec6_ontology_scope = "tech"
+            st.rerun()
+    with col2:
+        st.caption("Market Actors")
+        if st.button(str(space_summary.get("market_space_actor_count", 0)), key="market_actor_scope_count"):
+            st.session_state.spec6_ontology_scope = "market"
+            st.rerun()
+    col3.metric("Shared Actors", space_summary.get("shared_actor_count", 0))
+    adoption_resistance = space_summary.get("adoption_resistance")
+    col4.metric("Adoption Resistance", "n/a" if adoption_resistance is None else str(adoption_resistance))
 
 st.divider()
 
-if st.session_state.spec6_insight_payload:
-    insight_payload = st.session_state.spec6_insight_payload
-    st.subheader("Deep Strategic Insight")
+if st.session_state.spec6_baseline_payload:
+    payload = st.session_state.spec6_baseline_payload
+    view_model = payload.get("view_model", {})
+    explanation = payload.get("explanation", {})
+    st.subheader("Baseline Replay Path")
+    summary = view_model.get("baseline_summary", {})
 
-    persona = insight_payload.get("persona_insight") or {}
-    why_chain = insight_payload.get("why_chain") or []
-    gap_analysis = insight_payload.get("gap_analysis") or {}
-    process_gaps = gap_analysis.get("process_gaps") or []
-    outcome_gaps = gap_analysis.get("outcome_gaps") or []
-    learning_loop = gap_analysis.get("learning_loop") or []
-    known_outcome = str(gap_analysis.get("known_outcome") or "").strip()
-    formation_payload = st.session_state.spec6_formation_payload
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    metric_col1.metric("Outcome", summary.get("outcome", "unknown"))
+    metric_col2.metric("Phases", summary.get("phase_count", 0))
+    metric_col3.metric("Nodes", summary.get("node_count", 0))
 
-    t1, t2, t3 = st.tabs(["👤 Persona Narrative", "❓ Why Chain", "⚖️ Reality Gaps"])
+    fig = build_baseline_path_figure(view_model)
+    st.plotly_chart(fig, use_container_width=True)
 
-    with t1:
-        left_col, right_col = st.columns([1.05, 1.35])
-        with left_col:
-            st.markdown("### Founder Persona")
-            st.write(persona.get("narrative", "No narrative available."))
-            score_val = persona.get("consistency_score", "n/a")
-            st.metric("Consistency Score", str(score_val))
+    st.subheader("Simulated vs Real Outcome")
+    outcome_col1, outcome_col2 = st.columns(2)
+    outcome_col1.metric("Simulated outcome", str(summary.get("outcome", "unknown")))
+    outcome_col2.metric("Known real outcome", str(known_outcome))
 
-            key_traits = persona.get("key_traits") or []
-            if isinstance(key_traits, list):
-                st.markdown("**Key Traits**")
-                _render_trait_cards(key_traits)
+    reality_gaps = list(explanation.get("reality_gap_analysis") or [])
+    if reality_gaps:
+        st.markdown("**Reality Gap Analysis**")
+        for gap in reality_gaps:
+            st.warning(
+                (
+                    f"{gap.get('factor', 'gap')}: {gap.get('reality_observation', '')} "
+                    f"| calibration: {gap.get('suggested_calibration', '')}"
+                )
+            )
 
-        with right_col:
-            if st.session_state.spec6_status_payload:
-                st.markdown("### Founder Influence Graph")
-                founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
-                st.plotly_chart(founder_fig, use_container_width=True)
+    causal_gap_links = list(view_model.get("causal_gap_links") or [])
+    if causal_gap_links:
+        st.markdown("**Causal-Gap Links**")
+        st.json(causal_gap_links)
 
-    with t2:
-        if formation_payload:
-            st.markdown("### Strategic Formation Chain")
-            summary = formation_payload.get("summary") or {}
-            metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-            metric_col1.metric("Perception Signals", int(summary.get("perception_signal_count") or 0))
-            metric_col2.metric("Internal Constraints", int(summary.get("internal_constraint_count") or 0))
-            metric_col3.metric("External Pressures", int(summary.get("external_pressure_count") or 0))
-            metric_col4.metric("Execution Deltas", int(summary.get("execution_delta_count") or 0))
+    editable_controls = list(view_model.get("editable_controls") or [])
+    if editable_controls:
+        st.markdown("**Key Calibration Controls**")
+        st.json(editable_controls)
 
-            formation_fig = build_formation_chain_figure(formation_payload)
-            st.plotly_chart(formation_fig, use_container_width=True)
-
-        st.markdown("### Why: Strategic Formation Narrative")
-        why_items = why_chain if isinstance(why_chain, list) else []
-        for index, item in enumerate(why_items, start=1):
-            if not isinstance(item, dict):
-                continue
-            question = str(item.get("question") or f"Why {index}?")
-            answer = str(item.get("answer") or "No answer available.")
-            refs = item.get("evidence_refs") or []
-            with st.container(border=True):
-                st.markdown(f"**Why {index}: {question}**")
-                st.caption(answer)
-                if isinstance(refs, list) and refs:
-                    st.caption("Evidence: " + ", ".join([str(ref) for ref in refs[:3]]))
-
-        if formation_payload:
-            chain = formation_payload.get("formation_chain") or {}
-            with st.expander("Formation Data Details"):
-                st.markdown("**Perception**")
-                st.json(chain.get("perception") or [])
-                st.markdown("**Constraint Conflict**")
-                st.json(chain.get("constraint_conflict") or {})
-                st.markdown("**Mediation (Mental Patterns / Strategic Style)**")
-                st.json(chain.get("mediation") or {})
-                st.markdown("**Decision Logic**")
-                st.json(chain.get("decision_logic") or {})
-                st.markdown("**Execution Delta**")
-                st.json(chain.get("execution_delta") or [])
-
-    with t3:
-        st.markdown("### Process Reality Gaps")
-        process_gap_items = process_gaps if isinstance(process_gaps, list) else []
-        _render_gap_cards(process_gap_items, empty_text="No process gaps available.")
-
-        if known_outcome:
-            st.markdown("### Outcome Reality Gaps")
-            st.caption(f"Known Outcome: {known_outcome}")
-            outcome_gap_items = outcome_gaps if isinstance(outcome_gaps, list) else []
-            _render_gap_cards(outcome_gap_items, empty_text="No outcome gaps available.")
-
-        if isinstance(learning_loop, list) and learning_loop:
-            st.markdown("### Learning Loop Signals")
-            for start in range(0, len(learning_loop), 2):
-                lc1, lc2 = st.columns(2)
-                for col, item in zip((lc1, lc2), learning_loop[start : start + 2]):
-                    if not isinstance(item, dict):
-                        continue
-                    signal = str(item.get("signal") or "unknown_signal")
-                    adjustment = str(item.get("adjustment") or "")
-                    evidence_ref = str(item.get("evidence_ref") or "")
-                    with col:
-                        with st.container(border=True):
-                            st.markdown(f"**{signal}**")
-                            if adjustment:
-                                st.caption(adjustment)
-                            if evidence_ref:
-                                st.caption(f"Evidence: {evidence_ref}")
+    st.subheader("Artifact Paths")
+    st.code(json.dumps(payload.get("paths", {}), ensure_ascii=False, indent=2), language="json")
 
 st.divider()
 
-if st.session_state.spec6_ontology_graph_payload:
-    with st.container(border=True):
-        ontology_payload = st.session_state.spec6_ontology_graph_payload
-        st.subheader("Ontology Graph")
+if st.session_state.spec6_counterfactual_payload:
+    comparison = st.session_state.spec6_counterfactual_payload
+    st.subheader("Counterfactual Reasoning")
 
-        ontology_fig = build_ontology_graph_figure(
-            ontology_payload,
-            actor_scope=st.session_state.spec6_ontology_scope,
-        )
-        st.plotly_chart(ontology_fig, use_container_width=True)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Baseline Outcome", str(comparison.get("baseline_outcome_class") or "unknown"))
+    c2.metric("Variation Outcome", str(comparison.get("variation_outcome_class") or "unknown"))
+    c3.metric("Winner Changed", "yes" if comparison.get("winner_changed") else "no")
 
-        space_summary = _build_space_summary(ontology_payload)
-        reset_col, col1, col2, col3, col4 = st.columns(5)
-        with reset_col:
-            st.caption("Show")
-            if st.button("All", key="ontology_scope_all"):
-                st.session_state.spec6_ontology_scope = "all"
-                st.rerun()
-        with col1:
-            st.caption("Tech Actors")
-            if st.button(str(space_summary.get("tech_space_actor_count", 0)), key="tech_actor_scope_count"):
-                st.session_state.spec6_ontology_scope = "tech"
-                st.rerun()
-        with col2:
-            st.caption("Market Actors")
-            if st.button(str(space_summary.get("market_space_actor_count", 0)), key="market_actor_scope_count"):
-                st.session_state.spec6_ontology_scope = "market"
-                st.rerun()
-        col3.metric("Shared Actors", space_summary.get("shared_actor_count", 0))
-        adoption_resistance = space_summary.get("adoption_resistance")
-        col4.metric("Adoption Resistance", "n/a" if adoption_resistance is None else str(adoption_resistance))
+    deltas = comparison.get("deltas") if isinstance(comparison.get("deltas"), list) else []
+    if deltas:
+        st.markdown("**Deltas**")
+        st.dataframe(deltas, use_container_width=True)
 
+    failure_activation = comparison.get("failure_activation")
+    if isinstance(failure_activation, dict):
+        st.markdown("**Failure Activation**")
+        st.json(failure_activation)

@@ -274,6 +274,50 @@ def _normalize_reasoning_profile(value: Any) -> dict[str, Any]:
     }
 
 
+def _normalize_events(events: list[Any]) -> tuple[list[dict[str, Any]], list[str]]:
+    normalized: list[dict[str, Any]] = []
+    warnings_list: list[str] = []
+
+    for item in events:
+        if not isinstance(item, dict):
+            continue
+
+        # Already normalized shape
+        if "event_type" in item and isinstance(item.get("payload"), dict):
+            event_type = str(item.get("event_type") or "").strip()
+            payload = dict(item.get("payload") or {})
+            target = item.get("target")
+            normalized.append(
+                {
+                    "event_type": event_type or "event",
+                    "target": str(target).strip() if isinstance(target, str) and target.strip() else None,
+                    "payload": payload,
+                }
+            )
+            continue
+
+        # Legacy shape compatibility: event/event_id/id/description/time/... -> event_type + payload
+        event_type = str(item.get("event") or item.get("type") or item.get("event_type") or "event").strip()
+        target = str(item.get("target") or item.get("event_id") or item.get("id") or "").strip() or None
+        payload = dict(item)
+
+        if target and "event_id" not in payload:
+            payload["event_id"] = target
+
+        normalized.append(
+            {
+                "event_type": event_type or "event",
+                "target": target,
+                "payload": payload,
+            }
+        )
+        warnings_list.append(
+            "Auto-fix: normalized legacy abox.events item to event_type/payload schema."
+        )
+
+    return normalized, warnings_list
+
+
 def _align_abox_entries(
     *,
     capabilities: list[Any],
@@ -396,6 +440,9 @@ def _normalize_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[st
 
     abox = dict(payload.get("abox") or {})
     abox["actors"] = _normalize_actors(list(abox.get("actors") or []))
+    normalized_events, event_warnings = _normalize_events(list(abox.get("events") or []))
+    abox["events"] = normalized_events
+    normalization_warnings.extend(event_warnings)
     raw_capabilities = list(abox.get("capabilities") or [])
     raw_constraints = list(abox.get("constraints") or [])
     capability_concepts = {

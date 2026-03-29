@@ -45,9 +45,7 @@ def default_case_id(case_ids: list[str], loaded_case_id: str | Path | None = Non
 
 def case_output_dir(case_id: str, output_root: str | Path = "output/case_replay") -> Path:
     root = _resolve_output_root(output_root)
-    case_dir = root / normalize_case_id(case_id)
-    case_dir.mkdir(parents=True, exist_ok=True)
-    return case_dir
+    return root / normalize_case_id(case_id)
 
 
 def resolve_existing_case_output_dir(case_id: str, output_root: str | Path = "output/case_replay") -> Path:

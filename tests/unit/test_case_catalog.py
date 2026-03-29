@@ -56,6 +56,18 @@ def test_resolve_existing_case_output_dir_uses_case_name_directory(tmp_path: Pat
     assert resolve_existing_case_output_dir("x-developer", output_root=output_root) == target_dir
 
 
+def test_case_output_dir_does_not_create_directory(tmp_path: Path) -> None:
+    output_root = tmp_path / "output" / "case_replay"
+    target_dir = output_root / "x-developer"
+
+    resolved = case_output_dir("x-developer", output_root=output_root)
+    resolved_existing = resolve_existing_case_output_dir("x-developer", output_root=output_root)
+
+    assert resolved == target_dir
+    assert resolved_existing == target_dir
+    assert not target_dir.exists()
+
+
 def test_case_metadata_helpers_follow_canonical_case_names() -> None:
     assert suggest_document_path("x-developer") == "cases/x-developer.md"
     assert suggest_document_path("shenda") == "cases/shenda.md"

@@ -29,6 +29,45 @@ class OntologyValidationError(ValueError):
         super().__init__(message)
 
 
+def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyValidationIssue]:
+    issues: list[OntologyValidationIssue] = []
+    meta = payload.get("meta")
+    if not isinstance(meta, dict):
+        issues.append(OntologyValidationIssue(code="missing_meta", message="meta must be an object", path="meta"))
+    actors = payload.get("actors")
+    if not isinstance(actors, list):
+        issues.append(OntologyValidationIssue(code="missing_actors", message="actors must be an array", path="actors"))
+    events = payload.get("events")
+    if not isinstance(events, list):
+        issues.append(OntologyValidationIssue(code="missing_events", message="events must be an array", path="events"))
+    return issues
+
+
+def validate_actor_strategy_link_payload(payload: dict[str, Any], *, expected_actor_filename: str) -> list[OntologyValidationIssue]:
+    issues: list[OntologyValidationIssue] = []
+    actor_ref = payload.get("actor_ref")
+    if not isinstance(actor_ref, dict):
+        issues.append(
+            OntologyValidationIssue(
+                code="missing_actor_ref",
+                message="strategy ontology must include actor_ref",
+                path="actor_ref",
+            )
+        )
+        return issues
+
+    path_value = str(actor_ref.get("path") or "").strip()
+    if path_value != expected_actor_filename:
+        issues.append(
+            OntologyValidationIssue(
+                code="invalid_actor_ref_path",
+                message=f"actor_ref.path must equal {expected_actor_filename}",
+                path="actor_ref.path",
+            )
+        )
+    return issues
+
+
 def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
 

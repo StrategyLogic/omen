@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from omen.cli.case import handle_case_command, register_case_commands
-from omen.cli.founder import handle_analyze_command, register_analyze_commands
+from omen.cli.actor import (
+    handle_analyze_command,
+    handle_validate_command,
+    register_analyze_commands,
+    register_validate_commands,
+)
 from omen.explain.precision_report import build_precision_report
 from omen.explain.report import build_explanation_report
 from omen.ingest.assertion_builder import build_assertions_from_candidates
@@ -298,6 +303,7 @@ def main() -> None:
     )
 
     register_analyze_commands(sub)
+    register_validate_commands(sub)
     register_case_commands(sub)
 
     args = parser.parse_args()
@@ -648,6 +654,8 @@ def main() -> None:
         raise SystemExit(handle_case_command(args))
     elif args.command == "analyze":
         raise SystemExit(handle_analyze_command(args))
+    elif args.command == "validate":
+        raise SystemExit(handle_validate_command(args))
 
 
 if __name__ == "__main__":

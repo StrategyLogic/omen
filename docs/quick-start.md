@@ -180,6 +180,46 @@ omen/
 
 *Simulate the Signs. Reveal the Chaos.*
 
+## Spec 7（Strategic Actor OSS）快速验证
+
+### 1) 运行 Strategic Actor 基线分析
+
+```bash
+omen analyze actor --doc x-developer --config config/llm.toml
+```
+
+默认输出目录：
+
+- `output/actors/x-developer/`
+
+期望文件：
+
+- `strategy_ontology.json`
+- `actor_ontology.json`
+- `analyze_status.json`
+- `analyze_persona.json`
+
+### 2) 启动 Strategic Actor UI
+
+```bash
+streamlit run app/strategic_actor.py
+```
+
+### 3) 执行 actor 合同校验
+
+```bash
+omen validate actor --case x-developer --output-dir output/actors
+```
+
+### 4) Cloud-only 边界提示验证
+
+```bash
+omen analyze actor strategy --doc x-developer
+omen analyze actor insight --doc x-developer
+```
+
+预期行为：返回 Cloud-only 提示，不生成本地深度洞察文件。
+
 ## Spec 6（案例复盘）快速验证
 
 ### 1) 安装 Spec 6 依赖

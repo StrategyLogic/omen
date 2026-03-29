@@ -91,3 +91,11 @@ class OntologyInputPackage(BaseModel):
     tech_space_ontology: dict[str, Any] | None = None
     market_space_ontology: dict[str, Any] | None = None
     shared_actors: list[str] = Field(default_factory=list)
+
+
+class ActorOntologyEnvelope(BaseModel):
+    meta: dict[str, Any]
+    actors: list[dict[str, Any]] = Field(default_factory=list)
+    events: list[dict[str, Any]] = Field(default_factory=list)
+    influences: list[dict[str, Any]] = Field(default_factory=list)
+    query_skeleton: dict[str, Any] = Field(default_factory=dict)

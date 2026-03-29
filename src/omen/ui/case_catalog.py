@@ -52,6 +52,10 @@ def resolve_existing_case_output_dir(case_id: str, output_root: str | Path = "ou
     return case_output_dir(case_id, output_root=output_root)
 
 
+def actor_output_dir(case_id: str, output_root: str | Path = "output/actors") -> Path:
+    return case_output_dir(case_id, output_root=output_root)
+
+
 def suggest_document_path(case_id: str) -> str:
     return str(Path("cases") / f"{normalize_case_id(case_id)}.md")
 

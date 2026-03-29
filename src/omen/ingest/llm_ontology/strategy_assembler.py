@@ -66,3 +66,21 @@ def attach_founder_ref(
         "identity_map": _build_identity_map(founder_ontology),
     }
     return payload
+
+
+def attach_actor_ref(
+    strategy_ontology: dict[str, Any],
+    actor_ontology: dict[str, Any],
+    *,
+    actor_filename: str,
+) -> dict[str, Any]:
+    payload = dict(strategy_ontology)
+    actor_meta_value = actor_ontology.get("meta")
+    actor_meta: dict[str, Any] = actor_meta_value if isinstance(actor_meta_value, dict) else {}
+    payload["actor_ref"] = {
+        "path": actor_filename,
+        "version": str(actor_meta.get("version") or "1.0.0"),
+        "hash": founder_hash(actor_ontology),
+        "identity_map": _build_identity_map(actor_ontology),
+    }
+    return payload

@@ -137,6 +137,14 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
 ```
 
+### Spec 7 Strategic Actor OSS Commands
+
+```bash
+omen analyze actor --doc x-developer --config config/llm.toml
+streamlit run app/strategic_actor.py
+omen validate actor --case x-developer --output-dir output/actors
+```
+
 ### View Results
 
 **Local File Protection**: Output files are written to the root-level `output/` directory, which is excluded in `.gitignore` to avoid being tracked or accidentally uploaded, protecting your data from leakage.

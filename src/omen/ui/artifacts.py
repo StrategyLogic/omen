@@ -9,6 +9,11 @@ from typing import Any
 from omen.ui.case_catalog import normalize_case_id
 
 
+ACTOR_OUTPUT_ROOT = "output/actors"
+ACTOR_ONTOLOGY_FILENAME = "actor_ontology.json"
+STRATEGY_ONTOLOGY_FILENAME = "strategy_ontology.json"
+
+
 def _resolve_output_root(output_root: str | Path) -> Path:
     root = Path(output_root)
     if root.is_absolute():
@@ -23,6 +28,10 @@ def ensure_case_output_dir(case_id: str, output_root: str | Path = "output/case_
     case_dir = root / normalized_id
     case_dir.mkdir(parents=True, exist_ok=True)
     return case_dir
+
+
+def ensure_actor_output_dir(case_id: str, output_root: str | Path = ACTOR_OUTPUT_ROOT) -> Path:
+    return ensure_case_output_dir(case_id, output_root=output_root)
 
 
 def save_json_artifact(case_id: str, filename: str, payload: dict[str, Any]) -> Path:

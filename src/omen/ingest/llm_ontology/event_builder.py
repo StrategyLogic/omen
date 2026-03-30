@@ -7,7 +7,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.prompts import build_timeline_events_prompt
-from omen.models.case_models import CaseDocument, LLMConfig
+from omen.ingest.models.case_models import CaseDocument, LLMConfig
 
 
 def _extract_json_array(text: str) -> list[dict[str, Any]]:

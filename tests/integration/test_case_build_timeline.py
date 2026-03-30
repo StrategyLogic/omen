@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from omen.ingest.llm_ontology.event_builder import extract_timeline_events
-from omen.models.case_models import CaseDocument, LLMConfig
+from omen.ingest.models.case_models import CaseDocument, LLMConfig
 
 
 def _minimal_config() -> LLMConfig:

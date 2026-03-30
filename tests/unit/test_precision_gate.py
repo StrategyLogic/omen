@@ -1,4 +1,4 @@
-from omen.models.ingest_models import PrecisionEvaluationProfile
+from omen.ingest.models.ingest_models import PrecisionEvaluationProfile
 from omen.simulation.precision_gate import evaluate_precision_gates
 
 

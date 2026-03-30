@@ -19,3 +19,79 @@ def test_strategy_actor_ref_path_must_match_actor_filename() -> None:
         expected_actor_filename="actor_ontology.json",
     )
     assert any(issue.path == "actor_ref.path" for issue in issues)
+
+
+def test_actor_public_schema_requires_public_metadata() -> None:
+    payload = {
+        "meta": {
+            "case_id": "xd",
+            "version": "v0.1.0",
+            "disclosure_level": "public-structure",
+            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+        },
+        "actors": [
+            {
+                "id": "a1",
+                "name": "A",
+                "type": "founder",
+                "profile": {
+                    "mental_patterns": {"redacted": True},
+                    "strategic_style": {"redacted": True},
+                },
+            }
+        ],
+        "events": [],
+    }
+    issues = validate_actor_ontology_payload(payload)
+    assert any(issue.path == "meta.version" for issue in issues)
+
+
+def test_public_export_ignores_extra_fields_like_origin() -> None:
+    payload = {
+        "meta": {
+            "case_id": "xd",
+            "version": "v0.1.0-public",
+            "disclosure_level": "public-structure",
+            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+        },
+        "actors": [
+            {
+                "id": "a1",
+                "name": "A",
+                "type": "founder",
+                "profile": {
+                    "mental_patterns": {"redacted": True},
+                    "strategic_style": {"redacted": True},
+                },
+            }
+        ],
+        "events": [],
+        "influences": [{"source": "a", "target": "b", "type": "influences", "origin": "semantic_enhancement"}],
+    }
+    issues = validate_actor_ontology_payload(payload)
+    assert issues == []
+
+
+def test_public_export_ignores_closed_subdimension_content() -> None:
+    payload = {
+        "meta": {
+            "case_id": "xd",
+            "version": "v0.1.0-public",
+            "disclosure_level": "public-structure",
+            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+        },
+        "actors": [
+            {
+                "id": "a1",
+                "name": "A",
+                "type": "founder",
+                "profile": {
+                    "mental_patterns": {"core_beliefs": ["x"]},
+                    "strategic_style": {"redacted": True},
+                },
+            }
+        ],
+        "events": [],
+    }
+    issues = validate_actor_ontology_payload(payload)
+    assert issues == []

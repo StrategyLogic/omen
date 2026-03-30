@@ -1,0 +1,1 @@
+"""Ingest-scoped data models."""

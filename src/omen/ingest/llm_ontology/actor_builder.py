@@ -8,10 +8,16 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.prompts import build_actor_ontology_prompt
-from omen.models.case_models import CaseDocument, LLMConfig
+from omen.ingest.schema.actor_schema import (
+    DISCLOSURE_LEVEL,
+    QUERY_TYPES,
+    REDACTION_MARKER,
+    STRATEGIC_DIMENSIONS,
+    VERSION,
+)
+from omen.ingest.models.case_models import CaseDocument, LLMConfig
 
 
-_DEF_QUERY_TYPES = ["status", "why", "persona"]
 _PRODUCT_TYPES = {"product", "platform", "tool", "saas", "app", "system"}
 _ACTOR_TYPE_ALIAS = {
     "company": "organization",
@@ -48,72 +54,112 @@ def _extract_json_object(text: str) -> dict[str, Any]:
     return payload
 
 
-def _default_founder(case_id: str, timeline_events: list[dict[str, Any]]) -> dict[str, Any]:
-    evidence_refs: list[str] = []
-    for event in timeline_events:
-        refs = event.get("evidence_refs")
-        if isinstance(refs, list):
-            evidence_refs.extend(str(item) for item in refs)
+def _default_actor(case_id: str, timeline_events: list[dict[str, Any]]) -> dict[str, Any]:
+    events: list[dict[str, Any]] = []
+    for index, event in enumerate(timeline_events[:5], start=1):
+        event_id = str(event.get("id") or f"event-{index}").strip() or f"event-{index}"
+        events.append(
+            {
+                "id": event_id,
+                "name": str(event.get("name") or event.get("event") or event_id),
+                "type": str(event.get("type") or "event"),
+                "date": str(event.get("time") or "unknown"),
+                "description": str(event.get("description") or event.get("event") or "unknown"),
+            }
+        )
 
     return {
         "meta": {
-            "version": "0.1.0",
+            "version": VERSION,
             "case_id": case_id,
-            "slice": "founder",
-        },
-        "identity": {
-            "shared_ids": [f"actor:founder:{case_id}"]
+            "disclosure_level": DISCLOSURE_LEVEL,
+            "strategic_dimensions": list(STRATEGIC_DIMENSIONS),
         },
         "actors": [
             {
-                "id": f"founder.{case_id}",
-                "shared_id": f"actor:founder:{case_id}",
-                "name": "Founder",
-                "background_facts": {
-                    "birth_year": None,
-                    "origin": None,
-                    "education": [],
-                    "career_trajectory": [],
-                    "key_experiences": []
+                "id": f"actor.{case_id}",
+                "name": "Strategic Actor",
+                "type": "founder",
+                "profile": {
+                        "mental_patterns": dict(REDACTION_MARKER),
+                        "strategic_style": dict(REDACTION_MARKER),
                 },
-                "mental_patterns": {
-                    "core_beliefs": [],
-                    "cognitive_frames": [],
-                    "founder_dna": "Unknown",
-                    "risk_profile": {
-                        "technical_risk": "Medium",
-                        "market_risk": "Medium",
-                        "financial_risk": "Medium"
-                    }
-                },
-                "strategic_style": {
-                    "decision_style": "Pragmatic",
-                    "value_proposition": "Unknown",
-                    "decision_preferences": [],
-                    "non_negotiables": []
-                }
             }
         ],
-        "products": [],
-        "events": [
-            {
-                "id": f"founder.{event.get('id', 'event')}",
-                "name": str(event.get("name")),
-                "type": str(event.get("type")),
-                "date": str(event.get("time") or "unknown"),
-                "description": str(event.get("description") or event.get("event") or "unknown"),
-                "context_constraints": [],
-                "actors_involved": [f"founder.{case_id}"],
-                "evidence_refs": event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else [],
-            }
-            for event in timeline_events[:5]
-        ],
+        "events": events,
         "influences": [],
-        "query_skeleton": {
-            "query_types": _DEF_QUERY_TYPES,
-            "persona_prompt_template": "founder_persona_v1",
-            "required_evidence_fields": ["evidence_refs", "date", "relation", "context_constraints"]
+        "query_skeleton": {"query_types": list(QUERY_TYPES)},
+    }
+
+
+def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]:
+    meta = payload.get("meta") or {}
+    version = str(meta.get("version") or "").strip()
+    if not version:
+        version = VERSION
+    elif not version.endswith("-public"):
+        version = f"{version}-public"
+
+    actors_raw = payload.get("actors")
+    actor_items = [item for item in actors_raw if isinstance(item, dict)] if isinstance(actors_raw, list) else []
+    actors: list[dict[str, Any]] = []
+    for idx, actor in enumerate(actor_items, start=1):
+        actor_id = str(actor.get("id") or f"actor-{idx}").strip() or f"actor-{idx}"
+        actor_name = str(actor.get("name") or "Strategic Actor").strip() or "Strategic Actor"
+        actor_type = str(actor.get("type") or "role").strip() or "role"
+        actors.append(
+            {
+                "id": actor_id,
+                "name": actor_name,
+                "type": actor_type,
+                "profile": {
+                    "mental_patterns": dict(REDACTION_MARKER),
+                    "strategic_style": dict(REDACTION_MARKER),
+                },
+            }
+        )
+    if not actors:
+        actors = [
+            {
+                "id": f"actor.{case_id}",
+                "name": "Strategic Actor",
+                "type": "role",
+                "profile": {
+                    "mental_patterns": dict(REDACTION_MARKER),
+                    "strategic_style": dict(REDACTION_MARKER),
+                },
+            }
+        ]
+
+    events_raw = payload.get("events")
+    event_items = [item for item in events_raw if isinstance(item, dict)] if isinstance(events_raw, list) else []
+    events: list[dict[str, Any]] = []
+    for idx, event in enumerate(event_items, start=1):
+        event_id = str(event.get("id") or f"event-{idx}").strip() or f"event-{idx}"
+        events.append(
+            {
+                "id": event_id,
+                "name": str(event.get("name") or event.get("event") or event_id),
+                "type": str(event.get("type") or "event"),
+                "date": str(event.get("date") or event.get("time") or "unknown"),
+                "description": str(event.get("description") or event.get("event") or "unknown"),
+            }
+        )
+
+    influences_raw = payload.get("influences")
+    influences = dict(REDACTION_MARKER) if isinstance(influences_raw, list) and influences_raw else []
+
+    return {
+        "meta": {
+            "version": version,
+            "case_id": case_id,
+            "disclosure_level": DISCLOSURE_LEVEL,
+            "strategic_dimensions": list(STRATEGIC_DIMENSIONS),
         },
+        "actors": actors,
+        "events": events,
+        "influences": influences,
+        "query_skeleton": {"query_types": list(QUERY_TYPES)},
     }
 
 
@@ -196,7 +242,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
     query_skeleton = normalized.get("query_skeleton")
     if not isinstance(query_skeleton, dict):
         query_skeleton = {}
-    query_skeleton["query_types"] = _DEF_QUERY_TYPES
+    query_skeleton["query_types"] = list(QUERY_TYPES)
 
     if not product_items:
         default_product = _infer_default_product(case_doc)
@@ -309,7 +355,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
     normalized["products"] = product_items
     normalized["influences"] = influence_items
     normalized["query_skeleton"] = query_skeleton
-    return normalized
+    return _to_actor_schema(normalized, case_id=case_doc.case_id)
 
 
 def extract_actor_ontology(
@@ -333,7 +379,7 @@ def extract_actor_ontology(
     except Exception:
         pass
 
-    return _default_founder(case_doc.case_id, timeline_events)
+    return _default_actor(case_doc.case_id, timeline_events)
 
 
 def actor_hash(actor_ontology: dict[str, Any]) -> str:

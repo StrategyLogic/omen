@@ -298,7 +298,10 @@ def handle_validate_command(args: Any) -> int:
             path = Path(args.file)
             payload = json.loads(path.read_text(encoding="utf-8"))
             if path.name == ACTOR_ONTOLOGY_FILENAME:
-                errors = _issues_to_errors(validate_actor_ontology_payload(payload), source=str(path))
+                errors = _issues_to_errors(
+                    validate_actor_ontology_payload(payload),
+                    source=str(path),
+                )
             else:
                 errors = _issues_to_errors(
                     validate_actor_strategy_link_payload(payload, expected_actor_filename=ACTOR_ONTOLOGY_FILENAME),

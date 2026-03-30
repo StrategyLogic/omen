@@ -12,7 +12,7 @@ from omen.ingest.llm_ontology.prompts import (
     build_user_prompt,
 )
 from omen.ingest.llm_ontology.vector_cache import get_cached_vectors, save_vectors_to_cache
-from omen.models.case_models import CaseDocument, LLMConfig
+from omen.ingest.models.case_models import CaseDocument, LLMConfig
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:

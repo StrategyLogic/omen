@@ -34,8 +34,23 @@ def test_actor_baseline_command_writes_required_artifacts(tmp_path: Path, actor_
 
     def _fake_actor(**_: object):
         payload = {
-            "meta": {"case_id": "xd", "version": "1.0.0"},
-            "actors": [{"id": "a1", "shared_id": "a1"}],
+            "meta": {
+                "case_id": "xd",
+                "version": "v0.1.0-public",
+                "disclosure_level": "public-structure",
+                "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            },
+            "actors": [
+                {
+                    "id": "a1",
+                    "name": "Actor A",
+                    "type": "founder",
+                    "profile": {
+                        "mental_patterns": {"redacted": True},
+                        "strategic_style": {"redacted": True},
+                    },
+                }
+            ],
             "events": [{"id": "e1", "event": "launch", "time": "2016"}],
             "query_skeleton": {"query_types": ["status", "persona"]},
         }
@@ -79,6 +94,13 @@ def test_actor_baseline_command_writes_required_artifacts(tmp_path: Path, actor_
     assert (case_dir / "analyze_status.json").exists()
     assert (case_dir / "analyze_persona.json").exists()
 
+    actor_payload = json.loads((case_dir / "actor_ontology.json").read_text(encoding="utf-8"))
+    assert actor_payload["meta"]["disclosure_level"] == "public-structure"
+    assert actor_payload["meta"]["version"].endswith("-public")
+    profile = actor_payload["actors"][0]["profile"]
+    assert profile["mental_patterns"] == {"redacted": True}
+    assert profile["strategic_style"] == {"redacted": True}
+
 
 @pytest.mark.parametrize("subcommand", ["strategy", "insight"])
 def test_actor_cloud_only_subcommands_return_guidance(tmp_path: Path, actor_case_file: Path, monkeypatch, capsys, subcommand: str) -> None:
@@ -104,3 +126,38 @@ def test_actor_cloud_only_subcommands_return_guidance(tmp_path: Path, actor_case
     captured = capsys.readouterr()
     assert exc.value.code == 0
     assert "not available in this edition" in captured.out
+
+
+def test_validate_actor_file_accepts_public_schema_with_extra_fields(tmp_path: Path, monkeypatch, capsys) -> None:
+    payload = {
+        "meta": {
+            "case_id": "xd",
+            "version": "v0.1.0-public",
+            "disclosure_level": "public-structure",
+            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+        },
+        "actors": [
+            {
+                "id": "a1",
+                "name": "Actor A",
+                "type": "founder",
+                "profile": {
+                    "mental_patterns": {"redacted": True},
+                    "strategic_style": {"redacted": True},
+                },
+            }
+        ],
+        "events": [],
+        "influences": [{"source": "a1", "target": "e1", "type": "influences", "origin": "semantic_enhancement"}],
+    }
+    actor_file = tmp_path / "actor_ontology.json"
+    actor_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    monkeypatch.setattr(sys, "argv", ["omen", "validate", "actor", "--file", str(actor_file)])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    captured = capsys.readouterr()
+    assert exc.value.code == 0
+    assert '"status": "pass"' in captured.out

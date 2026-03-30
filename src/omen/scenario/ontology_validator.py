@@ -9,6 +9,7 @@ import warnings
 
 from pydantic import ValidationError
 
+from omen.ingest.schema.actor_schema import DISCLOSURE_LEVEL, STRATEGIC_DIMENSIONS, VERSION_SUFFIX
 from omen.scenario.ontology_models import OntologyInputPackage
 from omen.scenario.ontology_vocab import looks_like_actor_concept
 
@@ -29,14 +30,92 @@ class OntologyValidationError(ValueError):
         super().__init__(message)
 
 
+def _is_version_compatible(value: Any) -> bool:
+    return str(value or "").strip().endswith(VERSION_SUFFIX)
+
+
+def _is_disclosure_level_compatible(value: Any) -> bool:
+    return str(value or "").strip().lower() == DISCLOSURE_LEVEL
+
+
 def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyValidationIssue]:
     issues: list[OntologyValidationIssue] = []
+
     meta = payload.get("meta")
     if not isinstance(meta, dict):
         issues.append(OntologyValidationIssue(code="missing_meta", message="meta must be an object", path="meta"))
+        return issues
+
+    if not _is_version_compatible(meta.get("version")):
+        issues.append(
+            OntologyValidationIssue(
+                code="invalid_version",
+                message="meta.version must end with '-public'",
+                path="meta.version",
+            )
+        )
+
+    if not _is_disclosure_level_compatible(meta.get("disclosure_level")):
+        issues.append(
+            OntologyValidationIssue(
+                code="invalid_disclosure_level",
+                message="meta.disclosure_level must equal 'public-structure'",
+                path="meta.disclosure_level",
+            )
+        )
+
+    strategic_dimensions = meta.get("strategic_dimensions")
+    if not isinstance(strategic_dimensions, list):
+        issues.append(
+            OntologyValidationIssue(
+                code="missing_strategic_dimensions",
+                message="meta.strategic_dimensions must be an array",
+                path="meta.strategic_dimensions",
+            )
+        )
+    else:
+        dims = {str(item).strip() for item in strategic_dimensions if str(item).strip()}
+        required_dims = {str(item) for item in STRATEGIC_DIMENSIONS}
+        missing_dims = sorted(required_dims - dims)
+        for missing_dim in missing_dims:
+            issues.append(
+                OntologyValidationIssue(
+                    code="missing_dimension",
+                    message=f"missing required strategic dimension: {missing_dim}",
+                    path="meta.strategic_dimensions",
+                )
+            )
+
     actors = payload.get("actors")
     if not isinstance(actors, list):
         issues.append(OntologyValidationIssue(code="missing_actors", message="actors must be an array", path="actors"))
+    else:
+        for idx, actor in enumerate(actors):
+            base = f"actors[{idx}]"
+            if not isinstance(actor, dict):
+                continue
+            for required in ("id", "name", "type", "profile"):
+                if required not in actor:
+                    issues.append(
+                        OntologyValidationIssue(
+                            code="missing_actor_field",
+                            message=f"{required} is required in actor schema",
+                            path=f"{base}.{required}",
+                        )
+                    )
+            profile = actor.get("profile")
+            if not isinstance(profile, dict):
+                continue
+            for dim in sorted(STRATEGIC_DIMENSIONS):
+                if dim not in profile:
+                    issues.append(
+                        OntologyValidationIssue(
+                            code="missing_profile_dimension",
+                            message=f"profile.{dim} is required in actor schema",
+                            path=f"{base}.profile.{dim}",
+                        )
+                    )
+
     events = payload.get("events")
     if not isinstance(events, list):
         issues.append(OntologyValidationIssue(code="missing_events", message="events must be an array", path="events"))

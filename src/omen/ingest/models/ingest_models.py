@@ -1,4 +1,4 @@
-"""Pydantic models for Spec 4 ingest and precision contracts."""
+"""Pydantic models for ingest and precision contracts."""
 
 from __future__ import annotations
 

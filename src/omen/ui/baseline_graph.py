@@ -1,4 +1,4 @@
-"""Plot builders for Spec 6 baseline path visualization."""
+"""Plot builders for baseline path visualization."""
 
 from __future__ import annotations
 

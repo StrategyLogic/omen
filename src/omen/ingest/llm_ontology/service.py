@@ -9,7 +9,7 @@ from typing import Callable
 from omen.ingest.llm_ontology.config import load_llm_config
 from omen.ingest.llm_ontology.document_loader import chunk_case_document, load_case_document
 from omen.ingest.llm_ontology.generator import generate_ontology_payload
-from omen.models.case_replay_models import OntologyGenerationResult
+from omen.models.case_models import OntologyGenerationResult
 from omen.scenario.ontology_validator import OntologyValidationError, validate_ontology_input_or_raise
 
 LogFn = Callable[[str, str, str], None]

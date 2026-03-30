@@ -1,4 +1,4 @@
-"""Loader utilities for Spec 6 case replay artifacts."""
+"""Loader utilities for case replay artifacts."""
 
 from __future__ import annotations
 

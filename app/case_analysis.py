@@ -1,4 +1,4 @@
-"""Streamlit UI for Spec 6 case replay MVP (US1 baseline flow)."""
+"""Streamlit UI for case replay MVP."""
 
 from __future__ import annotations
 

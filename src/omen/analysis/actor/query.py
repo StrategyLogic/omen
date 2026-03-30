@@ -1,4 +1,4 @@
-"""Founder query skeleton (local, no LLM)."""
+"""Actor query skeleton (local, no LLM)."""
 
 from __future__ import annotations
 
@@ -467,3 +467,8 @@ def build_events_snapshot(
             "founder_edge_count": len(founder_graph.get("edges") or []),
         },
     }
+
+
+def build_status_snapshot(**kwargs):
+    """Backward-compatible alias used by legacy callers/tests."""
+    return build_events_snapshot(**kwargs)

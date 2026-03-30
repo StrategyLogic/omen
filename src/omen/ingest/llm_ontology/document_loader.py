@@ -1,4 +1,4 @@
-"""Case document loaders for Spec 6 ontology generation."""
+"""Case document loaders for ontology generation."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Literal
 
 from omen.ingest.pdf_extract import extract_pdf_pages
 from omen.ingest.text_processing import clean_text, split_into_chunks
-from omen.models.case_replay_models import CaseDocument
+from omen.models.case_models import CaseDocument
 
 
 def _guess_content_type(path: Path) -> Literal["markdown", "text", "pdf"]:

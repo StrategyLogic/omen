@@ -1,4 +1,4 @@
-"""Case selection helpers for Spec 6 UI and artifact layout."""
+"""Case selection helpers for UI and artifact layout."""
 
 from __future__ import annotations
 

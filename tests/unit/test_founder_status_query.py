@@ -1,4 +1,4 @@
-from omen.analysis.founder.query import build_events_snapshot
+from omen.analysis.actor.query import build_events_snapshot
 
 
 def test_build_status_snapshot_filters_timeline_and_builds_graph():

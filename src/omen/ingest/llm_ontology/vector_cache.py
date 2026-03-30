@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.models.case_replay_models import LLMConfig
+from omen.models.case_models import LLMConfig
 
 
 def _get_cache_dir() -> Path:

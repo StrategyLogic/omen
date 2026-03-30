@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.analysis.founder.insight import generate_persona_insight
-from omen.analysis.founder.query import build_events_snapshot
+from omen.analysis.actor.insight import generate_persona_insight
+from omen.analysis.actor.query import build_events_snapshot
 from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
@@ -256,7 +256,7 @@ def handle_analyze_command(args: Any) -> int:
         if actor_command in (None, ""):
             _run_status(case_dir, strategy_payload, actor_payload, year=args.year, date=args.date)
             _run_persona(case_id, case_dir, strategy_payload, actor_payload, args.config)
-            print("Completed actor OSS baseline flow")
+            print("Completed actor research workflow")
             return 0
 
         if actor_command == "persona":

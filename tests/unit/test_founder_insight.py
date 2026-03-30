@@ -1,6 +1,6 @@
 import json
 
-from omen.analysis.founder.insight import generate_unified_insight
+from omen.analysis.case.insight import generate_unified_insight
 
 
 class _MockResponse:

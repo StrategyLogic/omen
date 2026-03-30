@@ -1,4 +1,4 @@
-"""CLI entrypoint for Omen MVP."""
+"""CLI entrypoint for Omen."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Spec 6 baseline replay execution helpers."""
+"""Baseline replay execution helpers."""
 
 from __future__ import annotations
 

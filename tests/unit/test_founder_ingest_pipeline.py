@@ -5,7 +5,7 @@ from omen.ingest.llm_ontology.event_builder import extract_timeline_events
 from omen.ingest.llm_ontology.actor_enhancer import enhance_actor_decision_relationships
 from omen.ingest.llm_ontology.actor_builder import extract_actor_ontology
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
-from omen.models.case_replay_models import CaseDocument, LLMConfig
+from omen.models.case_models import CaseDocument, LLMConfig
 
 
 def _dummy_config() -> LLMConfig:

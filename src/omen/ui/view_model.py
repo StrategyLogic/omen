@@ -1,4 +1,4 @@
-"""View model builders for Spec 6 case replay UI."""
+"""View model builders for case replay UI."""
 
 from __future__ import annotations
 

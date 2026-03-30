@@ -1,4 +1,4 @@
-"""Artifact persistence helpers for Spec 6 UI flow."""
+"""Artifact persistence helpers for UI flow."""
 
 from __future__ import annotations
 

@@ -45,7 +45,7 @@ def test_actor_baseline_runs_without_private_credentials(tmp_path: Path, monkeyp
         lambda **_: {"persona_insight": {"narrative": "n", "key_traits": ["t1"]}, "run_meta": {"prompt_version": "v1"}},
     )
     monkeypatch.setattr(
-        "omen.cli.actor.build_status_snapshot",
+        "omen.cli.actor.build_events_snapshot",
         lambda **_: {"timeline": [{"id": "e1", "time": "2016", "name": "launch", "description": "launch"}]},
     )
     monkeypatch.setattr("omen.cli.actor.ensure_analyze_prompt_available", lambda *_: None)

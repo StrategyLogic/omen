@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 
-from omen.analysis.founder.loader import validate_founder_ref
+from omen.analysis.case.loader import validate_founder_ref
 from omen.ingest.llm_ontology.actor_builder import founder_hash
 
 

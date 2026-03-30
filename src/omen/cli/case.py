@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.analysis.founder.formation import build_strategic_formation_chain
-from omen.analysis.founder.insight import generate_persona_insight, generate_unified_insight, generate_why_insight
-from omen.analysis.founder.query import build_events_snapshot
+from omen.analysis.case.formation import build_strategic_formation_chain
+from omen.analysis.case.insight import generate_persona_insight, generate_unified_insight, generate_why_insight
+from omen.analysis.actor.query import build_events_snapshot
 from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
@@ -289,7 +289,7 @@ def handle_case_command(args: Any) -> int:
             return 0
 
         if args.analyze_command == "formation":
-            from omen.analysis.founder.llm_enhance import enhance_formation_with_narrative
+            from omen.analysis.case.llm_enhance import enhance_formation_with_narrative
 
             try:
                 ensure_analyze_prompt_available("formation")

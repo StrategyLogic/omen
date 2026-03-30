@@ -1,4 +1,4 @@
-"""LLM Insight engine for deep Persona & Strategy Gap analysis."""
+"""LLM insight engine for actor persona and strategy-gap analysis."""
 
 from __future__ import annotations
 

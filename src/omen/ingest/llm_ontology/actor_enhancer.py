@@ -13,7 +13,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.prompts import build_actor_semantic_enhancement_prompt
-from omen.models.case_replay_models import LLMConfig
+from omen.models.case_models import LLMConfig
 
 
 def _find_founder_actor_id(actors: list[dict[str, Any]]) -> str:

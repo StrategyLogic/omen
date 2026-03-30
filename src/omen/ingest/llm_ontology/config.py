@@ -1,4 +1,4 @@
-"""Configuration loader for Spec 6 LLM ingestion."""
+"""Configuration loader for LLM ingestion."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import tomllib
 import importlib
 from pathlib import Path
 
-from omen.models.case_replay_models import LLMConfig
+from omen.models.case_models import LLMConfig
 
 _ENV_PATTERN = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
 

@@ -27,17 +27,6 @@ def enhance_formation_with_narrative(
     founder = summary.get("founder", "the founder")
     decision_logic = chain.get("decision_logic", {})
     event_name = decision_logic.get("event_name", "Unknown Event")
-    event_description = decision_logic.get("description", "")
-
-    perception_list = "\n".join(
-        [f"- {p.get('source_name')}: {p.get('description')}" for p in chain.get("perception", [])]
-    )
-    execution_list = "\n".join(
-        [
-            f"- {e.get('target_name')}: {e.get('description')}"
-            for e in chain.get("execution_delta", [])
-        ]
-    )
 
     conflict = chain.get("constraint_conflict", {})
     ext_pressure_list = ", ".join(

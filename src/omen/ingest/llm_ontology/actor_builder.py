@@ -8,7 +8,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.prompts import build_actor_ontology_prompt
-from omen.models.case_replay_models import CaseDocument, LLMConfig
+from omen.models.case_models import CaseDocument, LLMConfig
 
 
 _DEF_QUERY_TYPES = ["status", "why", "persona"]

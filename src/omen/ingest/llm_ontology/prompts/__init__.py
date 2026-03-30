@@ -1,9 +1,9 @@
-"""Prompt builders for Spec 6 document-to-ontology generation."""
+"""Prompt builders for document-to-ontology generation."""
 
 from __future__ import annotations
 
 from omen.ingest.llm_ontology.prompt_registry import get_prompt_template
-from omen.models.case_replay_models import CaseDocument
+from omen.models.case_models import CaseDocument
 
 
 def _render_template(template: str, values: dict[str, object]) -> str:

@@ -1,4 +1,4 @@
-"""Connectivity healthcheck for Spec 6 LLM dependencies."""
+"""Connectivity healthcheck for LLM dependencies."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Data models for Spec 6 case replay workflow."""
+"""Data models for case replay workflow."""
 
 from __future__ import annotations
 

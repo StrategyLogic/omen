@@ -104,7 +104,7 @@ def test_actor_pipeline_passes_output_language_to_persona(tmp_path: Path, monkey
         "save_strategy_ontology",
         lambda payload, path: path.write_text(__import__("json").dumps(payload), encoding="utf-8") or path,
     )
-    monkeypatch.setattr(module, "build_status_snapshot", lambda **_kwargs: {"timeline": []})
+    monkeypatch.setattr(module, "build_events_snapshot", lambda **_kwargs: {"timeline": []})
 
     def _fake_persona(**kwargs):
         captured["output_language"] = str(kwargs.get("output_language"))

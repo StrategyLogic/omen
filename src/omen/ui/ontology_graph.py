@@ -1,4 +1,4 @@
-"""Ontology graph visualization helpers for Spec 6 UI."""
+"""Ontology graph visualization helpers for UI."""
 
 from __future__ import annotations
 

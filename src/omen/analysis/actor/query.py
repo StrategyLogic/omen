@@ -459,12 +459,12 @@ def build_events_snapshot(
             "date": date,
         },
         "timeline": timeline_events,
-        "founder_graph": actor_graph,
+        "actor_graph": actor_graph,
         "summary": {
             "timeline_event_count": len(timeline_events),
-            "founder_event_count": len(actor_events),
-            "founder_node_count": len(actor_graph.get("nodes") or []),
-            "founder_edge_count": len(actor_graph.get("edges") or []),
+            "actor_event_count": len(actor_events),
+            "actor_node_count": len(actor_graph.get("nodes") or []),
+            "actor_edge_count": len(actor_graph.get("edges") or []),
         },
     }
 

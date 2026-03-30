@@ -16,8 +16,8 @@ def _normalize_output_language(value: str | None) -> str:
     return "en"
 
 
-def _pick_primary_actor(founder_ontology: dict[str, Any]) -> dict[str, Any]:
-    actors = founder_ontology.get("actors") or []
+def _pick_primary_actor(actor_ontology: dict[str, Any]) -> dict[str, Any]:
+    actors = actor_ontology.get("actors") or []
     for actor in actors:
         if isinstance(actor, dict) and str(actor.get("type") or "").strip().lower() == "founder":
             return actor

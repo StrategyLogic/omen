@@ -162,8 +162,8 @@ def handle_case_command(args: Any) -> int:
             print(
                 "Summary: "
                 f"timeline_events={status_payload['summary']['timeline_event_count']}, "
-                f"founder_nodes={status_payload['summary']['founder_node_count']}, "
-                f"founder_edges={status_payload['summary']['founder_edge_count']}"
+                f"actor_nodes={status_payload['summary']['actor_node_count']}, "
+                f"actor_edges={status_payload['summary']['actor_edge_count']}"
             )
             return 0
 

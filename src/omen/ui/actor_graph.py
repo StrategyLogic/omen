@@ -11,7 +11,7 @@ import networkx as nx
 def build_actor_graph_figure(payload: dict[str, Any]) -> Any:
     go = importlib.import_module("plotly.graph_objects")
 
-    graph_data = payload.get("actor_graph") or payload.get("founder_graph") or {}
+    graph_data = payload.get("actor_graph") or {}
     nodes = graph_data.get("nodes") or []
     edges = graph_data.get("edges") or []
 

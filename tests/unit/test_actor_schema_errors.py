@@ -15,7 +15,7 @@ def test_actor_schema_errors_include_field_paths() -> None:
 
 def test_strategy_actor_ref_path_must_match_actor_filename() -> None:
     issues = validate_actor_strategy_link_payload(
-        {"actor_ref": {"path": "founder_ontology.json"}},
+        {"actor_ref": {"path": "legacy_actor_slice.json"}},
         expected_actor_filename="actor_ontology.json",
     )
     assert any(issue.path == "actor_ref.path" for issue in issues)

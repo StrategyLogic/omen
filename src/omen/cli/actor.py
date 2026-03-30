@@ -1,4 +1,4 @@
-"""Top-level strategic actor analysis commands for Spec 7 OSS."""
+"""Top-level strategic actor analysis commands."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from omen.analysis.founder.insight import generate_persona_insight
-from omen.analysis.founder.query import build_status_snapshot
+from omen.analysis.founder.query import build_events_snapshot
 from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
@@ -33,7 +33,7 @@ def _add_actor_common_args(parser: Any) -> None:
     parser.add_argument(
         "--doc",
         required=False,
-        help="Document name or path. Bare names resolve to cases/founder/<doc>.md",
+        help="Document name or path. Bare names resolve to cases/actors/<doc>.md",
     )
     parser.add_argument("--title", required=False, help="Optional case title")
     parser.add_argument("--known-outcome", required=False, help="Optional known outcome")
@@ -103,16 +103,16 @@ def _resolve_doc_path(doc: str) -> Path:
         return candidate
 
     stem = raw[:-3] if raw.endswith(".md") else raw
-    founder_candidate = Path("cases/founder") / f"{stem}.md"
-    if founder_candidate.exists():
-        return founder_candidate
+    actor_candidate = Path("cases/actors") / f"{stem}.md"
+    if actor_candidate.exists():
+        return actor_candidate
     return Path("cases") / f"{stem}.md"
 
 
 def _cloud_only_message(command: str) -> str:
     return (
-        f"Analyze actor sub-command `{command}` is Cloud-only in Spec 7 OSS baseline. "
-        "Use `omen analyze actor` or `omen analyze actor persona` for local OSS flow."
+        f"Analyze actor sub-command `{command}` is Cloud-only. "
+        "Use `omen analyze actor` or `omen analyze actor persona` for local flow."
     )
 
 
@@ -201,7 +201,7 @@ def _run_status(
     if strategy_payload is None:
         raise ValueError("Missing strategy ontology for status analysis")
 
-    status_payload = build_status_snapshot(
+    status_payload = build_events_snapshot(
         strategy_ontology=strategy_payload,
         founder_ontology=actor_payload,
         year=year,
@@ -232,13 +232,6 @@ def _run_persona(
 
 
 def handle_analyze_command(args: Any) -> int:
-    if args.analyze_object == "founder":
-        print(
-            "Analyze object `founder` is retired in Spec 7 OSS baseline. "
-            "Use `omen analyze actor --doc <name>` instead."
-        )
-        return 2
-
     if args.analyze_object != "actor":
         print(f"Analyze object `{args.analyze_object}` is not supported")
         return 3

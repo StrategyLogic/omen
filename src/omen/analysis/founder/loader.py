@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.llm_ontology.founder_builder import founder_hash
+from omen.ingest.llm_ontology.actor_builder import founder_hash
 
 
 class FounderSliceLoadError(ValueError):

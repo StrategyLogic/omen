@@ -1,4 +1,4 @@
-"""Configurable founder dimension access helpers."""
+"""Configurable actor dimension access helpers."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ DIMENSION_LOADERS: dict[str, DimensionLoader] = {
 }
 
 
-def load_founder_dimensions(
+def load_actor_dimensions(
     profile: dict[str, Any],
     *,
     names: list[str] | None = None,

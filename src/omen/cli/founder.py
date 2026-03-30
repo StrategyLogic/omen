@@ -15,8 +15,8 @@ from typing import Any
 
 from omen.analysis.founder.formation import build_strategic_formation_chain
 from omen.analysis.founder.insight import generate_persona_insight, generate_unified_insight, generate_why_insight
-from omen.analysis.founder.query import build_status_snapshot
-from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
+from omen.analysis.founder.query import build_events_snapshot
+from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
@@ -131,7 +131,7 @@ def _ensure_founder_artifacts(args: Any) -> tuple[str, Path]:
     )
     known_outcome_effective = generation.inferred_known_outcome or known_outcome
 
-    founder_payload, timeline_events = generate_founder_and_events_from_document(
+    founder_payload, timeline_events = generate_actor_and_events_from_document(
         document_path=str(doc_path),
         case_id=case_id,
         title=title,
@@ -168,7 +168,7 @@ def _run_status(case_dir: Path, strategy_payload: dict[str, Any] | None, founder
     if strategy_payload is None:
         raise ValueError("Missing strategy ontology for status analysis")
 
-    status_payload = build_status_snapshot(
+    status_payload = build_events_snapshot(
         strategy_ontology=strategy_payload,
         founder_ontology=founder_payload,
         year=year,

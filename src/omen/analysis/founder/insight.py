@@ -8,7 +8,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.config import load_llm_config
-from omen.ingest.llm_ontology.dimension_loaders import load_founder_dimensions
+from omen.ingest.llm_ontology.dimension_loaders import load_actor_dimensions
 from omen.ingest.llm_ontology.prompt_registry import get_analyze_prompt_version_token
 from omen.ingest.llm_ontology.prompts import (
     build_founder_gap_prompt,
@@ -543,7 +543,7 @@ def generate_unified_insight(
     profile = founder_actor.get("profile", {})
 
     profile_dict = profile if isinstance(profile, dict) else {}
-    loaded_dimensions = load_founder_dimensions(profile_dict)
+    loaded_dimensions = load_actor_dimensions(profile_dict)
     mental_patterns = loaded_dimensions.get("mental_patterns") or {}
     strategic_style = loaded_dimensions.get("strategic_style") or {}
     core_beliefs = [str(item) for item in (mental_patterns.get("core_beliefs") or []) if str(item).strip()]

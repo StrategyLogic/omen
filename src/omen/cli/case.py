@@ -8,8 +8,8 @@ from typing import Any
 
 from omen.analysis.founder.formation import build_strategic_formation_chain
 from omen.analysis.founder.insight import generate_persona_insight, generate_unified_insight, generate_why_insight
-from omen.analysis.founder.query import build_status_snapshot
-from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
+from omen.analysis.founder.query import build_events_snapshot
+from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
@@ -210,7 +210,7 @@ def handle_case_command(args: Any) -> int:
             strategy_payload = json.loads(strategy_path.read_text(encoding="utf-8"))
             founder_payload = json.loads(founder_path.read_text(encoding="utf-8"))
 
-            status_payload = build_status_snapshot(
+            status_payload = build_events_snapshot(
                 strategy_ontology=strategy_payload,
                 founder_ontology=founder_payload,
                 year=args.year,
@@ -417,7 +417,7 @@ def handle_case_command(args: Any) -> int:
     emit("strategy_generation", "PASSED", f"validation_passed={generation.validation_passed}")
 
     emit("slice_generation", "STARTED", "generating founder ontology + timeline events")
-    founder_payload, timeline_events = generate_founder_and_events_from_document(
+    founder_payload, timeline_events = generate_actor_and_events_from_document(
         document_path=args.document,
         case_id=case_id,
         title=title,

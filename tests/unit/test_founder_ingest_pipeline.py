@@ -1,8 +1,9 @@
 import json
 
+from omen.ingest.llm_ontology import actor_builder
 from omen.ingest.llm_ontology.event_builder import extract_timeline_events
-from omen.ingest.llm_ontology.founder_actor_enhancer import enhance_actor_decision_relationships
-from omen.ingest.llm_ontology.founder_builder import extract_founder_ontology
+from omen.ingest.llm_ontology.actor_enhancer import enhance_actor_decision_relationships
+from omen.ingest.llm_ontology.actor_builder import extract_actor_ontology
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
@@ -29,13 +30,13 @@ def _dummy_case() -> CaseDocument:
 
 
 def test_event_and_founder_extractors_fallback_without_llm(monkeypatch):
-    from omen.ingest.llm_ontology import event_builder, founder_builder
+    from omen.ingest.llm_ontology import event_builder
 
     def _raise(_config):
         raise RuntimeError("offline")
 
     monkeypatch.setattr(event_builder, "create_chat_client", _raise)
-    monkeypatch.setattr(founder_builder, "create_chat_client", _raise)
+    monkeypatch.setattr(actor_builder, "create_chat_client", _raise)
 
     case_doc = _dummy_case()
     config = _dummy_config()
@@ -48,7 +49,7 @@ def test_event_and_founder_extractors_fallback_without_llm(monkeypatch):
     assert "description" in events[0]
     assert events[0]["event"] in {"launch", "release", "pilot", "pricing", "expansion", "other"}
 
-    founder = extract_founder_ontology(
+    founder = extract_actor_ontology(
         case_doc=case_doc,
         chunks=chunks,
         config=config,
@@ -85,7 +86,7 @@ def test_strategy_assembler_attaches_events_and_founder_ref():
 
 
 def test_enhance_actor_decision_relationships_excludes_founder_actor(monkeypatch):
-    from omen.ingest.llm_ontology import founder_actor_enhancer
+    from omen.ingest.llm_ontology import actor_enhancer
 
     class _DummyResponse:
         def __init__(self, content: str) -> None:
@@ -107,7 +108,7 @@ def test_enhance_actor_decision_relationships_excludes_founder_actor(monkeypatch
                 )
             )
 
-    monkeypatch.setattr(founder_actor_enhancer, "create_chat_client", lambda _config: _DummyChat())
+    monkeypatch.setattr(actor_enhancer, "create_chat_client", lambda _config: _DummyChat())
 
     founder_ontology = {
         "meta": {"case_id": "x-developer"},
@@ -148,7 +149,7 @@ def test_enhance_actor_decision_relationships_excludes_founder_actor(monkeypatch
 
 
 def test_enhance_actor_decision_relationships_infers_company_as_founder_when_missing_flag(monkeypatch):
-    from omen.ingest.llm_ontology import founder_actor_enhancer
+    from omen.ingest.llm_ontology import actor_enhancer
 
     class _DummyResponse:
         def __init__(self, content: str) -> None:
@@ -176,7 +177,7 @@ def test_enhance_actor_decision_relationships_infers_company_as_founder_when_mis
                 )
             )
 
-    monkeypatch.setattr(founder_actor_enhancer, "create_chat_client", lambda _config: _DummyChat())
+    monkeypatch.setattr(actor_enhancer, "create_chat_client", lambda _config: _DummyChat())
 
     founder_ontology = {
         "meta": {"case_id": "x-developer"},
@@ -213,7 +214,7 @@ def test_enhance_actor_decision_relationships_infers_company_as_founder_when_mis
 
 
 def test_extract_founder_ontology_moves_product_like_actor_to_products(monkeypatch):
-    from omen.ingest.llm_ontology import founder_builder
+    from omen.ingest.llm_ontology import actor_builder
 
     class _DummyResponse:
         def __init__(self, content: str) -> None:
@@ -234,9 +235,9 @@ def test_extract_founder_ontology_moves_product_like_actor_to_products(monkeypat
             }
             return _DummyResponse(json.dumps(payload, ensure_ascii=False))
 
-    monkeypatch.setattr(founder_builder, "create_chat_client", lambda _config: _DummyChat())
+    monkeypatch.setattr(actor_builder, "create_chat_client", lambda _config: _DummyChat())
 
-    founder = extract_founder_ontology(
+    founder = extract_actor_ontology(
         case_doc=_dummy_case(),
         chunks=[_dummy_case().raw_text],
         config=_dummy_config(),

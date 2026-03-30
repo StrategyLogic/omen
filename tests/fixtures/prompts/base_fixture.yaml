@@ -7,7 +7,7 @@ templates:
   timeline_events_prompt: |
     Timeline extract for [[case_id]] with excerpt: [[excerpt]]
   persona_insight: |
-    Founder persona analysis template.
+    Strategic persona analysis template.
 prompt_meta:
   system_prompt:
     id: base.system_prompt

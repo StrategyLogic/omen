@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from omen.ingest.llm_ontology.founder_builder import founder_hash
+from omen.ingest.llm_ontology.actor_builder import founder_hash
 
 
 def _build_identity_map(founder_ontology: dict[str, Any]) -> dict[str, str]:

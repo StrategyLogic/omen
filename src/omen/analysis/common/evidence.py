@@ -1,4 +1,4 @@
-"""Evidence helpers for founder analysis outputs."""
+"""Evidence helpers for analysis outputs."""
 
 from __future__ import annotations
 

@@ -16,7 +16,7 @@ import streamlit as st
 from omen.analysis.founder.formation import build_strategic_formation_chain
 from omen.analysis.founder.insight import generate_unified_insight
 from omen.analysis.founder.query import build_status_snapshot
-from omen.ingest.llm_ontology.founder_service import generate_founder_and_events_from_document
+from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
 from omen.ingest.llm_ontology.strategy_assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
@@ -29,7 +29,7 @@ from omen.ui.case_catalog import (
     suggest_strategy,
 )
 from omen.ui.formation_graph import build_formation_chain_figure
-from omen.ui.founder_graph import build_founder_graph_figure
+from omen.ui.actor_graph import build_actor_graph_figure
 from omen.ui.ontology_graph import build_ontology_graph_figure
 
 
@@ -156,7 +156,7 @@ UI_TEXT: dict[str, dict[str, str]] = {
     "zh": {
         "language_selector": "Language / 语言",
         "sidebar_title": "Omen 战略推演引擎",
-        "sidebar_intro": "Omen 是一个开源的战略推演引擎，帮助决策者理清复杂现象背后的逻辑，提供可追溯、可解释、可推演的战略洞察。",
+        "sidebar_intro": "Omen 是一个开源的战略推演引擎，帮助决策者理清复杂现象背后的逻辑，不仅提供结论，更提供可追溯、可解释、可推演的战略洞察。",
         "no_cases_found": "在 cases/founder/*.md 下未找到创始人案例",
         "case_context": "选择案例",
         "settings": "设置",
@@ -709,7 +709,7 @@ def _run_omen_pipeline(
     if generation.inferred_known_outcome:
         st.session_state.spec6_pending_known_outcome_updates[case_id] = generation.inferred_known_outcome
 
-    founder_payload, timeline_events = generate_founder_and_events_from_document(
+    founder_payload, timeline_events = generate_actor_and_events_from_document(
         document_path=document_path,
         case_id=case_id,
         title=title,
@@ -1390,7 +1390,7 @@ if st.session_state.spec6_insight_payload:
 if st.session_state.spec6_status_payload:
     st.divider()
     st.subheader(_t("influence_graph"))
-    founder_fig = build_founder_graph_figure(st.session_state.spec6_status_payload)
+    founder_fig = build_actor_graph_figure(st.session_state.spec6_status_payload)
     st.plotly_chart(founder_fig, use_container_width=True)
 
 if st.session_state.spec6_status_payload:

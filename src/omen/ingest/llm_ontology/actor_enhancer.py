@@ -1,4 +1,4 @@
-"""Semantic enhancement for non-founder actor decision relationships.
+"""Semantic enhancement for actor decision relationships.
 
 Rules:
 - Exclude founder actor from enhancement.

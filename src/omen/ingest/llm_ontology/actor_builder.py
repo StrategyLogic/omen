@@ -1,4 +1,4 @@
-"""Build-time founder ontology extraction for case replay."""
+"""Build-time actor ontology extraction."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
-from omen.ingest.llm_ontology.prompts import build_founder_ontology_prompt
+from omen.ingest.llm_ontology.prompts import build_actor_ontology_prompt
 from omen.models.case_replay_models import CaseDocument, LLMConfig
 
 
@@ -44,7 +44,7 @@ def _extract_json_object(text: str) -> dict[str, Any]:
         raise ValueError("LLM response does not contain a JSON object")
     payload = json.loads(text[start : end + 1])
     if not isinstance(payload, dict):
-        raise ValueError("founder payload is not a JSON object")
+        raise ValueError("actor payload is not a JSON object")
     return payload
 
 
@@ -317,7 +317,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
     return normalized
 
 
-def extract_founder_ontology(
+def extract_actor_ontology(
     *,
     case_doc: CaseDocument,
     chunks: list[str],
@@ -326,7 +326,7 @@ def extract_founder_ontology(
 ) -> dict[str, Any]:
     excerpt = "\n\n---\n\n".join(chunks[: min(len(chunks), config.max_chunks)])
     timeline_json = json.dumps(timeline_events[:20], ensure_ascii=False)
-    prompt = build_founder_ontology_prompt(case_doc, excerpt, timeline_json)
+    prompt = build_actor_ontology_prompt(case_doc, excerpt, timeline_json)
 
     try:
         chat = create_chat_client(config)

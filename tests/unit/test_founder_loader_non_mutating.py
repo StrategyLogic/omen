@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 
 from omen.analysis.founder.loader import validate_founder_ref
-from omen.ingest.llm_ontology.founder_builder import founder_hash
+from omen.ingest.llm_ontology.actor_builder import founder_hash
 
 
 def test_validate_founder_ref_does_not_mutate_strategy_or_founder_payloads() -> None:

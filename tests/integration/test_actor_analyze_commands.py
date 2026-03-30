@@ -19,10 +19,10 @@ class _FakeGeneration:
 
 @pytest.fixture
 def actor_case_file(tmp_path: Path) -> Path:
-    case_dir = tmp_path / "cases" / "founder"
+    case_dir = tmp_path / "cases" / "actors"
     case_dir.mkdir(parents=True, exist_ok=True)
     doc = case_dir / "xd.md"
-    doc.write_text("founder narrative", encoding="utf-8")
+    doc.write_text("actor narrative", encoding="utf-8")
     return doc
 
 
@@ -104,14 +104,3 @@ def test_actor_cloud_only_subcommands_return_guidance(tmp_path: Path, actor_case
     captured = capsys.readouterr()
     assert exc.value.code == 0
     assert "Cloud-only" in captured.out
-
-
-def test_founder_analyze_entrypoint_is_rejected(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(sys, "argv", ["omen", "analyze", "founder", "--doc", "xd"])
-
-    with pytest.raises(SystemExit) as exc:
-        main()
-
-    captured = capsys.readouterr()
-    assert exc.value.code == 2
-    assert "retired in Spec 7 OSS baseline" in captured.out

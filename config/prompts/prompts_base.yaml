@@ -9,8 +9,8 @@ prompt_meta:
   timeline_events_prompt:
     id: base.timeline_events_prompt
     version: 1.0.0
-  founder_ontology_prompt:
-    id: base.founder_ontology_prompt
+  actor_ontology_prompt:
+    id: base.actor_ontology_prompt
     version: 1.0.0
   actor_semantic_enhancement_prompt:
     id: base.actor_semantic_enhancement_prompt
@@ -149,14 +149,14 @@ prompts:
     Content:
     [[excerpt]]
 
-  founder_ontology_prompt: |
+  actor_ontology_prompt: |
     You are an ontology extraction assistant.
-    Build founder_ontology JSON only (v0.1.0-founder-centric).
+    Build actor_ontology JSON only (v0.1.0-actor-centric).
 
     Required top-level keys:
     - meta (version, case_id, slice)
     - identity (shared_ids)
-    - actors (detailed founder profile)
+    - actors (detailed actor profiles)
     - products (product/platform/tool assets)
     - events (strategic points)
     - influences (causal relationships)

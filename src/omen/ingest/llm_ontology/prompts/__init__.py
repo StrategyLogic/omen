@@ -51,12 +51,12 @@ def build_timeline_events_prompt(doc: CaseDocument, excerpt: str) -> str:
     )
 
 
-def build_founder_ontology_prompt(
+def build_actor_ontology_prompt(
     doc: CaseDocument,
     excerpt: str,
     timeline_json: str,
 ) -> str:
-    template = get_prompt_template("founder_ontology_prompt", tier="base")
+    template = get_prompt_template("actor_ontology_prompt", tier="base")
     return _render_template(
         template,
         {

@@ -1,4 +1,4 @@
-from omen.analysis.founder.query import build_status_snapshot
+from omen.analysis.founder.query import build_events_snapshot
 
 
 def test_build_status_snapshot_filters_timeline_and_builds_graph():
@@ -45,7 +45,7 @@ def test_build_status_snapshot_filters_timeline_and_builds_graph():
         ],
     }
 
-    payload = build_status_snapshot(
+    payload = build_events_snapshot(
         strategy_ontology=strategy_ontology,
         founder_ontology=founder_ontology,
         year=2016,
@@ -89,7 +89,7 @@ def test_build_status_snapshot_falls_back_to_founder_timeline_when_strategy_even
         "influences": [],
     }
 
-    payload = build_status_snapshot(
+    payload = build_events_snapshot(
         strategy_ontology=strategy_ontology,
         founder_ontology=founder_ontology,
         year=2016,
@@ -118,7 +118,7 @@ def test_build_status_snapshot_uses_legacy_content_when_description_missing():
         "influences": [],
     }
 
-    payload = build_status_snapshot(
+    payload = build_events_snapshot(
         strategy_ontology=strategy_ontology,
         founder_ontology=founder_ontology,
         year=2016,
@@ -148,7 +148,7 @@ def test_build_founder_graph_uses_only_explicit_edges_and_keeps_all_nodes():
         "influences": [],
     }
 
-    payload = build_status_snapshot(
+    payload = build_events_snapshot(
         strategy_ontology=strategy_ontology,
         founder_ontology=founder_ontology,
         year=None,
@@ -184,7 +184,7 @@ def test_build_founder_graph_handles_legacy_constraint_event_influence_keys():
         ],
     }
 
-    payload = build_status_snapshot(
+    payload = build_events_snapshot(
         strategy_ontology=strategy_ontology,
         founder_ontology=founder_ontology,
         year=None,
@@ -227,7 +227,7 @@ def test_build_founder_graph_adds_constraint_edge_to_founder_by_default():
         "influences": [],
     }
 
-    payload = build_status_snapshot(
+    payload = build_events_snapshot(
         strategy_ontology=strategy_ontology,
         founder_ontology=founder_ontology,
         year=None,

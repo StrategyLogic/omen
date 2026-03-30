@@ -128,7 +128,7 @@ def _filter_strategy_events(
             continue
         event_name = str(event.get("name") or event.get("event") or event.get("type") or "").strip() or "unknown"
         description = _event_description_text(event)
-        evidence_refs = event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else []
+        evidence_refs = event.get("evidence_refs") or []
         items.append(
             _timeline_row(
                 event_id=str(event.get("id") or event.get("event_id") or "").strip() or "unknown",
@@ -142,9 +142,9 @@ def _filter_strategy_events(
     return items
 
 
-def _timeline_from_founder_events(founder_events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _timeline_from_actor_events(actor_events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     timeline: list[dict[str, Any]] = []
-    for event in founder_events:
+    for event in actor_events:
         event_id = str(event.get("id") or "").strip()
         event_name = str(event.get("name") or "").strip()
         event_description = _event_description_text(event)
@@ -157,7 +157,7 @@ def _timeline_from_founder_events(founder_events: list[dict[str, Any]]) -> list[
             )
             event_name = event_type
 
-        evidence_refs = event.get("evidence_refs") if isinstance(event.get("evidence_refs"), list) else []
+        evidence_refs = event.get("evidence_refs") or []
         timeline.append(
             _timeline_row(
                 event_id=event_id or "unknown",
@@ -261,7 +261,7 @@ def _pick_founder_actor_id(actors: list[dict[str, Any]], case_id: str | None = N
     return str(best.get("id") or "").strip()
 
 
-def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_actor_graph(founder_ontology: dict[str, Any], founder_events: list[dict[str, Any]]) -> dict[str, Any]:
     nodes: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
     case_meta = founder_ontology.get("meta") or {}
@@ -433,7 +433,7 @@ def _build_founder_graph(founder_ontology: dict[str, Any], founder_events: list[
     return {"nodes": dedup_nodes, "edges": dedup_edges}
 
 
-def build_status_snapshot(
+def build_events_snapshot(
     *,
     strategy_ontology: dict[str, Any],
     founder_ontology: dict[str, Any],
@@ -444,13 +444,13 @@ def build_status_snapshot(
     founder_events = _filter_founder_events(founder_ontology, year=year, date=date)
     
     # We prefer to build timeline from founder ontology to ensure 'name' matches canonical event name
-    timeline_events = _timeline_from_founder_events(founder_events)
+    timeline_events = _timeline_from_actor_events(founder_events)
     
     # If founder ontology is empty for some reason, fallback to strategy ontology ABOX events
     if not timeline_events:
         timeline_events = _filter_strategy_events(strategy_ontology, year=year, date=date)
         
-    founder_graph = _build_founder_graph(founder_ontology, founder_events)
+    founder_graph = _build_actor_graph(founder_ontology, founder_events)
 
     return {
         "query": {

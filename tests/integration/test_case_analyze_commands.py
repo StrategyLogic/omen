@@ -116,10 +116,6 @@ def test_case_analyze_why_writes_output(tmp_path: Path, monkeypatch) -> None:
             "xd",
             "--decision-id",
             "event-2",
-            "--output-dir",
-            str(output_root),
-            "--config",
-            str(tmp_path / "missing-llm.toml"),
         ],
     )
 
@@ -127,21 +123,12 @@ def test_case_analyze_why_writes_output(tmp_path: Path, monkeypatch) -> None:
         main()
 
     assert exc.value.code == 0
-    payload = json.loads((case_dir / "analyze_why.json").read_text(encoding="utf-8"))
-    assert payload["query"]["type"] == "why"
-    assert payload["query"]["decision_id"] == "event-2"
-    assert len(payload["why_chain"]) >= 3
-    assert payload["run_meta"]["prompt_version"] == "pro.founder_why@1.0.0"
+    assert not (case_dir / "analyze_why.json").exists()
 
 
-def test_case_analyze_formation_fails_when_pro_prompt_is_unavailable(tmp_path: Path, monkeypatch) -> None:
+def test_case_analyze_formation_is_cloud_only_in_oss(tmp_path: Path, monkeypatch) -> None:
     output_root = tmp_path / "output" / "case_replay"
-    _write_case_artifacts(output_root)
-
-    def _raise_unavailable(command: str):
-        raise FileNotFoundError(f"missing prompt pack for {command}")
-
-    monkeypatch.setattr("omen.cli.case.ensure_analyze_prompt_available", _raise_unavailable)
+    case_dir = _write_case_artifacts(output_root)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -154,12 +141,11 @@ def test_case_analyze_formation_fails_when_pro_prompt_is_unavailable(tmp_path: P
             "xd",
             "--event-id",
             "event-1",
-            "--output-dir",
-            str(output_root),
         ],
     )
 
     with pytest.raises(SystemExit) as exc:
         main()
 
-    assert exc.value.code == 2
+    assert exc.value.code == 0
+    assert not (case_dir / "analyze_formation.json").exists()

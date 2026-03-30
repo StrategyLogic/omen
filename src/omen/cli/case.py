@@ -6,8 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.analysis.case.formation import build_strategic_formation_chain
-from omen.analysis.case.insight import generate_persona_insight, generate_unified_insight, generate_why_insight
+from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
 from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
@@ -68,26 +67,9 @@ def register_case_commands(subparsers: Any) -> None:
         help="Optional output JSON path for analyze status payload",
     )
 
-    why = analyze_sub.add_parser("why", help="show decision attribution")
+    why = analyze_sub.add_parser("why", help="Cloud-only in OSS baseline")
     why.add_argument("--case-id", required=True, help="Case identifier")
     why.add_argument("--decision-id", required=True, help="Decision node id")
-    why.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML",
-    )
-    why.add_argument(
-        "--output-dir",
-        required=False,
-        default="output/case_replay",
-        help="Root output directory",
-    )
-    why.add_argument(
-        "--output",
-        required=False,
-        help="Optional output JSON path for analyze why payload",
-    )
 
     persona = analyze_sub.add_parser("persona", help="show subjective founder persona")
     persona.add_argument("--case-id", required=True, help="Case identifier")
@@ -110,47 +92,13 @@ def register_case_commands(subparsers: Any) -> None:
         help="Optional output JSON path for analyze persona payload",
     )
 
-    formation = analyze_sub.add_parser("formation", help="trace strategic formation chain")
+    formation = analyze_sub.add_parser("formation", help="Cloud-only in OSS baseline")
     formation.add_argument("--case-id", required=True, help="Case identifier")
     formation.add_argument("--event-id", required=True, help="Target event id")
-    formation.add_argument(
-        "--output-dir",
-        required=False,
-        default="output/case_replay",
-        help="Root output directory",
-    )
-    formation.add_argument(
-        "--output",
-        required=False,
-        help="Optional output JSON path for analyze formation payload",
-    )
-    formation.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML",
-    )
 
-    insight = analyze_sub.add_parser("insight", help="unified deep insight (persona + gaps)")
+    insight = analyze_sub.add_parser("insight", help="Cloud-only in OSS baseline")
     insight.add_argument("--case-id", required=True, help="Case identifier")
     insight.add_argument("--event-id", required=False, help="Optional event ID for gap context")
-    insight.add_argument(
-        "--output-dir",
-        required=False,
-        default="output/case_replay",
-        help="Root output directory",
-    )
-    insight.add_argument(
-        "--output",
-        required=False,
-        help="Optional output JSON path for unified insight",
-    )
-    insight.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML for insight enhancement",
-    )
 
 
 def _generation_report_payload(
@@ -194,6 +142,13 @@ def handle_case_command(args: Any) -> int:
         print(f"[CASE-BUILD][{step}][{status}] {message}", flush=True)
 
     if args.case_command == "analyze":
+        if args.analyze_command in {"why", "formation", "insight"}:
+            print(
+                f"Case analyze sub-command `{args.analyze_command}` is Cloud-only in OSS baseline. "
+                "Use `omen case analyze status` or `omen case analyze persona` for local flow."
+            )
+            return 0
+
         if args.analyze_command == "status":
             case_id = normalize_case_id(args.case_id)
             case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
@@ -257,117 +212,6 @@ def handle_case_command(args: Any) -> int:
                 encoding="utf-8",
             )
             print(f"Saved analyze persona payload to {output_path}")
-            return 0
-
-        if args.analyze_command == "why":
-            try:
-                ensure_analyze_prompt_available("why")
-                case_id = normalize_case_id(args.case_id)
-                case_dir, strategy_payload, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
-            except Exception as exc:
-                print(f"Analyze why is unavailable: {exc}")
-                return 2
-
-            try:
-                why_payload = generate_why_insight(
-                    case_id=case_id,
-                    founder_ontology=founder_payload,
-                    strategy_ontology=strategy_payload,
-                    decision_id=str(args.decision_id).strip(),
-                    config_path=args.config,
-                )
-            except Exception as exc:
-                print(f"Analyze why failed: {exc}")
-                return 2
-
-            output_path = Path(args.output) if args.output else case_dir / "analyze_why.json"
-            output_path.write_text(
-                json.dumps(why_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            print(f"Saved analyze why payload to {output_path}")
-            return 0
-
-        if args.analyze_command == "formation":
-            from omen.analysis.case.llm_enhance import enhance_formation_with_narrative
-
-            try:
-                ensure_analyze_prompt_available("formation")
-                case_id = normalize_case_id(args.case_id)
-                case_dir, _, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
-            except Exception as exc:
-                print(f"Analyze formation is unavailable: {exc}")
-                return 2
-            try:
-                formation_payload = build_strategic_formation_chain(
-                    founder_ontology=founder_payload,
-                    target_event_id=str(args.event_id).strip(),
-                )
-
-                # Add narrative enhancement (US2/T025)
-                # In this phase, we use the skeleton narrative if no LLM config is passed
-                formation_payload = enhance_formation_with_narrative(formation_payload)
-
-            except Exception as exc:
-                print(f"Analyze formation failed: {exc}")
-                return 2
-
-            output_path = Path(args.output) if args.output else case_dir / "analyze_formation.json"
-            output_path.write_text(
-                json.dumps(formation_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            summary = formation_payload.get("summary") or {}
-            print(f"Saved analyze formation payload to {output_path}")
-            print(
-                "Summary: "
-                f"founder={summary.get('founder', 'unknown')}, "
-                f"perception_signals={summary.get('perception_signal_count', 0)}, "
-                f"internal_constraints={summary.get('internal_constraint_count', 0)}, "
-                f"external_pressures={summary.get('external_pressure_count', 0)}, "
-                f"execution_delta={summary.get('execution_delta_count', 0)}"
-            )
-            return 0
-
-        if args.analyze_command == "insight":
-            try:
-                ensure_analyze_prompt_available("why")
-                ensure_analyze_prompt_available("insight")
-                if args.event_id:
-                    ensure_analyze_prompt_available("formation")
-                case_id = normalize_case_id(args.case_id)
-                case_dir, strategy_payload, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
-            except Exception as exc:
-                print(f"Analyze insight is unavailable: {exc}")
-                return 2
-            formation_payload = None
-            if args.event_id:
-                try:
-                    formation_payload = build_strategic_formation_chain(
-                        founder_ontology=founder_payload,
-                        target_event_id=str(args.event_id).strip(),
-                    )
-                except Exception as exc:
-                    print(f"Formation tracing for insight failed: {exc}. Proceeding with persona only.")
-
-            try:
-                insight_payload = generate_unified_insight(
-                    case_id=case_id,
-                    founder_ontology=founder_payload,
-                    strategy_ontology=strategy_payload,
-                    formation_payload=formation_payload,
-                    config_path=args.config,
-                )
-            except Exception as exc:
-                print(f"Analyze insight failed: {exc}")
-                return 2
-
-            output_path = Path(args.output) if args.output else case_dir / "analyze_insight.json"
-            output_path.write_text(
-                json.dumps(insight_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            print(f"Saved unified insight payload to {output_path}")
             return 0
 
         print(f"Analyze command `{args.analyze_command}` is not implemented yet.")

@@ -62,7 +62,7 @@ omen ingest-dry-run --scenario data/scenarios/ontology.json --text-file data/ing
 Spec 6 的摄取与分析 prompt 已迁移到 YAML，并按能力层分离：
 
 - `config/prompts/prompts_base.yaml`：公开层（OPEN），用于构建与 `case analyze persona`
-- `config/prompts/prompts_pro.yaml`：增强层（PRO），用于 `case analyze why|formation|insight`
+- `config/prompts/prompts_pro.yaml`：增强层（PRO），仅用于云端能力，不在 OSS 本地命令中暴露
 
 运行时由 `src/omen/ingest/llm_ontology/prompt_registry.py` 完成命令到模板的映射，并从 YAML `prompt_meta` 读取版本信息，写入分析结果中的 `run_meta.prompt_version`。
 

@@ -142,7 +142,7 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 ```bash
 omen analyze actor --doc x-developer --config config/llm.toml
 streamlit run app/strategic_actor.py
-omen validate actor --case x-developer --output-dir output/actors
+omen validate actor --doc x-developer --output-dir output/actors
 ```
 
 ### 查看运行结果

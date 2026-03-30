@@ -5,7 +5,7 @@
 Case-level validation:
 
 ```bash
-omen validate actor --case <case-id> --output-dir output/actors
+omen validate actor --doc <doc_name> --output-dir output/actors
 ```
 
 Single-file validation:

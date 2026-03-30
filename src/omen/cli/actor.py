@@ -85,7 +85,11 @@ def register_validate_commands(subparsers: Any) -> None:
     validate_sub = validate.add_subparsers(dest="validate_object", required=True)
 
     actor = validate_sub.add_parser("actor", help="validate actor artifacts")
-    actor.add_argument("--case", required=False, help="Case id under output root")
+    actor.add_argument(
+        "--doc",
+        required=False,
+        help="Document name or path. Bare names resolve to case id by stem",
+    )
     actor.add_argument("--file", required=False, help="Single file to validate")
     actor.add_argument("--output-dir", required=False, default=ACTOR_DEFAULT_OUTPUT_ROOT)
 
@@ -292,8 +296,8 @@ def handle_validate_command(args: Any) -> int:
         print(f"Validate object `{args.validate_object}` is not supported")
         return 3
 
-    if bool(args.case) == bool(args.file):
-        print("Provide exactly one of --case or --file")
+    if bool(args.doc) == bool(args.file):
+        print("Provide exactly one of --doc or --file")
         return 2
 
     try:
@@ -311,7 +315,8 @@ def handle_validate_command(args: Any) -> int:
             print(json.dumps(report, ensure_ascii=False, indent=2))
             return 0 if report["status"] == "pass" else 2
 
-        case_dir = ensure_actor_output_dir(args.case, output_root=args.output_dir)
+        case_id = normalize_case_id(args.doc)
+        case_dir = ensure_actor_output_dir(case_id, output_root=args.output_dir)
         actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
         strategy_path = case_dir / STRATEGY_ONTOLOGY_FILENAME
         errors: list[dict[str, Any]] = []

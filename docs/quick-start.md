@@ -208,7 +208,7 @@ streamlit run app/strategic_actor.py
 ### 3) 执行 actor 合同校验
 
 ```bash
-omen validate actor --case x-developer --output-dir output/actors
+omen validate actor --doc x-developer --output-dir output/actors
 ```
 
 ### 4) Cloud-only 边界提示验证

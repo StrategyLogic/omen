@@ -103,4 +103,4 @@ def test_actor_cloud_only_subcommands_return_guidance(tmp_path: Path, actor_case
 
     captured = capsys.readouterr()
     assert exc.value.code == 0
-    assert "Cloud-only" in captured.out
+    assert "not available in this edition" in captured.out

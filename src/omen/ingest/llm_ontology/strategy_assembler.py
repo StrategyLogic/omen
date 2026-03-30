@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from omen.ingest.llm_ontology.actor_builder import founder_hash
+from omen.ingest.llm_ontology.actor_builder import actor_hash
 
 
 def _build_identity_map(founder_ontology: dict[str, Any]) -> dict[str, str]:
@@ -62,7 +62,7 @@ def attach_founder_ref(
     payload["founder_ref"] = {
         "path": founder_filename,
         "version": str(founder_meta.get("version") or "1.0.0"),
-        "hash": founder_hash(founder_ontology),
+        "hash": actor_hash(founder_ontology),
         "identity_map": _build_identity_map(founder_ontology),
     }
     return payload
@@ -80,7 +80,7 @@ def attach_actor_ref(
     payload["actor_ref"] = {
         "path": actor_filename,
         "version": str(actor_meta.get("version") or "1.0.0"),
-        "hash": founder_hash(actor_ontology),
+        "hash": actor_hash(actor_ontology),
         "identity_map": _build_identity_map(actor_ontology),
     }
     return payload

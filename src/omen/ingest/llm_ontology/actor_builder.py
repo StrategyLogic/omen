@@ -341,6 +341,6 @@ def extract_actor_ontology(
     return _default_founder(case_doc.case_id, timeline_events)
 
 
-def founder_hash(founder_ontology: dict[str, Any]) -> str:
-    canonical = json.dumps(founder_ontology, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+def actor_hash(actor_ontology: dict[str, Any]) -> str:
+    canonical = json.dumps(actor_ontology, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return f"sha256:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()}"

@@ -359,7 +359,7 @@ def _run_actor_pipeline(
     parsed_date = status_date.strip() or None
     status_payload = build_events_snapshot(
         strategy_ontology=strategy_payload,
-        founder_ontology=actor_payload,
+        actor_ontology=actor_payload,
         year=None,
         date=parsed_date,
     )
@@ -370,7 +370,7 @@ def _run_actor_pipeline(
 
     persona_payload = generate_persona_insight(
         case_id=case_id,
-        founder_ontology=actor_payload,
+        actor_ontology=actor_payload,
         strategy_ontology=strategy_payload,
         config_path=config_path,
         output_language=output_language,

@@ -30,7 +30,7 @@ def _pick_primary_actor(founder_ontology: dict[str, Any]) -> dict[str, Any]:
 def generate_persona_insight(
     *,
     case_id: str,
-    founder_ontology: dict[str, Any],
+    actor_ontology: dict[str, Any],
     strategy_ontology: dict[str, Any] | None = None,
     llm_client: Any = None,
     config_path: str | None = None,
@@ -38,7 +38,7 @@ def generate_persona_insight(
 ) -> dict[str, Any]:
     del strategy_ontology, llm_client, config_path
 
-    actor = _pick_primary_actor(founder_ontology)
+    actor = _pick_primary_actor(actor_ontology)
     actor_name = str(actor.get("name") or "Strategic Actor").strip() or "Strategic Actor"
     profile = actor.get("profile") or {}
     profile_dict = profile if isinstance(profile, dict) else {}

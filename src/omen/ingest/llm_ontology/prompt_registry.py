@@ -30,9 +30,6 @@ class PromptMetadata:
 
 ANALYZE_PROMPT_BINDINGS: dict[str, AnalyzePromptBinding] = {
     "persona": AnalyzePromptBinding(command="persona", tier="base", template_key="persona_insight"),
-    "why": AnalyzePromptBinding(command="why", tier="pro", template_key="founder_why"),
-    "formation": AnalyzePromptBinding(command="formation", tier="pro", template_key="strategic_formation"),
-    "insight": AnalyzePromptBinding(command="insight", tier="pro", template_key="founder_gap"),
 }
 
 

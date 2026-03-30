@@ -80,20 +80,8 @@ def build_actor_semantic_enhancement_prompt(actor_payload_json: str, existing_re
     )
 
 
-def build_strategic_formation_prompt() -> str:
-    return get_prompt_template("strategic_formation", tier="pro").strip()
-
-
 def build_persona_insight_prompt() -> str:
     return get_prompt_template("persona_insight", tier="base").strip()
-
-
-def build_founder_why_prompt() -> str:
-    return get_prompt_template("founder_why", tier="pro").strip()
-
-
-def build_founder_gap_prompt() -> str:
-    return get_prompt_template("founder_gap", tier="pro").strip()
 
 
 def build_json_retry_prompt(base_prompt: str) -> str:

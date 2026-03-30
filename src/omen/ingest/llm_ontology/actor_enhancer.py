@@ -1,7 +1,7 @@
 """Semantic enhancement for actor decision relationships.
 
 Rules:
-- Exclude founder actor from enhancement.
+- Exclude founder from enhancement.
 - Build semantic relations only from actor co-involvement in decision events.
 - Do not use constraints to generate enhancement relations.
 """
@@ -16,7 +16,7 @@ from omen.ingest.llm_ontology.prompts import build_actor_semantic_enhancement_pr
 from omen.models.case_models import LLMConfig
 
 
-def _find_founder_actor_id(actors: list[dict[str, Any]]) -> str:
+def _find_founder_id(actors: list[dict[str, Any]]) -> str:
     for actor in actors:
         actor_id = str(actor.get("id") or "").strip()
         actor_name = str(actor.get("name") or "").lower()
@@ -101,11 +101,11 @@ def _normalize_relation_keys(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def enhance_actor_decision_relationships(
-    founder_ontology: dict[str, Any],
+    actor_ontology: dict[str, Any],
     *,
     config: LLMConfig | None = None,
 ) -> tuple[dict[str, Any], int]:
-    payload = dict(founder_ontology)
+    payload = dict(actor_ontology)
     actors = payload.get("actors") or []
     products = payload.get("products") or []
     actor_dicts = [actor for actor in actors if isinstance(actor, dict)]
@@ -121,10 +121,10 @@ def enhance_actor_decision_relationships(
         if str(p.get("type") or "").lower() == "competitor"
     }
 
-    founder_actor_id = _find_founder_actor_id(actor_dicts)
+    founder_id = _find_founder_id(actor_dicts)
     
     # 0. Exclude Founder from analysis candidates
-    candidate_actor_ids = {aid for aid in actor_ids if aid != founder_actor_id}
+    candidate_actor_ids = {aid for aid in actor_ids if aid != founder_id}
     
     # Combined entity pool for analysis (Excluded-Founder Actors + Competitor Products)
     all_entity_ids = candidate_actor_ids | competitor_product_ids

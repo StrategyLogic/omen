@@ -67,10 +67,6 @@ def register_case_commands(subparsers: Any) -> None:
         help="Optional output JSON path for analyze status payload",
     )
 
-    why = analyze_sub.add_parser("why", help="Cloud-only in OSS baseline")
-    why.add_argument("--case-id", required=True, help="Case identifier")
-    why.add_argument("--decision-id", required=True, help="Decision node id")
-
     persona = analyze_sub.add_parser("persona", help="show subjective founder persona")
     persona.add_argument("--case-id", required=True, help="Case identifier")
     persona.add_argument("--year-range", required=False, help="Year range like 2014:2018")
@@ -91,14 +87,6 @@ def register_case_commands(subparsers: Any) -> None:
         required=False,
         help="Optional output JSON path for analyze persona payload",
     )
-
-    formation = analyze_sub.add_parser("formation", help="Cloud-only in OSS baseline")
-    formation.add_argument("--case-id", required=True, help="Case identifier")
-    formation.add_argument("--event-id", required=True, help="Target event id")
-
-    insight = analyze_sub.add_parser("insight", help="Cloud-only in OSS baseline")
-    insight.add_argument("--case-id", required=True, help="Case identifier")
-    insight.add_argument("--event-id", required=False, help="Optional event ID for gap context")
 
 
 def _generation_report_payload(
@@ -142,13 +130,6 @@ def handle_case_command(args: Any) -> int:
         print(f"[CASE-BUILD][{step}][{status}] {message}", flush=True)
 
     if args.case_command == "analyze":
-        if args.analyze_command in {"why", "formation", "insight"}:
-            print(
-                f"Case analyze sub-command `{args.analyze_command}` is Cloud-only in OSS baseline. "
-                "Use `omen case analyze status` or `omen case analyze persona` for local flow."
-            )
-            return 0
-
         if args.analyze_command == "status":
             case_id = normalize_case_id(args.case_id)
             case_dir = ensure_case_output_dir(case_id, output_root=args.output_dir)
@@ -167,7 +148,7 @@ def handle_case_command(args: Any) -> int:
 
             status_payload = build_events_snapshot(
                 strategy_ontology=strategy_payload,
-                founder_ontology=founder_payload,
+                actor_ontology=founder_payload,
                 year=args.year,
                 date=args.date,
             )
@@ -198,7 +179,7 @@ def handle_case_command(args: Any) -> int:
             try:
                 persona_payload = generate_persona_insight(
                     case_id=case_id,
-                    founder_ontology=founder_payload,
+                    actor_ontology=founder_payload,
                     strategy_ontology=strategy_payload,
                     config_path=args.config,
                 )

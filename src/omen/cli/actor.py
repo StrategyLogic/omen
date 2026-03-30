@@ -111,8 +111,8 @@ def _resolve_doc_path(doc: str) -> Path:
 
 def _cloud_only_message(command: str) -> str:
     return (
-        f"Analyze actor sub-command `{command}` is Cloud-only. "
-        "Use `omen analyze actor` or `omen analyze actor persona` for local flow."
+        f"Analyze actor sub-command `{command}` is not available in this edition. "
+        "Use `omen analyze actor` or `omen analyze actor persona`."
     )
 
 
@@ -203,7 +203,7 @@ def _run_status(
 
     status_payload = build_events_snapshot(
         strategy_ontology=strategy_payload,
-        founder_ontology=actor_payload,
+        actor_ontology=actor_payload,
         year=year,
         date=date,
     )
@@ -222,7 +222,7 @@ def _run_persona(
     ensure_analyze_prompt_available("persona")
     persona_payload = generate_persona_insight(
         case_id=case_id,
-        founder_ontology=actor_payload,
+        actor_ontology=actor_payload,
         strategy_ontology=strategy_payload,
         config_path=config_path,
     )

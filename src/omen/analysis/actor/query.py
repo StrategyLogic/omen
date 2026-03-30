@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 
-def snapshot_by_year(founder_ontology: dict[str, Any], year: int) -> dict[str, Any]:
-    events = founder_ontology.get("events") or []
+def snapshot_by_year(actor_ontology: dict[str, Any], year: int) -> dict[str, Any]:
+    events = actor_ontology.get("events") or []
     year_text = str(year)
     filtered = [event for event in events if year_text in str(event.get("date") or event.get("time") or "")]
     return {
@@ -171,13 +171,13 @@ def _timeline_from_actor_events(actor_events: list[dict[str, Any]]) -> list[dict
     return timeline
 
 
-def _filter_founder_events(
-    founder_ontology: dict[str, Any],
+def _filter_actor_events(
+    actor_ontology: dict[str, Any],
     *,
     year: int | None,
     date: str | None,
 ) -> list[dict[str, Any]]:
-    raw_events = founder_ontology.get("events") or []
+    raw_events = actor_ontology.get("events") or []
     filtered: list[dict[str, Any]] = []
     for event in raw_events:
         if not isinstance(event, dict):
@@ -236,7 +236,7 @@ def _resolve_influence_endpoint(
     return ""
 
 
-def _pick_founder_actor_id(actors: list[dict[str, Any]], case_id: str | None = None) -> str:
+def _pick_founder_id(actors: list[dict[str, Any]], case_id: str | None = None) -> str:
     if not actors:
         return ""
 
@@ -261,15 +261,15 @@ def _pick_founder_actor_id(actors: list[dict[str, Any]], case_id: str | None = N
     return str(best.get("id") or "").strip()
 
 
-def _build_actor_graph(founder_ontology: dict[str, Any], founder_events: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_actor_graph(actor_ontology: dict[str, Any], actor_events: list[dict[str, Any]]) -> dict[str, Any]:
     nodes: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
-    case_meta = founder_ontology.get("meta") or {}
+    case_meta = actor_ontology.get("meta") or {}
     case_id = str(case_meta.get("case_id") or "").strip() or None
 
-    actors = founder_ontology.get("actors") or []
+    actors = actor_ontology.get("actors") or []
     actor_dicts = [item for item in actors if isinstance(item, dict)]
-    founder_actor_id = _pick_founder_actor_id(actor_dicts, case_id=case_id)
+    founder_id = _pick_founder_id(actor_dicts, case_id=case_id)
     for actor in actors:
         if not isinstance(actor, dict):
             continue
@@ -281,20 +281,20 @@ def _build_actor_graph(founder_ontology: dict[str, Any], founder_events: list[di
                 "id": actor_id,
                 "label": (
                     f"{str(actor.get('name') or actor_id)} (Founder)"
-                    if actor_id == founder_actor_id
+                    if actor_id == founder_id
                     else str(actor.get("name") or actor_id)
                 ),
                 "node_type": (
-                    "founder_actor" if actor_id == founder_actor_id
+                    "founder_actor" if actor_id == founder_id
                     else "competitor" if str(actor.get("type") or "").lower() == "competitor"
                     else "customer" if str(actor.get("type") or "").lower() == "customer"
                     else "actor"
                 ),
-                "is_founder": actor_id == founder_actor_id,
+                "is_founder": actor_id == founder_id,
             }
         )
 
-    products = founder_ontology.get("products") or []
+    products = actor_ontology.get("products") or []
     for product in products:
         if not isinstance(product, dict):
             continue
@@ -309,7 +309,7 @@ def _build_actor_graph(founder_ontology: dict[str, Any], founder_events: list[di
             }
         )
 
-    for event in founder_events:
+    for event in actor_events:
         event_id = str(event.get("id") or "").strip()
         if not event_id:
             continue
@@ -337,7 +337,7 @@ def _build_actor_graph(founder_ontology: dict[str, Any], founder_events: list[di
                 }
             )
 
-    constraints = founder_ontology.get("constraints") or []
+    constraints = actor_ontology.get("constraints") or []
     for constraint in constraints:
         if not isinstance(constraint, dict):
             continue
@@ -366,20 +366,20 @@ def _build_actor_graph(founder_ontology: dict[str, Any], founder_events: list[di
                     "weight": 1.0,
                 }
             )
-            if actor_token == founder_actor_id:
+            if actor_token == founder_id:
                 linked_founder = True
 
-        if founder_actor_id and not linked_founder:
+        if founder_id and not linked_founder:
             edges.append(
                 {
                     "source": cid,
-                    "target": founder_actor_id,
+                    "target": founder_id,
                     "label": "constraints",
                     "weight": 1.0,
                 }
             )
 
-    influences = founder_ontology.get("influences") or []
+    influences = actor_ontology.get("influences") or []
     known_node_ids = {node["id"] for node in nodes if isinstance(node, dict) and node.get("id")}
     for influence in influences:
         if not isinstance(influence, dict):
@@ -436,21 +436,21 @@ def _build_actor_graph(founder_ontology: dict[str, Any], founder_events: list[di
 def build_events_snapshot(
     *,
     strategy_ontology: dict[str, Any],
-    founder_ontology: dict[str, Any],
+    actor_ontology: dict[str, Any],
     year: int | None = None,
     date: str | None = None,
 ) -> dict[str, Any]:
-    # Founder events carry the canonical source names/IDs
-    founder_events = _filter_founder_events(founder_ontology, year=year, date=date)
+    # Actor events carry the canonical source names/IDs
+    actor_events = _filter_actor_events(actor_ontology, year=year, date=date)
     
-    # We prefer to build timeline from founder ontology to ensure 'name' matches canonical event name
-    timeline_events = _timeline_from_actor_events(founder_events)
+    # We prefer to build timeline from actor ontology to ensure 'name' matches canonical event name
+    timeline_events = _timeline_from_actor_events(actor_events)
     
-    # If founder ontology is empty for some reason, fallback to strategy ontology ABOX events
+    # If actor ontology is empty for some reason, fallback to strategy ontology ABOX events
     if not timeline_events:
         timeline_events = _filter_strategy_events(strategy_ontology, year=year, date=date)
         
-    founder_graph = _build_actor_graph(founder_ontology, founder_events)
+    actor_graph = _build_actor_graph(actor_ontology, actor_events)
 
     return {
         "query": {
@@ -459,12 +459,12 @@ def build_events_snapshot(
             "date": date,
         },
         "timeline": timeline_events,
-        "founder_graph": founder_graph,
+        "founder_graph": actor_graph,
         "summary": {
             "timeline_event_count": len(timeline_events),
-            "founder_event_count": len(founder_events),
-            "founder_node_count": len(founder_graph.get("nodes") or []),
-            "founder_edge_count": len(founder_graph.get("edges") or []),
+            "founder_event_count": len(actor_events),
+            "founder_node_count": len(actor_graph.get("nodes") or []),
+            "founder_edge_count": len(actor_graph.get("edges") or []),
         },
     }
 

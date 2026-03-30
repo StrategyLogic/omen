@@ -211,15 +211,6 @@ streamlit run app/strategic_actor.py
 omen validate actor --doc x-developer --output-dir output/actors
 ```
 
-### 4) Cloud-only 边界提示验证
-
-```bash
-omen analyze actor strategy --doc x-developer
-omen analyze actor insight --doc x-developer
-```
-
-预期行为：返回 Cloud-only 提示，不生成本地深度洞察文件。
-
 ## Spec 6（案例复盘）快速验证
 
 ### 1) 安装 Spec 6 依赖
@@ -283,7 +274,7 @@ streamlit run app/case_analysis.py
   - `config/prompts/prompts_pro.yaml`
 2. 命令分层：
   - OPEN: `omen case analyze persona`
-  - PRO: `why|formation|insight` 为云端能力，OSS 本地命令不暴露
+  - 当前本地命令仅发布 OPEN 能力
 3. 分析结果中的 `run_meta.prompt_version` 应显示为 `<prompt_id>@<version>`，例如：
   - `base.persona_insight@1.0.0`
 

@@ -7,7 +7,6 @@ from typing import Callable
 from omen.ingest.llm_ontology.config import load_llm_config
 from omen.ingest.llm_ontology.document_loader import chunk_case_document, load_case_document
 from omen.ingest.llm_ontology.event_builder import extract_timeline_events
-from omen.ingest.llm_ontology.actor_enhancer import enhance_actor_decision_relationships
 from omen.ingest.llm_ontology.actor_builder import extract_actor_ontology
 
 
@@ -68,12 +67,6 @@ def generate_actor_and_events_from_document(
         config=llm_config,
         timeline_events=timeline_events,
     )
-    emit("actor_enhance", "RUNNING", "enhancing semantic relations between actors")
-    actor_ontology, added_relations = enhance_actor_decision_relationships(
-        actor_ontology,
-        config=llm_config,
-    )
-    emit("actor_enhance", "PASSED", f"added_relations={added_relations}")
     actor_count = len(actor_ontology.get("actors") or []) if isinstance(actor_ontology, dict) else 0
     emit("actor_extract", "PASSED", f"actors={actor_count}")
 

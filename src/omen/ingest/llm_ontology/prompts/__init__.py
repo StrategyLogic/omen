@@ -69,17 +69,6 @@ def build_actor_ontology_prompt(
     )
 
 
-def build_actor_semantic_enhancement_prompt(actor_payload_json: str, existing_relations_json: str) -> str:
-    template = get_prompt_template("actor_semantic_enhancement_prompt", tier="base")
-    return _render_template(
-        template,
-        {
-            "actor_payload_json": actor_payload_json,
-            "existing_relations_json": existing_relations_json,
-        },
-    )
-
-
 def build_persona_insight_prompt() -> str:
     return get_prompt_template("persona_insight", tier="base").strip()
 

@@ -243,7 +243,6 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                             "target": founder_actor_id,
                             "type": "influences",
                             "description": "Competitor market presence influences founder strategic decisions.",
-                            "origin": "normalization",
                         }
                     )
                     seen_edges.add(key)
@@ -257,7 +256,6 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                             "target": product_id,
                             "type": "builds",
                             "description": "Founder/lead actor builds and steers the core product asset.",
-                            "origin": "normalization",
                         }
                     )
                     seen_edges.add(key)
@@ -275,8 +273,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                         "source": cp_id,
                         "target": comp_id,
                         "type": "competes_with",
-                        "description": "Core product competes with traditional solutions.",
-                        "origin": "normalization"
+                        "description": "Core product competes with traditional solutions."
                     })
                     seen_edges.add(key)
 
@@ -290,8 +287,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                         "source": str(actor_involved_id),
                         "target": event_id,
                         "type": "participates_in",
-                        "description": "Actor participates in strategic decision/event.",
-                        "origin": "normalization"
+                        "description": "Actor participates in strategic decision/event."
                     })
                     seen_edges.add(key)
             
@@ -305,8 +301,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                         "source": event_id,
                         "target": cp_id,
                         "type": "affects",
-                        "description": "Strategic decision affects the core product lifecycle.",
-                        "origin": "normalization"
+                        "description": "Strategic decision affects the core product lifecycle."
                     })
                     seen_edges.add(key)
 

@@ -29,37 +29,46 @@ from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_
 ACTOR_DEFAULT_OUTPUT_ROOT = "output/actors"
 
 
-def register_analyze_commands(subparsers: Any) -> None:
-    analyze = subparsers.add_parser("analyze", help="top-level analysis commands")
-    analyze_sub = analyze.add_subparsers(dest="analyze_object", required=True)
-
-    actor = analyze_sub.add_parser("actor", help="strategic actor analysis flow")
-    actor.add_argument(
+def _add_actor_common_args(parser: Any) -> None:
+    parser.add_argument(
         "--doc",
-        required=True,
+        required=False,
         help="Document name or path. Bare names resolve to cases/founder/<doc>.md",
     )
-    actor.add_argument("--title", required=False, help="Optional case title")
-    actor.add_argument("--known-outcome", required=False, help="Optional known outcome")
-    actor.add_argument("--year", required=False, type=int, help="Optional status snapshot year")
-    actor.add_argument("--date", required=False, help="Optional status snapshot date")
-    actor.add_argument(
+    parser.add_argument("--title", required=False, help="Optional case title")
+    parser.add_argument("--known-outcome", required=False, help="Optional known outcome")
+    parser.add_argument("--year", required=False, type=int, help="Optional status snapshot year")
+    parser.add_argument("--date", required=False, help="Optional status snapshot date")
+    parser.add_argument(
         "--config",
         required=False,
         default="config/llm.toml",
         help="Path to local LLM config TOML",
     )
-    actor.add_argument(
+    parser.add_argument(
         "--output-dir",
         required=False,
         default=ACTOR_DEFAULT_OUTPUT_ROOT,
         help="Root output directory for actor analysis artifacts",
     )
 
+
+def register_analyze_commands(subparsers: Any) -> None:
+    analyze = subparsers.add_parser("analyze", help="top-level analysis commands")
+    analyze_sub = analyze.add_subparsers(dest="analyze_object", required=True)
+
+    actor = analyze_sub.add_parser("actor", help="strategic actor analysis flow")
+    _add_actor_common_args(actor)
+
     actor_sub = actor.add_subparsers(dest="actor_command", required=False)
-    actor_sub.add_parser("persona", help="output persona only")
-    actor_sub.add_parser("strategy", help="cloud-only in OSS baseline")
-    actor_sub.add_parser("insight", help="cloud-only in OSS baseline")
+    persona = actor_sub.add_parser("persona", help="output persona only")
+    _add_actor_common_args(persona)
+
+    strategy = actor_sub.add_parser("strategy", help="cloud-only in OSS baseline")
+    _add_actor_common_args(strategy)
+
+    insight = actor_sub.add_parser("insight", help="cloud-only in OSS baseline")
+    _add_actor_common_args(insight)
 
     founder = analyze_sub.add_parser("founder", help="deprecated founder analyze object")
     founder.add_argument("--doc", required=False)
@@ -230,6 +239,15 @@ def handle_analyze_command(args: Any) -> int:
         print(f"Analyze object `{args.analyze_object}` is not supported")
         return 3
 
+    if not getattr(args, "doc", None):
+        print("Analyze actor requires --doc <name_or_path>")
+        return 2
+
+    actor_command = getattr(args, "actor_command", None)
+    if actor_command in {"strategy", "insight"}:
+        print(_cloud_only_message(actor_command))
+        return 0
+
     try:
         case_id, _ = _ensure_actor_artifacts(args)
         case_dir, strategy_payload, actor_payload = _load_analysis_artifacts(case_id, args.output_dir)
@@ -238,8 +256,6 @@ def handle_analyze_command(args: Any) -> int:
         return 2
 
     try:
-        actor_command = getattr(args, "actor_command", None)
-
         if actor_command in (None, ""):
             _run_status(case_dir, strategy_payload, actor_payload, year=args.year, date=args.date)
             _run_persona(case_id, case_dir, strategy_payload, actor_payload, args.config)
@@ -248,10 +264,6 @@ def handle_analyze_command(args: Any) -> int:
 
         if actor_command == "persona":
             _run_persona(case_id, case_dir, strategy_payload, actor_payload, args.config)
-            return 0
-
-        if actor_command in {"strategy", "insight"}:
-            print(_cloud_only_message(actor_command))
             return 0
 
         print(f"Analyze actor sub-command `{actor_command}` is not supported")

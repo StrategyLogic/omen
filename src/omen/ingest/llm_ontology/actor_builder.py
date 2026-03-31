@@ -10,45 +10,17 @@ from typing import Any
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.prompts import build_actor_ontology_prompt
 from omen.ingest.schema.actor_schema import (
+    ACTOR_TYPE_ALIAS,
+    ALLOWED_ACTOR_TYPES,
     BACKGROUND_FACT_FIELDS,
+    PRODUCT_TYPES,
     QUERY_TYPES,
+    STRATEGIC_ACTOR_TYPES,
+    STRATEGIC_ROLE_TOKENS,
+    STRATEGIC_STYLE_FIELDS,
     VERSION,
 )
 from omen.ingest.models.case_models import CaseDocument, LLMConfig
-
-
-_PRODUCT_TYPES = {"product", "platform", "tool", "saas", "app", "system"}
-_ACTOR_TYPE_ALIAS = {
-    "company": "organization",
-    "startup": "organization",
-    "enterprise": "organization",
-    "business": "organization",
-    "org": "organization",
-    "department": "team",
-    "squad": "team",
-    "group": "team",
-    "top management": "top_management",
-    "top-management": "top_management",
-    "executive": "top_management",
-    "management": "top_management",
-}
-_STRATEGIC_ROLE_TOKENS = {"founder", "ceo", "top management"}
-_ALLOWED_ACTOR_TYPES = {
-    "founder",
-    "ceo",
-    "top_management",
-    "team",
-    "organization",
-    "customer",
-    "competitor",
-    "regulator",
-    "investor",
-    "partner",
-    "supplier",
-    "government",
-    "other",
-}
-_STRATEGIC_ACTOR_TYPES = {"founder", "ceo", "top_management"}
 
 
 def _display_name_from_case_id(case_id: str) -> str:
@@ -120,15 +92,129 @@ def _normalize_background_facts(background: Any) -> dict[str, Any]:
     return facts
 
 
+def _is_empty_fact_value(field: str, value: Any) -> bool:
+    if field in {"birth_year", "origin"}:
+        return value is None
+    return not isinstance(value, list) or not value
+
+
+def _merge_background_facts(primary: Any, fallback: Any) -> dict[str, Any]:
+    merged = _normalize_background_facts(primary)
+    fallback_facts = _normalize_background_facts(fallback)
+    for field in BACKGROUND_FACT_FIELDS:
+        if _is_empty_fact_value(field, merged.get(field)) and not _is_empty_fact_value(field, fallback_facts.get(field)):
+            merged[field] = fallback_facts[field]
+    return merged
+
+
+def _normalize_strategic_style(profile: Any) -> dict[str, Any]:
+    if not isinstance(profile, dict):
+        return {
+            "decision_style": None,
+            "value_proposition": None,
+            "decision_preferences": [],
+            "non_negotiables": [],
+        }
+
+    source = profile.get("strategic_style")
+    style = dict(source) if isinstance(source, dict) else {}
+
+    if "decision_style" not in style:
+        token = _as_optional_str(profile.get("decision_style") or profile.get("decision_making_style"))
+        if token is not None:
+            style["decision_style"] = token
+
+    if "value_proposition" not in style:
+        token = _as_optional_str(profile.get("value_proposition") or profile.get("strategic_value"))
+        if token is not None:
+            style["value_proposition"] = token
+
+    if "decision_preferences" not in style:
+        style["decision_preferences"] = _as_str_list(profile.get("decision_preferences"))
+
+    if "non_negotiables" not in style:
+        style["non_negotiables"] = _as_str_list(profile.get("non_negotiables"))
+
+    normalized: dict[str, Any] = {}
+    for field in STRATEGIC_STYLE_FIELDS:
+        value = style.get(field)
+        if field in {"decision_preferences", "non_negotiables"}:
+            normalized[field] = _as_str_list(value)
+        else:
+            normalized[field] = _as_optional_str(value)
+    return normalized
+
+
+def _has_competitor_signal(*values: Any) -> bool:
+    tokens = {
+        "competitor",
+        "competing",
+        "alternative",
+        "substitute",
+        "project management",
+        "collaboration",
+        "process tool",
+    }
+    for value in values:
+        text = str(value or "").strip().lower()
+        if not text:
+            continue
+        if any(token in text for token in tokens):
+            return True
+    return False
+
+
+def _slugify_id(value: str, *, fallback: str) -> str:
+    token = re.sub(r"[^a-z0-9]+", "-", value.strip().lower()).strip("-")
+    return token or fallback
+
+
+def _normalize_product_identity(item: dict[str, Any], *, fallback_idx: int) -> tuple[str, str]:
+    raw_id = str(item.get("id") or "").strip()
+    raw_name = str(item.get("name") or "").strip()
+    raw_type = str(item.get("type") or "").strip().lower()
+    raw_desc = str(item.get("description") or "").strip()
+    raw_role = str(item.get("role") or "").strip().lower()
+
+    is_competitor = raw_type == "competitor" or _has_competitor_signal(raw_id, raw_name, raw_desc, raw_role)
+    normalized_type = "competitor" if is_competitor else (raw_type if raw_type in PRODUCT_TYPES else "product")
+
+    base = raw_id or raw_name
+    base_slug = _slugify_id(base, fallback=f"item-{fallback_idx}")
+    prefixes = (
+        "actor-",
+        "actor.",
+        "actor_",
+        "product-",
+        "product.",
+        "product_",
+        "competitor-",
+        "competitor.",
+        "competitor_",
+    )
+    changed = True
+    while changed:
+        changed = False
+        for prefix in prefixes:
+            if base_slug.startswith(prefix):
+                base_slug = base_slug[len(prefix) :]
+                changed = True
+                break
+    base_slug = _slugify_id(base_slug, fallback=f"item-{fallback_idx}")
+
+    normalized_prefix = "competitor" if normalized_type == "competitor" else "product"
+    normalized_id = f"{normalized_prefix}-{base_slug}"
+    return normalized_id, normalized_type
+
+
 def _extract_profile(profile: Any) -> dict[str, Any]:
     background = profile.get("background_facts") if isinstance(profile, dict) else None
+    # Some payloads still place factual background fields at profile root level.
+    merged_background = _merge_background_facts(background, profile if isinstance(profile, dict) else None)
     extract_profile: dict[str, Any] = {
-        "background_facts": _normalize_background_facts(background)
+        "background_facts": merged_background
     }
-    if isinstance(profile, dict):
-        strategic_style = profile.get("strategic_style")
-        if isinstance(strategic_style, dict):
-            extract_profile["strategic_style"] = dict(strategic_style)
+    extract_profile["strategic_style"] = _normalize_strategic_style(profile)
     return extract_profile
 
 
@@ -136,6 +222,29 @@ def _extract_actor_profile(profile: Any) -> dict[str, Any] | None:
     if not isinstance(profile, dict):
         return None
     return dict(profile)
+
+
+def _background_facts_all_empty(background_facts: dict[str, Any]) -> bool:
+    for field in BACKGROUND_FACT_FIELDS:
+        value = background_facts.get(field)
+        if not _is_empty_fact_value(field, value):
+            return False
+    return True
+
+
+def _event_facts_for_actor(events: list[dict[str, Any]], actor_id: str) -> list[str]:
+    snippets: list[str] = []
+    seen: set[str] = set()
+    for event in events:
+        involved = {str(item).strip() for item in (event.get("actors_involved") or []) if str(item).strip()}
+        if actor_id not in involved:
+            continue
+        candidate = str(event.get("description") or event.get("name") or "").strip()
+        if not candidate or candidate in seen:
+            continue
+        snippets.append(candidate)
+        seen.add(candidate)
+    return snippets[:5]
 
 
 def _fallback_related_actors(events: list[dict[str, Any]], *, strategic_actor_id: str) -> list[dict[str, Any]]:
@@ -167,8 +276,8 @@ def _normalize_actor_kind_and_role(raw_type: Any, raw_role: Any = None) -> tuple
         role = role_token or ("strategic_actor" if type_token == "StrategicActor" else "actor")
         return type_token, role
 
-    normalized_role = _normalize_role_label(_ACTOR_TYPE_ALIAS.get(lowered, lowered or "actor"))
-    if normalized_role in _STRATEGIC_ROLE_TOKENS:
+    normalized_role = _normalize_role_label(ACTOR_TYPE_ALIAS.get(lowered, lowered or "actor"))
+    if normalized_role in STRATEGIC_ROLE_TOKENS:
         return "StrategicActor", role_token or normalized_role
     return "Actor", role_token or normalized_role or "actor"
 
@@ -298,6 +407,24 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
             }
         )
 
+    for actor in actors:
+        if str(actor.get("type") or "") != "StrategicActor":
+            continue
+        profile = actor.get("profile")
+        if not isinstance(profile, dict):
+            continue
+        background_facts = profile.get("background_facts")
+        if not isinstance(background_facts, dict):
+            continue
+        if not _background_facts_all_empty(background_facts):
+            continue
+        actor_id = str(actor.get("id") or "").strip()
+        if not actor_id:
+            continue
+        inferred_experiences = _event_facts_for_actor(events, actor_id)
+        if inferred_experiences:
+            background_facts["key_experiences"] = inferred_experiences
+
     products_raw = payload.get("products")
     product_items = [item for item in products_raw if isinstance(item, dict)] if isinstance(products_raw, list) else []
     products: list[dict[str, Any]] = []
@@ -366,9 +493,8 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
 
 
 def _as_product_node(actor: dict[str, Any]) -> dict[str, Any]:
-    item_id = str(actor.get("id") or "").strip()
-    item_name = str(actor.get("name") or item_id or "product").strip() or "product"
-    item_type = str(actor.get("type") or "product").strip().lower() or "product"
+    item_name = str(actor.get("name") or actor.get("id") or "product").strip() or "product"
+    item_id, item_type = _normalize_product_identity(actor, fallback_idx=1)
     return {
         "id": item_id,
         "name": item_name,
@@ -407,26 +533,49 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
     product_items = [item for item in products if isinstance(item, dict)] if isinstance(products, list) else []
 
     next_actors: list[dict[str, Any]] = []
-    product_ids = {str(item.get("id") or "").strip() for item in product_items if str(item.get("id") or "").strip()}
+    next_products: list[dict[str, Any]] = []
+    product_ids: set[str] = set()
+    product_id_alias: dict[str, str] = {}
+
+    for idx, product in enumerate(product_items, start=1):
+        normalized_product = _as_product_node(product)
+        normalized_id, normalized_type = _normalize_product_identity(product, fallback_idx=idx)
+        old_id = str(product.get("id") or "").strip()
+        normalized_product["id"] = normalized_id
+        normalized_product["type"] = normalized_type
+        if old_id and old_id != normalized_id:
+            product_id_alias[old_id] = normalized_id
+        if normalized_id in product_ids:
+            continue
+        product_ids.add(normalized_id)
+        next_products.append(normalized_product)
 
     for actor in actor_items:
         actor_id = str(actor.get("id") or "").strip()
         actor_name = str(actor.get("name") or "").strip().lower()
         actor_type_raw = str(actor.get("type") or "organization").strip().lower()
-        actor_type = _ACTOR_TYPE_ALIAS.get(actor_type_raw, actor_type_raw)
+        actor_type = ACTOR_TYPE_ALIAS.get(actor_type_raw, actor_type_raw)
 
+        actor_role = _normalize_role_label(actor.get("role"))
         is_product_like = (
-            actor_type in _PRODUCT_TYPES
+            actor_type in PRODUCT_TYPES
             or any(token in actor_name for token in ("product", "platform", "tool", "saas", "app"))
         )
         if is_product_like:
-            product_node = _as_product_node({**actor, "type": actor_type})
-            if actor_id and actor_id not in product_ids:
-                product_items.append(product_node)
-                product_ids.add(actor_id)
+            inferred_type = "competitor" if _has_competitor_signal(actor_id, actor_name, actor_role, actor_type) else actor_type
+            product_candidate = {**actor, "type": inferred_type}
+            product_node = _as_product_node(product_candidate)
+            normalized_id, normalized_type = _normalize_product_identity(product_candidate, fallback_idx=len(next_products) + 1)
+            product_node["id"] = normalized_id
+            product_node["type"] = normalized_type
+            if actor_id and actor_id != normalized_id:
+                product_id_alias[actor_id] = normalized_id
+            if normalized_id not in product_ids:
+                next_products.append(product_node)
+                product_ids.add(normalized_id)
             continue
 
-        normalized_type = actor_type if actor_type in _ALLOWED_ACTOR_TYPES else "role"
+        normalized_type = actor_type if actor_type in ALLOWED_ACTOR_TYPES else "role"
         next_actor = dict(actor)
         next_actor["type"] = normalized_type
         
@@ -437,10 +586,14 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
         query_skeleton = {}
     query_skeleton["query_types"] = list(QUERY_TYPES)
 
-    if not product_items:
+    if not next_products:
         default_product = _infer_default_product(case_doc)
         if default_product is not None:
-            product_items.append(default_product)
+            normalized_id, normalized_type = _normalize_product_identity(default_product, fallback_idx=1)
+            default_product["id"] = normalized_id
+            default_product["type"] = normalized_type
+            next_products.append(default_product)
+            product_ids.add(normalized_id)
 
     founder_actor_id = ""
     for actor in next_actors:
@@ -449,7 +602,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
         actor_name = str(actor.get("name") or "").strip().lower()
         if not actor_id:
             continue
-        if actor_type in _STRATEGIC_ACTOR_TYPES or any(
+        if actor_type in STRATEGIC_ACTOR_TYPES or any(
             token in actor_name or token in actor_id.lower()
             for token in ("founder", "ceo", "top management", "top_management")
         ):
@@ -458,8 +611,37 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
     if not founder_actor_id and next_actors:
         founder_actor_id = str(next_actors[0].get("id") or "").strip()
 
+    product_type_by_id = {
+        str(item.get("id") or "").strip(): str(item.get("type") or "").strip().lower()
+        for item in next_products
+        if str(item.get("id") or "").strip()
+    }
+
     influences = normalized.get("influences")
     influence_items = [item for item in influences if isinstance(item, dict)] if isinstance(influences, list) else []
+    remapped_influences: list[dict[str, Any]] = []
+    for influence in influence_items:
+        source = str(influence.get("source") or "").strip()
+        target = str(influence.get("target") or "").strip()
+        if source in product_id_alias:
+            source = product_id_alias[source]
+        if target in product_id_alias:
+            target = product_id_alias[target]
+        remapped = dict(influence)
+        if source:
+            remapped["source"] = source
+        if target:
+            remapped["target"] = target
+        remapped_influences.append(remapped)
+    cleaned_influences: list[dict[str, Any]] = []
+    for influence in remapped_influences:
+        source = str(influence.get("source") or "").strip()
+        target = str(influence.get("target") or "").strip()
+        relation = str(influence.get("type") or "").strip().lower()
+        if founder_actor_id and source == founder_actor_id and product_type_by_id.get(target) == "competitor" and relation == "builds":
+            continue
+        cleaned_influences.append(influence)
+    influence_items = cleaned_influences
     seen_edges = {
         (
             str(item.get("source") or "").strip(),
@@ -469,7 +651,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
         for item in influence_items
     }
     if founder_actor_id:
-        for product in product_items:
+        for product in next_products:
             product_id = str(product.get("id") or "").strip()
             product_type = str(product.get("type") or "").strip().lower()
             if not product_id:
@@ -503,8 +685,8 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                     seen_edges.add(key)
 
         # Cross-link: Product competes with Competitor
-        core_products = [p for p in product_items if str(p.get("type")).lower() != "competitor"]
-        competitors = [p for p in product_items if str(p.get("type")).lower() == "competitor"]
+        core_products = [p for p in next_products if str(p.get("type")).lower() != "competitor"]
+        competitors = [p for p in next_products if str(p.get("type")).lower() == "competitor"]
         for cp in core_products:
             for comp in competitors:
                 cp_id = str(cp.get("id"))
@@ -548,7 +730,7 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                     seen_edges.add(key)
 
     normalized["actors"] = next_actors
-    normalized["products"] = product_items
+    normalized["products"] = next_products
     normalized["influences"] = influence_items
     normalized["query_skeleton"] = query_skeleton
     return _to_actor_schema(normalized, case_id=case_doc.case_id)

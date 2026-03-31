@@ -33,7 +33,7 @@ def test_actor_schema_requires_metadata_suffix() -> None:
             {
                 "id": "a1",
                 "name": "A",
-                "type": "role",
+                "type": "founder",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -58,7 +58,7 @@ def test_schema_validator_ignores_extra_fields_like_origin() -> None:
             {
                 "id": "a1",
                 "name": "A",
-                "type": "role",
+                "type": "founder",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -84,12 +84,53 @@ def test_schema_validator_ignores_closed_subdimension_content() -> None:
             {
                 "id": "a1",
                 "name": "A",
-                "type": "role",
+                "type": "founder",
                 "profile": {
                     "mental_patterns": {"core_beliefs": ["x"]},
                     "strategic_style": {"redacted": True},
                 },
             }
+        ],
+        "events": [],
+    }
+    issues = validate_actor_ontology_payload(payload)
+    assert issues == []
+
+
+def test_schema_validator_requires_profile_for_strategic_actor() -> None:
+    payload = {
+        "meta": {
+            "case_id": "xd",
+            "version": "v0.1.0-public",
+            "disclosure_level": "public-structure",
+            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+        },
+        "actors": [{"id": "a1", "name": "Leader", "type": "founder"}],
+        "events": [],
+    }
+    issues = validate_actor_ontology_payload(payload)
+    assert any(issue.path == "actors[0].profile" for issue in issues)
+
+
+def test_schema_validator_allows_role_actor_without_profile() -> None:
+    payload = {
+        "meta": {
+            "case_id": "xd",
+            "version": "v0.1.0-public",
+            "disclosure_level": "public-structure",
+            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+        },
+        "actors": [
+            {
+                "id": "a1",
+                "name": "Leader",
+                "type": "founder",
+                "profile": {
+                    "mental_patterns": {"redacted": True},
+                    "strategic_style": {"redacted": True},
+                },
+            },
+            {"id": "a2", "name": "Analyst", "type": "role"},
         ],
         "events": [],
     }

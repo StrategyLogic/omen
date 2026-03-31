@@ -140,7 +140,7 @@ def test_validate_actor_file_accepts_schema_with_extra_fields(tmp_path: Path, mo
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "role",
+                "type": "founder",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},

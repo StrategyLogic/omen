@@ -19,7 +19,10 @@ def _normalize_output_language(value: str | None) -> str:
 def _pick_primary_actor(actor_ontology: dict[str, Any]) -> dict[str, Any]:
     actors = actor_ontology.get("actors") or []
     for actor in actors:
-        if isinstance(actor, dict) and str(actor.get("type") or "").strip().lower() == "founder":
+        if not isinstance(actor, dict):
+            continue
+        actor_type = str(actor.get("type") or "").strip().lower()
+        if actor_type in {"founder", "ceo", "top_management"}:
             return actor
     for actor in actors:
         if isinstance(actor, dict):

@@ -31,7 +31,7 @@ def test_actor_profile_passes_when_redacted_shape_is_valid() -> None:
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "role",
+                "type": "founder",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -57,12 +57,13 @@ def test_actor_profile_ignores_non_schema_extra_fields() -> None:
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "role",
+                "type": "ceo",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
                 },
-            }
+            },
+            {"id": "a2", "name": "Stakeholder", "type": "role"},
         ],
         "events": [],
         "influences": [{"source": "a1", "target": "x", "type": "influences", "origin": "system_generated"}],

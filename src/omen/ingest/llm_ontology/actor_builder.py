@@ -28,9 +28,15 @@ _ACTOR_TYPE_ALIAS = {
     "department": "team",
     "squad": "team",
     "group": "team",
+    "top management": "top_management",
+    "top-management": "top_management",
+    "executive": "top_management",
+    "management": "top_management",
 }
 _ALLOWED_ACTOR_TYPES = {
     "founder",
+    "ceo",
+    "top_management",
     "person",
     "team",
     "organization",
@@ -41,6 +47,7 @@ _ALLOWED_ACTOR_TYPES = {
     "competitor",
     "role",
 }
+_STRATEGIC_ACTOR_TYPES = {"founder", "ceo", "top_management"}
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
@@ -102,22 +109,44 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
 
     actors_raw = payload.get("actors")
     actor_items = [item for item in actors_raw if isinstance(item, dict)] if isinstance(actors_raw, list) else []
+    strategic_ids: set[str] = set()
+    for actor in actor_items:
+        actor_id = str(actor.get("id") or "").strip()
+        actor_name = str(actor.get("name") or "").strip().lower()
+        actor_type_raw = str(actor.get("type") or "role").strip().lower()
+        actor_type = _ACTOR_TYPE_ALIAS.get(actor_type_raw, actor_type_raw)
+        if actor_id and (
+            actor_type in _STRATEGIC_ACTOR_TYPES
+            or any(token in actor_name for token in ("founder", "ceo", "top management", "top_management"))
+        ):
+            strategic_ids.add(actor_id)
+            break
+
     actors: list[dict[str, Any]] = []
     for idx, actor in enumerate(actor_items, start=1):
         actor_id = str(actor.get("id") or f"actor-{idx}").strip() or f"actor-{idx}"
         actor_name = str(actor.get("name") or "Strategic Actor").strip() or "Strategic Actor"
-        actor_type = str(actor.get("type") or "role").strip() or "role"
-        actors.append(
-            {
-                "id": actor_id,
-                "name": actor_name,
-                "type": actor_type,
-                "profile": {
-                    "mental_patterns": dict(REDACTION_MARKER),
-                    "strategic_style": dict(REDACTION_MARKER),
-                },
+        actor_type_raw = str(actor.get("type") or "role").strip().lower() or "role"
+        actor_type = _ACTOR_TYPE_ALIAS.get(actor_type_raw, actor_type_raw)
+        if actor_type not in _ALLOWED_ACTOR_TYPES:
+            actor_type = "role"
+
+        # Only the Strategic Actor carries strategic mental-pattern profile.
+        if not strategic_ids and idx == 1:
+            strategic_ids.add(actor_id)
+        is_strategic_actor = actor_id in strategic_ids
+
+        actor_row: dict[str, Any] = {
+            "id": actor_id,
+            "name": actor_name,
+            "type": actor_type if is_strategic_actor else "role",
+        }
+        if is_strategic_actor:
+            actor_row["profile"] = {
+                "mental_patterns": dict(REDACTION_MARKER),
+                "strategic_style": dict(REDACTION_MARKER),
             }
-        )
+        actors.append(actor_row)
     if not actors:
         actors = [
             {
@@ -136,6 +165,8 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
     events: list[dict[str, Any]] = []
     for idx, event in enumerate(event_items, start=1):
         event_id = str(event.get("id") or f"event-{idx}").strip() or f"event-{idx}"
+        actor_refs = [str(item).strip() for item in (event.get("actors_involved") or []) if str(item).strip()]
+        evidence_refs = [str(item).strip() for item in (event.get("evidence_refs") or []) if str(item).strip()]
         events.append(
             {
                 "id": event_id,
@@ -143,11 +174,64 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
                 "type": str(event.get("type") or "event"),
                 "date": str(event.get("date") or event.get("time") or "unknown"),
                 "description": str(event.get("description") or event.get("event") or "unknown"),
+                "actors_involved": actor_refs,
+                "evidence_refs": evidence_refs,
+                "is_strategy_related": bool(event.get("is_strategy_related", True)),
+            }
+        )
+
+    products_raw = payload.get("products")
+    product_items = [item for item in products_raw if isinstance(item, dict)] if isinstance(products_raw, list) else []
+    products: list[dict[str, Any]] = []
+    for idx, product in enumerate(product_items, start=1):
+        product_id = str(product.get("id") or f"product-{idx}").strip() or f"product-{idx}"
+        products.append(
+            {
+                "id": product_id,
+                "name": str(product.get("name") or product_id),
+                "type": str(product.get("type") or "product").strip().lower() or "product",
+                "description": str(product.get("description") or "").strip(),
+                "attributes": product.get("attributes") if isinstance(product.get("attributes"), dict) else {},
+            }
+        )
+
+    constraints_raw = payload.get("constraints")
+    constraint_items = [item for item in constraints_raw if isinstance(item, dict)] if isinstance(constraints_raw, list) else []
+    constraints: list[dict[str, Any]] = []
+    for idx, constraint in enumerate(constraint_items, start=1):
+        constraint_id = str(constraint.get("id") or f"constraint-{idx}").strip() or f"constraint-{idx}"
+        applies_to = [str(item).strip() for item in (constraint.get("applies_to") or constraint.get("actors_affected") or []) if str(item).strip()]
+        constraints.append(
+            {
+                "id": constraint_id,
+                "type": str(constraint.get("type") or constraint.get("name") or "constraint").strip() or "constraint",
+                "category": str(constraint.get("category") or "").strip(),
+                "applies_to": applies_to,
             }
         )
 
     influences_raw = payload.get("influences")
-    influences = dict(REDACTION_MARKER) if isinstance(influences_raw, list) and influences_raw else []
+    influence_items = [item for item in influences_raw if isinstance(item, dict)] if isinstance(influences_raw, list) else []
+    influences: list[dict[str, Any]] = []
+    seen_edges: set[tuple[str, str, str]] = set()
+    for influence in influence_items:
+        source = str(influence.get("source") or influence.get("source_event") or influence.get("source_constraint") or "").strip()
+        target = str(influence.get("target") or influence.get("target_event") or influence.get("target_constraint") or "").strip()
+        relation = str(influence.get("type") or "influences").strip() or "influences"
+        if not source or not target:
+            continue
+        key = (source, target, relation)
+        if key in seen_edges:
+            continue
+        seen_edges.add(key)
+        influences.append(
+            {
+                "source": source,
+                "target": target,
+                "type": relation,
+                "description": str(influence.get("description") or "").strip(),
+            }
+        )
 
     return {
         "meta": {
@@ -158,6 +242,8 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
         },
         "actors": actors,
         "events": events,
+        "products": products,
+        "constraints": constraints,
         "influences": influences,
         "query_skeleton": {"query_types": list(QUERY_TYPES)},
     }
@@ -224,18 +310,9 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
                 product_ids.add(actor_id)
             continue
 
-        normalized_type = actor_type if actor_type in _ALLOWED_ACTOR_TYPES else "organization"
+        normalized_type = actor_type if actor_type in _ALLOWED_ACTOR_TYPES else "role"
         next_actor = dict(actor)
         next_actor["type"] = normalized_type
-
-        # Ensure stakeholders have the expected structure
-        if normalized_type != "founder" and "profile" not in next_actor:
-            next_actor["profile"] = {
-                "interest": "Unknown",
-                "influence_level": "Medium",
-                "alignment_with_founder": "Unknown",
-                "key_constraints": []
-            }
         
         next_actors.append(next_actor)
 
@@ -256,7 +333,10 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
         actor_name = str(actor.get("name") or "").strip().lower()
         if not actor_id:
             continue
-        if actor_type == "founder" or "founder" in actor_name or "founder" in actor_id.lower():
+        if actor_type in _STRATEGIC_ACTOR_TYPES or any(
+            token in actor_name or token in actor_id.lower()
+            for token in ("founder", "ceo", "top management", "top_management")
+        ):
             founder_actor_id = actor_id
             break
     if not founder_actor_id and next_actors:

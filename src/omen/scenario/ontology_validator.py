@@ -30,6 +30,11 @@ class OntologyValidationError(ValueError):
         super().__init__(message)
 
 
+def _is_strategic_actor_type(value: Any) -> bool:
+    actor_type = str(value or "").strip().lower()
+    return actor_type in {"founder", "ceo", "top_management"}
+
+
 def _is_version_compatible(value: Any) -> bool:
     return str(value or "").strip().endswith(VERSION_SUFFIX)
 
@@ -90,11 +95,12 @@ def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyVal
     if not isinstance(actors, list):
         issues.append(OntologyValidationIssue(code="missing_actors", message="actors must be an array", path="actors"))
     else:
+        strategic_actor_count = 0
         for idx, actor in enumerate(actors):
             base = f"actors[{idx}]"
             if not isinstance(actor, dict):
                 continue
-            for required in ("id", "name", "type", "profile"):
+            for required in ("id", "name", "type"):
                 if required not in actor:
                     issues.append(
                         OntologyValidationIssue(
@@ -103,8 +109,20 @@ def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyVal
                             path=f"{base}.{required}",
                         )
                     )
+
+            if not _is_strategic_actor_type(actor.get("type")):
+                continue
+
+            strategic_actor_count += 1
             profile = actor.get("profile")
             if not isinstance(profile, dict):
+                issues.append(
+                    OntologyValidationIssue(
+                        code="missing_actor_field",
+                        message="profile is required for strategic actor types",
+                        path=f"{base}.profile",
+                    )
+                )
                 continue
             for dim in sorted(STRATEGIC_DIMENSIONS):
                 if dim not in profile:
@@ -115,6 +133,15 @@ def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyVal
                             path=f"{base}.profile.{dim}",
                         )
                     )
+
+        if strategic_actor_count == 0:
+            issues.append(
+                OntologyValidationIssue(
+                    code="missing_strategic_actor",
+                    message="at least one strategic actor (founder/ceo/top_management) is required",
+                    path="actors",
+                )
+            )
 
     events = payload.get("events")
     if not isinstance(events, list):

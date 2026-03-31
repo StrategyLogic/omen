@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from omen.ingest.models.ingest_models import PrecisionEvaluationProfile
+from omen.ingest.models import PrecisionEvaluationProfile
 
 
 def _gate_result(name: str, observed: float, threshold: float) -> dict[str, Any]:

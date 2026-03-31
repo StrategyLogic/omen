@@ -8,10 +8,10 @@ from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
-from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
-from omen.ingest.llm_ontology.prompt_registry import ensure_analyze_prompt_available
-from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
-from omen.ingest.llm_ontology.strategy_assembler import attach_actor_ref, attach_timeline_events
+from omen.ingest.llm_ontology.services.actor import generate_actor_and_events_from_document
+from omen.ingest.llm_ontology.services.strategy import generate_strategy_ontology_from_document
+from omen.ingest.llm_ontology.prompts.registry import ensure_analyze_prompt_available
+from omen.ingest.llm_ontology.assembler import attach_actor_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.scenario.ontology_validator import (
     validate_actor_ontology_payload,

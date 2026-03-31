@@ -8,7 +8,7 @@ import tomllib
 import importlib
 from pathlib import Path
 
-from omen.ingest.models.case_models import LLMConfig
+from omen.ingest.models import LLMConfig
 
 _ENV_PATTERN = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
 

@@ -8,7 +8,7 @@ from typing import Any
 
 import streamlit as st
 
-from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
+from omen.ingest.llm_ontology.services.strategy import generate_strategy_ontology_from_document
 from omen.scenario.case_replay_loader import (
     load_case_replay_scenario,
     save_strategy_ontology,

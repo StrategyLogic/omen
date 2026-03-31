@@ -12,9 +12,9 @@ import streamlit as st
 
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
-from omen.ingest.llm_ontology.actor_service import generate_actor_and_events_from_document
-from omen.ingest.llm_ontology.service import generate_strategy_ontology_from_document
-from omen.ingest.llm_ontology.strategy_assembler import attach_actor_ref, attach_timeline_events
+from omen.ingest.llm_ontology.services.actor import generate_actor_and_events_from_document
+from omen.ingest.llm_ontology.services.strategy import generate_strategy_ontology_from_document
+from omen.ingest.llm_ontology.assembler import attach_actor_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.ui.actor_graph import build_actor_graph_figure
 from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME, STRATEGY_ONTOLOGY_FILENAME, ensure_actor_output_dir

@@ -9,7 +9,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.prompts import build_actor_ontology_prompt
-from omen.ingest.schema.actor_schema import (
+from omen.ingest.llm_ontology.schema.actor import (
     ACTOR_TYPE_ALIAS,
     ALLOWED_ACTOR_TYPES,
     BACKGROUND_FACT_FIELDS,
@@ -20,7 +20,7 @@ from omen.ingest.schema.actor_schema import (
     STRATEGIC_STYLE_FIELDS,
     VERSION,
 )
-from omen.ingest.models.case_models import CaseDocument, LLMConfig
+from omen.ingest.models import CaseDocument, LLMConfig
 
 
 def _display_name_from_case_id(case_id: str) -> str:

@@ -8,7 +8,12 @@ def map_candidate_to_concept(entity_text: str, concept_names: list[str]) -> tupl
     normalized = {concept.lower(): concept for concept in concept_names}
 
     matches = [concept for concept_lc, concept in normalized.items() if concept_lc and concept_lc in text]
+    
+    # Priority for longer matches to avoid Actor matching StrategicActor
     if len(matches) > 1:
+        matches.sort(key=len, reverse=True)
+        if len(matches[0]) > len(matches[1]):
+            return "mapped", matches[0]
         return "conflict", None
     if len(matches) == 1:
         return "mapped", matches[0]

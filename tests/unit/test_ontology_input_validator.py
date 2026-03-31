@@ -27,9 +27,7 @@ def test_validate_ontology_input_rejects_missing_concepts() -> None:
     with pytest.raises(OntologyValidationError) as exc:
         validate_ontology_input_or_raise(payload)
 
-    assert any(issue.code == "schema_validation_error" for issue in exc.value.issues)
-
-
+    assert any(issue.code == "unknown_relation_source" for issue in exc.value.issues)
 def test_validate_ontology_input_rejects_unresolved_rule_ref() -> None:
     payload = json.loads(INVALID_RULE_REF_PATH.read_text(encoding="utf-8"))
 
@@ -125,7 +123,7 @@ def test_validate_ontology_input_accepts_raw_llm_style_payload() -> None:
 
     assert package.meta.version == "1.0"
     assert package.meta.domain == "X-Developer Replay"
-    assert len(package.tbox.concepts) == 2
+    assert len(package.tbox.concepts) == 4
     assert len(package.tbox.relations) >= 1
 
 

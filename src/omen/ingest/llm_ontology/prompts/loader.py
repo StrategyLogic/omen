@@ -49,7 +49,7 @@ def _parse_prompt_file(path: str | Path) -> tuple[dict[str, str], dict[str, dict
 
 
 def get_repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+    return Path(__file__).resolve().parents[5]
 
 
 def get_prompt_config_dir() -> Path:

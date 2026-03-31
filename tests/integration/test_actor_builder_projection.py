@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from omen.ingest.llm_ontology.actor_builder import extract_actor_ontology
-from omen.ingest.llm_ontology.document_loader import load_case_document
-from omen.ingest.models.case_models import LLMConfig
+from omen.ingest.llm_ontology.builders.actor import extract_actor_ontology
+from omen.ingest.documents import load_case_document
+from omen.ingest.models import LLMConfig
 
 
 def _minimal_config() -> LLMConfig:
@@ -106,7 +106,7 @@ def test_actor_builder_profile_for_chen_case(monkeypatch) -> None:
         def invoke(self, _prompt: str):
             return _Response()
 
-    monkeypatch.setattr("omen.ingest.llm_ontology.actor_builder.create_chat_client", lambda _cfg: _Chat())
+    monkeypatch.setattr("omen.ingest.llm_ontology.builders.actor.create_chat_client", lambda _cfg: _Chat())
 
     actor_ontology = extract_actor_ontology(
         case_doc=case_doc,
@@ -217,7 +217,7 @@ def test_actor_builder_normalizes_competitor_product_and_influences(monkeypatch)
         def invoke(self, _prompt: str):
             return _Response()
 
-    monkeypatch.setattr("omen.ingest.llm_ontology.actor_builder.create_chat_client", lambda _cfg: _Chat())
+    monkeypatch.setattr("omen.ingest.llm_ontology.builders.actor.create_chat_client", lambda _cfg: _Chat())
 
     actor_ontology = extract_actor_ontology(
         case_doc=case_doc,
@@ -297,7 +297,7 @@ def test_actor_builder_backfills_background_facts_from_events(monkeypatch) -> No
         def invoke(self, _prompt: str):
             return _Response()
 
-    monkeypatch.setattr("omen.ingest.llm_ontology.actor_builder.create_chat_client", lambda _cfg: _Chat())
+    monkeypatch.setattr("omen.ingest.llm_ontology.builders.actor.create_chat_client", lambda _cfg: _Chat())
 
     actor_ontology = extract_actor_ontology(
         case_doc=case_doc,

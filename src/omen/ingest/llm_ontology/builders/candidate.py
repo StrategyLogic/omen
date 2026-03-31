@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from omen.ingest.candidate_mapper import map_candidate_to_concept
-from omen.ingest.text_processing import clean_text, split_into_chunks
+from omen.ingest.llm_ontology.builders.mapper import map_candidate_to_concept
+from omen.ingest.documents import clean_text, split_into_chunks
 
 
 def build_candidates_from_text(
@@ -22,6 +22,7 @@ def build_candidates_from_text(
     candidates: list[dict[str, Any]] = []
     for index, chunk in enumerate(chunks):
         status, concept = map_candidate_to_concept(chunk, concept_names)
+        print(f"DEBUG: Chunk: {chunk} mapped status: {status} concept: {concept}")
         candidates.append(
             {
                 "candidate_id": f"{document_id}-{index}",

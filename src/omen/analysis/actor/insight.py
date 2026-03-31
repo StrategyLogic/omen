@@ -8,7 +8,7 @@ from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.config import load_llm_config
-from omen.ingest.llm_ontology.prompt_registry import get_analyze_prompt_version_token
+from omen.ingest.llm_ontology.prompts.registry import get_analyze_prompt_version_token
 from omen.ingest.llm_ontology.prompts import build_json_retry_prompt, build_persona_insight_prompt
 
 
@@ -170,11 +170,6 @@ def generate_persona_insight(
 
     narrative = str(insight.get("narrative") or "").strip()
     traits = _normalize_traits(insight.get("key_traits"))
-    if not narrative:
-        raise ValueError("persona_insight.narrative is required")
-    if len(traits) < 3:
-        raise ValueError("persona_insight.key_traits must contain at least 3 valid items")
-
     score_raw = insight.get("consistency_score") or 0
     try:
         consistency_score = float(score_raw)

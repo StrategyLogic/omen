@@ -1,14 +1,13 @@
-"""Actor/event slice generation service for build-time pipeline."""
+"""Actor and event extraction service."""
 
 from __future__ import annotations
 
 from typing import Callable
 
 from omen.ingest.llm_ontology.config import load_llm_config
-from omen.ingest.llm_ontology.document_loader import chunk_case_document, load_case_document
-from omen.ingest.llm_ontology.event_builder import extract_timeline_events
-from omen.ingest.llm_ontology.actor_builder import extract_actor_ontology
-
+from omen.ingest.documents import chunk_case_document, load_case_document
+from omen.ingest.llm_ontology.builders.event import extract_timeline_events
+from omen.ingest.llm_ontology.builders.actor import extract_actor_ontology
 
 LogFn = Callable[[str, str, str], None]
 

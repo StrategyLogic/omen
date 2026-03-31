@@ -1,4 +1,4 @@
-"""Service for document-to-ontology generation and validation."""
+"""Strategy ontology generation service."""
 
 from __future__ import annotations
 
@@ -7,10 +7,9 @@ from datetime import datetime
 from typing import Callable
 
 from omen.ingest.llm_ontology.config import load_llm_config
-from omen.ingest.llm_ontology.document_loader import chunk_case_document, load_case_document
+from omen.ingest.documents import chunk_case_document, load_case_document
 from omen.ingest.llm_ontology.generator import generate_ontology_payload
-from omen.ingest.models.case_models import OntologyGenerationResult
-from omen.scenario.ontology_validator import OntologyValidationError, validate_ontology_input_or_raise
+from omen.ingest.models import OntologyGenerationResult
 
 LogFn = Callable[[str, str, str], None]
 
@@ -25,6 +24,11 @@ def generate_strategy_ontology_from_document(
     config_path: str = "config/llm.toml",
     logger: LogFn | None = None,
 ) -> OntologyGenerationResult:
+    from omen.scenario.ontology_validator import (
+        OntologyValidationError,
+        validate_ontology_input_or_raise,
+    )
+
     def emit(step: str, status: str, message: str) -> None:
         if logger:
             logger(step, status, message)

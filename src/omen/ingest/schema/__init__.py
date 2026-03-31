@@ -1,1 +1,0 @@
-"""Ingest-scoped schema definitions."""

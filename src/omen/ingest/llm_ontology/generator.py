@@ -11,7 +11,7 @@ from omen.ingest.llm_ontology.prompts import (
     build_system_prompt,
     build_user_prompt,
 )
-from omen.ingest.models.case_models import CaseDocument, LLMConfig
+from omen.ingest.models import CaseDocument, LLMConfig
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:

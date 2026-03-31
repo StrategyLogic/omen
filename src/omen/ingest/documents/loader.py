@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from omen.ingest.pdf_extract import extract_pdf_pages
-from omen.ingest.text_processing import clean_text, split_into_chunks
-from omen.ingest.models.case_models import CaseDocument
+from omen.ingest.documents.pdf import extract_pdf_pages
+from omen.ingest.documents.text import clean_text, split_into_chunks
+from omen.ingest.models import CaseDocument
 
 
 def _guess_content_type(path: Path) -> Literal["markdown", "text", "pdf"]:

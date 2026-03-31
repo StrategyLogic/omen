@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from omen.ingest.models.case_models import LLMConfig
+from omen.ingest.models import LLMConfig
 
 
 def create_chat_client(config: LLMConfig) -> Any:

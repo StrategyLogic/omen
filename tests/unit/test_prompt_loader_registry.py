@@ -1,5 +1,5 @@
-from omen.ingest.llm_ontology.prompt_loader import load_tier_prompts
-from omen.ingest.llm_ontology.prompt_registry import (
+from omen.ingest.llm_ontology.prompts.loader import load_tier_prompts
+from omen.ingest.llm_ontology.prompts.registry import (
     ensure_analyze_prompt_available,
     get_analyze_prompt_version_token,
     resolve_analyze_prompt_binding,
@@ -10,7 +10,7 @@ def test_load_base_prompt_templates() -> None:
     prompts = load_tier_prompts("base")
 
     assert "persona_insight" in prompts
-    assert "{founder_name}" in prompts["persona_insight"]
+    assert "{actor_name}" in prompts["persona_insight"]
 
 
 def test_analyze_prompt_bindings_match_open_pro_split() -> None:

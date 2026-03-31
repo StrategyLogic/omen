@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from omen.ingest.models.ingest_models import (
+from omen.ingest.models import (
     ExtractedEntityCandidate,
     OntologyAssertionCandidate,
     PrecisionEvaluationProfile,

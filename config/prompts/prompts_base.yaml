@@ -171,6 +171,7 @@ prompts:
     - role: descriptive role text (e.g. founder, ceo, management, customer, competitor). role MUST be a concise base label only. Do NOT include qualifiers in parentheses.
     - Profile for StrategicActor:
       - background_facts: birth_year, origin, education[], career_trajectory[], key_experiences[]
+      - strategic_style: decision_style, value_proposition, decision_preferences[], non_negotiables[]
     - Profile for all other Actors (investor, customer, etc.):
       - profile: interest, influence_level, alignment_with_strategic_actor
 

@@ -57,11 +57,25 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
                 "id": "actor-x-developer-team",
                 "name": "X-Developer internal team",
                 "type": "role",
+                "role": "internal development team",
             },
             {
                 "id": "actor-pilot-customer",
                 "name": "Pilot customer organization",
                 "type": "role",
+                "role": "customer (pilot team)",
+            },
+            {
+                "id": "actor-tech-managers",
+                "name": "Technical managers",
+                "type": "role",
+                "role": "target customer segment (technical leadership)",
+            },
+            {
+                "id": "actor-developers",
+                "name": "Developers",
+                "type": "role",
+                "role": "end-user (software engineers)",
             },
         ],
         "events": [
@@ -106,7 +120,7 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
     }
 
     actors = actor_ontology["actors"]
-    assert len(actors) >= 3
+    assert len(actors) >= 5
 
     primary = next(actor for actor in actors if actor["id"] == "actor-chen-jiaxing")
     assert primary["type"] == "StrategicActor"
@@ -127,3 +141,8 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
     actor_ids = {actor["id"] for actor in actors}
     assert "actor-x-developer-team" in actor_ids
     assert "actor-pilot-customer" in actor_ids
+
+    by_id = {actor["id"]: actor for actor in actors}
+    assert by_id["actor-pilot-customer"]["role"] == "customer"
+    assert by_id["actor-tech-managers"]["role"] == "target customer segment"
+    assert by_id["actor-developers"]["role"] == "end-user"

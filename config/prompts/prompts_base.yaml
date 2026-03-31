@@ -78,37 +78,36 @@ prompts:
     - shared_actors MUST list actor_ids that appear in both tech_space_ontology.actors and market_space_ontology.actors.
     - Focus this case on the process of adoption resistance when a new technology product enters market.
     - Provide case_package references with ontology_presence=true and runtime support booleans all true.
-
-            Minimal structural example (shape only):
-            {
-                "meta": {"version": "1.0", "case_id": "...", "domain": "...", "strategy": "new_tech_market_entry"},
-                "tbox": {
-                    "concepts": [{"name": "ExampleActor", "description": "...", "category": "actor"}],
-                    "relations": [{"name": "has_capability", "source": "ExampleActor", "target": "example_capability", "description": "..."}],
-                    "axioms": [{"id": "AX-1", "statement": "...", "type": "activation"}]
-                },
-                "abox": {
-                    "actors": [{"actor_id": "example_actor", "actor_type": "StrategicActor", "role": "founder", "shared_id": "Example Inc.", "labels": [], "profile": {"mental_patterns": {}, "strategic_style": {}}}],
-                    "capabilities": [{"actor_id": "example_actor", "name": "example_capability", "score": 0.8}],
-                    "constraints": [{"name": "budget", "value": 100}]
-                },
-                "reasoning_profile": {
-                    "activation_rules": [{"rule_id": "AX-1"}],
-                    "propagation_rules": [],
-                    "counterfactual_rules": []
-                },
-                "tech_space_ontology": {
-                    "actors": [{"actor_id": "example_actor"}],
-                    "capabilities": [{"name": "example_capability", "score": 0.8}],
-                    "axioms": [{"id": "T-AX-1", "statement": "capability improves with integration"}]
-                },
-                "market_space_ontology": {
-                    "actors": [{"actor_id": "example_actor"}],
-                    "market_attributes": {"adoption_resistance": 0.7},
-                    "axioms": [{"id": "M-AX-1", "statement": "high adoption_resistance slows expansion"}]
-                },
-                "shared_actors": ["example_actor"]
-            }
+        Minimal structural example (shape only):
+        {
+            "meta": {"version": "1.0", "case_id": "...", "domain": "...", "strategy": "new_tech_market_entry"},
+            "tbox": {
+                "concepts": [{"name": "ExampleActor", "description": "...", "category": "actor"}],
+                "relations": [{"name": "has_capability", "source": "ExampleActor", "target": "example_capability", "description": "..."}],
+                "axioms": [{"id": "AX-1", "statement": "...", "type": "activation"}]
+            },
+            "abox": {
+                "actors": [{"actor_id": "example_actor", "actor_type": "StrategicActor", "role": "founder", "shared_id": "Example Inc.", "labels": [], "profile": {"background_facts": {}, "strategic_style": {}}}],
+                "capabilities": [{"actor_id": "example_actor", "name": "example_capability", "score": 0.8}],
+                "constraints": [{"name": "budget", "value": 100}]
+            },
+            "reasoning_profile": {
+                "activation_rules": [{"rule_id": "AX-1"}],
+                "propagation_rules": [],
+                "counterfactual_rules": []
+            },
+            "tech_space_ontology": {
+                "actors": [{"actor_id": "example_actor"}],
+                "capabilities": [{"name": "example_capability", "score": 0.8}],
+                "axioms": [{"id": "T-AX-1", "statement": "capability improves with integration"}]
+            },
+            "market_space_ontology": {
+                "actors": [{"actor_id": "example_actor"}],
+                "market_attributes": {"adoption_resistance": 0.7},
+                "axioms": [{"id": "M-AX-1", "statement": "high adoption_resistance slows expansion"}]
+            },
+            "shared_actors": ["example_actor"]
+          }
 
   user_prompt: |
     Case ID: [[case_id]]
@@ -165,22 +164,15 @@ prompts:
     - query_skeleton (supported queries)
 
     Actor Schema (Single Strategic Actor + Multi-Role Actors):
-    - IMPORTANT: Extract ALL actors mentioned in the case (founder, ceo, management team, customers, competitors, etc.).
+    - IMPORTANT: Extract ALL actors mentioned in the case (founder, ceo, management, customers, competitors, etc.).
     - id: unique slug (e.g. 'actor-founder-1', 'actor-customer-apple').
     - name: display name.
-    - type: MUST be one of Actor or StrategicActor.
-    - role: descriptive role text (e.g. founder, ceo, management, customer, competitor).
-    - Exactly ONE actor MUST be StrategicActor.
-    - StrategicActor MUST include a profile object.
-    - StrategicActor.profile.background_facts MUST use EXACTLY this structure:
-      - birth_year: integer or null
-      - origin: string or null
-      - education: string[]
-      - career_trajectory: string[]
-      - key_experiences: string[]
-    - Do NOT add any extra keys under background_facts.
-    - Only include source-grounded factual statements; never infer/guess background facts.
-    - Other actors MUST be Actor; role remains descriptive text only.
+    - type: MUST be one of Actor or StrategicActor. Exactly ONE actor MUST be StrategicActor.
+    - role: descriptive role text (e.g. founder, ceo, management, customer, competitor). role MUST be a concise base label only. Do NOT include qualifiers in parentheses.
+    - Profile for StrategicActor:
+      - background_facts: birth_year, origin, education[], career_trajectory[], key_experiences[]
+    - Profile for all other Actors (investor, customer, etc.):
+      - profile: interest, influence_level, alignment_with_strategic_actor
 
     Events Schema:
     - id, name, type, date, description, context_constraints[], actors_involved[], evidence_refs[]
@@ -218,9 +210,8 @@ prompts:
 
   persona_insight: |
     Analyze the character and strategic profile of the following StrategicActor based on provided ontology data.
-    Strategic Actor name: {founder_name}
-    Profile Facts: {profile_facts}
-    Mental Patterns: {mental_patterns}
+    Strategic Actor name: {actor_name}
+    Background Facts: {background_facts}
     Strategic Style: {strategic_style}
 
     Generate a cohesive narrative (150-200 words) describing their "Persona".

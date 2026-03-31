@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Any
 
 from omen.ingest.llm_ontology.clients import create_chat_client
@@ -31,7 +32,7 @@ _ACTOR_TYPE_ALIAS = {
     "executive": "top_management",
     "management": "top_management",
 }
-_STRATEGIC_ROLE_TOKENS = {"founder", "ceo", "top_management"}
+_STRATEGIC_ROLE_TOKENS = {"founder", "ceo", "top management"}
 _ALLOWED_ACTOR_TYPES = {
     "founder",
     "ceo",
@@ -60,6 +61,13 @@ def _display_name_from_case_id(case_id: str) -> str:
 def _is_placeholder_name(value: str) -> bool:
     token = value.strip().lower()
     return token in {"strategic actor", "actor", "founder", "lead actor"}
+
+
+def _normalize_role_label(value: Any) -> str:
+    token = str(value or "").strip().lower().replace("_", " ")
+    token = re.sub(r"\s*\([^)]*\)", "", token)
+    token = re.sub(r"\s+", " ", token).strip(" -_,;:")
+    return token or "actor"
 
 
 def _default_background_facts() -> dict[str, Any]:
@@ -139,14 +147,14 @@ def _fallback_related_actors(events: list[dict[str, Any]], *, strategic_actor_id
 
 def _normalize_actor_kind_and_role(raw_type: Any, raw_role: Any = None) -> tuple[str, str]:
     type_token = str(raw_type or "").strip()
-    role_token = str(raw_role or "").strip().lower()
+    role_token = _normalize_role_label(raw_role)
     lowered = type_token.lower()
 
     if type_token in {"Actor", "StrategicActor"}:
         role = role_token or ("strategic_actor" if type_token == "StrategicActor" else "actor")
         return type_token, role
 
-    normalized_role = _ACTOR_TYPE_ALIAS.get(lowered, lowered or "actor")
+    normalized_role = _normalize_role_label(_ACTOR_TYPE_ALIAS.get(lowered, lowered or "actor"))
     if normalized_role in _STRATEGIC_ROLE_TOKENS:
         return "StrategicActor", role_token or normalized_role
     return "Actor", role_token or normalized_role or "actor"

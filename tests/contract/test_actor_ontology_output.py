@@ -21,19 +21,23 @@ def test_actor_ontology_schema_allows_extra_fields() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
             "extra": "ignored",
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "role",
+                "type": "StrategicActor",
+                "role": "founder",
                 "profile": {
-                    "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "background_facts": {
+                        "birth_year": None,
+                        "origin": None,
+                        "education": [],
+                        "career_trajectory": [],
+                        "key_experiences": [],
+                    },
                     "custom_impl": {"ok": True},
                 },
                 "custom_field": "ignored",

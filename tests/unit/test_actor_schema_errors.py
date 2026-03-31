@@ -26,17 +26,21 @@ def test_actor_schema_requires_metadata_suffix() -> None:
         "meta": {
             "case_id": "xd",
             "version": "v0.1.0",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "A",
-                "type": "founder",
+                "type": "StrategicActor",
+                "role": "founder",
                 "profile": {
-                    "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "background_facts": {
+                        "birth_year": None,
+                        "origin": None,
+                        "education": [],
+                        "career_trajectory": [],
+                        "key_experiences": [],
+                    }
                 },
             }
         ],
@@ -50,18 +54,22 @@ def test_schema_validator_ignores_extra_fields_like_origin() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "A",
-                "type": "founder",
+                "type": "StrategicActor",
+                "role": "founder",
                 "profile": {
-                    "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "background_facts": {
+                        "birth_year": 1990,
+                        "origin": "Earth",
+                        "education": ["A"],
+                        "career_trajectory": ["B"],
+                        "key_experiences": ["C"],
+                    }
                 },
             }
         ],
@@ -72,40 +80,34 @@ def test_schema_validator_ignores_extra_fields_like_origin() -> None:
     assert issues == []
 
 
-def test_schema_validator_ignores_closed_subdimension_content() -> None:
+def test_schema_validator_requires_canonical_background_facts() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "A",
-                "type": "founder",
-                "profile": {
-                    "mental_patterns": {"core_beliefs": ["x"]},
-                    "strategic_style": {"redacted": True},
-                },
+                "type": "StrategicActor",
+                "role": "founder",
+                "profile": {"background_facts": {"vision": "inferred"}},
             }
         ],
         "events": [],
     }
     issues = validate_actor_ontology_payload(payload)
-    assert issues == []
+    assert any(issue.path == "actors[0].profile.background_facts.birth_year" for issue in issues)
 
 
 def test_schema_validator_requires_profile_for_strategic_actor() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
         },
-        "actors": [{"id": "a1", "name": "Leader", "type": "founder"}],
+        "actors": [{"id": "a1", "name": "Leader", "type": "StrategicActor", "role": "founder"}],
         "events": [],
     }
     issues = validate_actor_ontology_payload(payload)
@@ -116,21 +118,25 @@ def test_schema_validator_allows_role_actor_without_profile() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "Leader",
-                "type": "founder",
+                "type": "StrategicActor",
+                "role": "founder",
                 "profile": {
-                    "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "background_facts": {
+                        "birth_year": None,
+                        "origin": None,
+                        "education": [],
+                        "career_trajectory": [],
+                        "key_experiences": [],
+                    }
                 },
             },
-            {"id": "a2", "name": "Analyst", "type": "role"},
+            {"id": "a2", "name": "Analyst", "type": "Actor", "role": "analyst"},
         ],
         "events": [],
     }

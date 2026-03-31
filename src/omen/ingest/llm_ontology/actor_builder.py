@@ -9,10 +9,8 @@ from typing import Any
 from omen.ingest.llm_ontology.clients import create_chat_client
 from omen.ingest.llm_ontology.prompts import build_actor_ontology_prompt
 from omen.ingest.schema.actor_schema import (
-    DISCLOSURE_LEVEL,
+    BACKGROUND_FACT_FIELDS,
     QUERY_TYPES,
-    REDACTION_MARKER,
-    STRATEGIC_DIMENSIONS,
     VERSION,
 )
 from omen.ingest.models.case_models import CaseDocument, LLMConfig
@@ -33,21 +31,125 @@ _ACTOR_TYPE_ALIAS = {
     "executive": "top_management",
     "management": "top_management",
 }
+_STRATEGIC_ROLE_TOKENS = {"founder", "ceo", "top_management"}
 _ALLOWED_ACTOR_TYPES = {
     "founder",
     "ceo",
     "top_management",
-    "person",
     "team",
     "organization",
     "customer",
-    "partner",
-    "investor",
-    "regulator",
     "competitor",
-    "role",
+    "regulator",
+    "investor",
+    "partner",
+    "supplier",
+    "government",
+    "other",
 }
 _STRATEGIC_ACTOR_TYPES = {"founder", "ceo", "top_management"}
+
+
+def _display_name_from_case_id(case_id: str) -> str:
+    tokens = [part for part in case_id.replace("_", "-").split("-") if part]
+    if not tokens:
+        return "Strategic Actor"
+    return " ".join(token.capitalize() for token in tokens)
+
+
+def _is_placeholder_name(value: str) -> bool:
+    token = value.strip().lower()
+    return token in {"strategic actor", "actor", "founder", "lead actor"}
+
+
+def _default_background_facts() -> dict[str, Any]:
+    defaults: dict[str, Any] = {field: [] for field in BACKGROUND_FACT_FIELDS}
+    defaults["birth_year"] = None
+    defaults["origin"] = None
+    return defaults
+
+
+def _as_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _as_optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        token = value.strip()
+        if token.isdigit():
+            return int(token)
+    return None
+
+
+def _as_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    token = str(value).strip()
+    return token or None
+
+
+def _normalize_background_facts(background: Any) -> dict[str, Any]:
+    facts = _default_background_facts()
+    if not isinstance(background, dict):
+        return facts
+
+    for field in BACKGROUND_FACT_FIELDS:
+        value = background.get(field)
+        if field == "birth_year":
+            facts[field] = _as_optional_int(value)
+        elif field == "origin":
+            facts[field] = _as_optional_str(value)
+        else:
+            facts[field] = _as_str_list(value)
+    return facts
+
+
+def _extract_public_profile(profile: Any) -> dict[str, Any]:
+    background = profile.get("background_facts") if isinstance(profile, dict) else None
+    return {"background_facts": _normalize_background_facts(background)}
+
+
+def _fallback_related_actors(events: list[dict[str, Any]], *, strategic_actor_id: str) -> list[dict[str, Any]]:
+    related: list[dict[str, Any]] = []
+    seen: set[str] = {strategic_actor_id}
+    for event in events:
+        for candidate in event.get("actors_involved") or []:
+            actor_id = str(candidate or "").strip()
+            if not actor_id or actor_id in seen:
+                continue
+            seen.add(actor_id)
+            related.append(
+                {
+                    "id": actor_id,
+                    "name": actor_id.replace("-", " ").replace("_", " ").title(),
+                    "type": "Actor",
+                    "role": "actor",
+                }
+            )
+    return related
+
+
+def _normalize_actor_kind_and_role(raw_type: Any, raw_role: Any = None) -> tuple[str, str]:
+    type_token = str(raw_type or "").strip()
+    role_token = str(raw_role or "").strip().lower()
+    lowered = type_token.lower()
+
+    if type_token in {"Actor", "StrategicActor"}:
+        role = role_token or ("strategic_actor" if type_token == "StrategicActor" else "actor")
+        return type_token, role
+
+    normalized_role = _ACTOR_TYPE_ALIAS.get(lowered, lowered or "actor")
+    if normalized_role in _STRATEGIC_ROLE_TOKENS:
+        return "StrategicActor", role_token or normalized_role
+    return "Actor", role_token or normalized_role or "actor"
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
@@ -75,24 +177,24 @@ def _default_actor(case_id: str, timeline_events: list[dict[str, Any]]) -> dict[
             }
         )
 
+    strategic_actor_id = f"actor.{case_id}"
+    actors = [
+        {
+            "id": strategic_actor_id,
+            "name": _display_name_from_case_id(case_id),
+            "type": "StrategicActor",
+            "role": "founder",
+            "profile": {"background_facts": _default_background_facts()},
+        }
+    ]
+    actors.extend(_fallback_related_actors(events, strategic_actor_id=strategic_actor_id))
+
     return {
         "meta": {
             "version": VERSION,
             "case_id": case_id,
-            "disclosure_level": DISCLOSURE_LEVEL,
-            "strategic_dimensions": list(STRATEGIC_DIMENSIONS),
         },
-        "actors": [
-            {
-                "id": f"actor.{case_id}",
-                "name": "Strategic Actor",
-                "type": "founder",
-                "profile": {
-                        "mental_patterns": dict(REDACTION_MARKER),
-                        "strategic_style": dict(REDACTION_MARKER),
-                },
-            }
-        ],
+        "actors": actors,
         "events": events,
         "influences": [],
         "query_skeleton": {"query_types": list(QUERY_TYPES)},
@@ -100,63 +202,54 @@ def _default_actor(case_id: str, timeline_events: list[dict[str, Any]]) -> dict[
 
 
 def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]:
-    meta = payload.get("meta") or {}
-    version = str(meta.get("version") or "").strip()
-    if not version:
-        version = VERSION
-    elif not version.endswith("-public"):
-        version = f"{version}-public"
+    version = VERSION
 
     actors_raw = payload.get("actors")
     actor_items = [item for item in actors_raw if isinstance(item, dict)] if isinstance(actors_raw, list) else []
     strategic_ids: set[str] = set()
     for actor in actor_items:
         actor_id = str(actor.get("id") or "").strip()
-        actor_name = str(actor.get("name") or "").strip().lower()
-        actor_type_raw = str(actor.get("type") or "role").strip().lower()
-        actor_type = _ACTOR_TYPE_ALIAS.get(actor_type_raw, actor_type_raw)
-        if actor_id and (
-            actor_type in _STRATEGIC_ACTOR_TYPES
-            or any(token in actor_name for token in ("founder", "ceo", "top management", "top_management"))
-        ):
+        actor_type, _actor_role = _normalize_actor_kind_and_role(actor.get("type"), actor.get("role"))
+        if actor_id and actor_type == "StrategicActor":
             strategic_ids.add(actor_id)
             break
 
     actors: list[dict[str, Any]] = []
     for idx, actor in enumerate(actor_items, start=1):
         actor_id = str(actor.get("id") or f"actor-{idx}").strip() or f"actor-{idx}"
-        actor_name = str(actor.get("name") or "Strategic Actor").strip() or "Strategic Actor"
-        actor_type_raw = str(actor.get("type") or "role").strip().lower() or "role"
-        actor_type = _ACTOR_TYPE_ALIAS.get(actor_type_raw, actor_type_raw)
-        if actor_type not in _ALLOWED_ACTOR_TYPES:
-            actor_type = "role"
+        actor_name = str(actor.get("name") or "").strip()
+        actor_type, actor_role = _normalize_actor_kind_and_role(actor.get("type"), actor.get("role"))
 
-        # Only the Strategic Actor carries strategic mental-pattern profile.
+        # Only the Strategic Actor carries profile content.
         if not strategic_ids and idx == 1:
             strategic_ids.add(actor_id)
         is_strategic_actor = actor_id in strategic_ids
+        normalized_role = actor_role
+        if is_strategic_actor and normalized_role in {"actor", "role"}:
+            normalized_role = "founder"
+        normalized_name = actor_name
+        if is_strategic_actor and (not normalized_name or _is_placeholder_name(normalized_name)):
+            normalized_name = _display_name_from_case_id(case_id)
+        elif not normalized_name:
+            normalized_name = f"Actor {idx}"
 
         actor_row: dict[str, Any] = {
             "id": actor_id,
-            "name": actor_name,
-            "type": actor_type if is_strategic_actor else "role",
+            "name": normalized_name,
+            "type": "StrategicActor" if is_strategic_actor else "Actor",
+            "role": normalized_role,
         }
         if is_strategic_actor:
-            actor_row["profile"] = {
-                "mental_patterns": dict(REDACTION_MARKER),
-                "strategic_style": dict(REDACTION_MARKER),
-            }
+            actor_row["profile"] = _extract_public_profile(actor.get("profile"))
         actors.append(actor_row)
     if not actors:
         actors = [
             {
                 "id": f"actor.{case_id}",
-                "name": "Strategic Actor",
-                "type": "role",
-                "profile": {
-                    "mental_patterns": dict(REDACTION_MARKER),
-                    "strategic_style": dict(REDACTION_MARKER),
-                },
+                "name": _display_name_from_case_id(case_id),
+                "type": "StrategicActor",
+                "role": "founder",
+                "profile": {"background_facts": _default_background_facts()},
             }
         ]
 
@@ -237,8 +330,6 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
         "meta": {
             "version": version,
             "case_id": case_id,
-            "disclosure_level": DISCLOSURE_LEVEL,
-            "strategic_dimensions": list(STRATEGIC_DIMENSIONS),
         },
         "actors": actors,
         "events": events,

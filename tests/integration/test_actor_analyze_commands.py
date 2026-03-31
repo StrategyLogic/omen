@@ -36,18 +36,22 @@ def test_actor_baseline_command_writes_required_artifacts(tmp_path: Path, actor_
         payload = {
             "meta": {
                 "case_id": "xd",
-                "version": "v0.1.0-public",
-                "disclosure_level": "public-structure",
-                "strategic_dimensions": ["mental_patterns", "strategic_style"],
+                "version": "v0.1.0-actor",
             },
             "actors": [
                 {
                     "id": "a1",
                     "name": "Actor A",
-                    "type": "role",
+                    "type": "StrategicActor",
+                    "role": "founder",
                     "profile": {
-                        "mental_patterns": {"redacted": True},
-                        "strategic_style": {"redacted": True},
+                        "background_facts": {
+                            "birth_year": 1990,
+                            "origin": "Earth",
+                            "education": ["University"],
+                            "career_trajectory": ["Founder"],
+                            "key_experiences": ["Built company"],
+                        }
                     },
                 }
             ],
@@ -95,11 +99,19 @@ def test_actor_baseline_command_writes_required_artifacts(tmp_path: Path, actor_
     assert (case_dir / "analyze_persona.json").exists()
 
     actor_payload = json.loads((case_dir / "actor_ontology.json").read_text(encoding="utf-8"))
-    assert actor_payload["meta"]["disclosure_level"] == "public-structure"
-    assert actor_payload["meta"]["version"].endswith("-public")
+    assert "disclosure_level" not in actor_payload["meta"]
+    assert "strategic_dimensions" not in actor_payload["meta"]
+    assert actor_payload["meta"]["version"] == "v0.1.0-actor"
     profile = actor_payload["actors"][0]["profile"]
-    assert profile["mental_patterns"] == {"redacted": True}
-    assert profile["strategic_style"] == {"redacted": True}
+    assert profile == {
+        "background_facts": {
+            "birth_year": 1990,
+            "origin": "Earth",
+            "education": ["University"],
+            "career_trajectory": ["Founder"],
+            "key_experiences": ["Built company"],
+        }
+    }
 
 
 @pytest.mark.parametrize("subcommand", ["strategy", "insight"])
@@ -132,18 +144,22 @@ def test_validate_actor_file_accepts_schema_with_extra_fields(tmp_path: Path, mo
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "founder",
+                "type": "StrategicActor",
+                "role": "founder",
                 "profile": {
-                    "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "background_facts": {
+                        "birth_year": None,
+                        "origin": None,
+                        "education": [],
+                        "career_trajectory": [],
+                        "key_experiences": [],
+                    }
                 },
             }
         ],

@@ -22,7 +22,7 @@ def _pick_primary_actor(actor_ontology: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(actor, dict):
             continue
         actor_type = str(actor.get("type") or "").strip().lower()
-        if actor_type in {"founder", "ceo", "top_management"}:
+        if actor_type == "strategicactor":
             return actor
     for actor in actors:
         if isinstance(actor, dict):

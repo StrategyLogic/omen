@@ -23,18 +23,22 @@ def test_actor_profile_passes_when_redacted_shape_is_valid() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "founder",
+                "type": "StrategicActor",
+                "role": "founder",
                 "profile": {
-                    "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "background_facts": {
+                        "birth_year": None,
+                        "origin": None,
+                        "education": [],
+                        "career_trajectory": [],
+                        "key_experiences": [],
+                    }
                 },
             }
         ],
@@ -44,29 +48,34 @@ def test_actor_profile_passes_when_redacted_shape_is_valid() -> None:
     assert validate_actor_ontology_payload(payload) == []
 
 
-def test_actor_profile_ignores_non_schema_extra_fields() -> None:
+def test_actor_profile_rejects_non_schema_extra_fields() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
-            "version": "v0.1.0-public",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
+            "version": "v0.1.0-actor",
             "actor_relation_count": 2,
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "ceo",
+                "type": "StrategicActor",
+                "role": "ceo",
                 "profile": {
-                    "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "background_facts": {
+                        "birth_year": None,
+                        "origin": None,
+                        "education": [],
+                        "career_trajectory": [],
+                        "key_experiences": [],
+                        "vision": "inferred text",
+                    }
                 },
             },
-            {"id": "a2", "name": "Stakeholder", "type": "role"},
+            {"id": "a2", "name": "Stakeholder", "type": "Actor", "role": "customer"},
         ],
         "events": [],
         "influences": [{"source": "a1", "target": "x", "type": "influences", "origin": "system_generated"}],
     }
     issues = validate_actor_ontology_payload(payload)
-    assert issues == []
+    assert any(issue.code == "unexpected_background_fact_field" for issue in issues)

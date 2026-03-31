@@ -9,7 +9,7 @@ import warnings
 
 from pydantic import ValidationError
 
-from omen.ingest.schema.actor_schema import DISCLOSURE_LEVEL, STRATEGIC_DIMENSIONS, VERSION_SUFFIX
+from omen.ingest.schema.actor_schema import BACKGROUND_FACT_FIELDS, VERSION
 from omen.scenario.ontology_models import OntologyInputPackage
 from omen.scenario.ontology_vocab import looks_like_actor_concept
 
@@ -32,15 +32,15 @@ class OntologyValidationError(ValueError):
 
 def _is_strategic_actor_type(value: Any) -> bool:
     actor_type = str(value or "").strip().lower()
-    return actor_type in {"founder", "ceo", "top_management"}
+    return actor_type == "strategicactor"
 
 
 def _is_version_compatible(value: Any) -> bool:
-    return str(value or "").strip().endswith(VERSION_SUFFIX)
+    return str(value or "").strip() == VERSION
 
 
-def _is_disclosure_level_compatible(value: Any) -> bool:
-    return str(value or "").strip().lower() == DISCLOSURE_LEVEL
+def _is_str_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
 def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyValidationIssue]:
@@ -55,41 +55,10 @@ def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyVal
         issues.append(
             OntologyValidationIssue(
                 code="invalid_version",
-                message="meta.version must end with '-public'",
+                message=f"meta.version must equal '{VERSION}'",
                 path="meta.version",
             )
         )
-
-    if not _is_disclosure_level_compatible(meta.get("disclosure_level")):
-        issues.append(
-            OntologyValidationIssue(
-                code="invalid_disclosure_level",
-                message="meta.disclosure_level must equal 'public-structure'",
-                path="meta.disclosure_level",
-            )
-        )
-
-    strategic_dimensions = meta.get("strategic_dimensions")
-    if not isinstance(strategic_dimensions, list):
-        issues.append(
-            OntologyValidationIssue(
-                code="missing_strategic_dimensions",
-                message="meta.strategic_dimensions must be an array",
-                path="meta.strategic_dimensions",
-            )
-        )
-    else:
-        dims = {str(item).strip() for item in strategic_dimensions if str(item).strip()}
-        required_dims = {str(item) for item in STRATEGIC_DIMENSIONS}
-        missing_dims = sorted(required_dims - dims)
-        for missing_dim in missing_dims:
-            issues.append(
-                OntologyValidationIssue(
-                    code="missing_dimension",
-                    message=f"missing required strategic dimension: {missing_dim}",
-                    path="meta.strategic_dimensions",
-                )
-            )
 
     actors = payload.get("actors")
     if not isinstance(actors, list):
@@ -124,13 +93,65 @@ def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyVal
                     )
                 )
                 continue
-            for dim in sorted(STRATEGIC_DIMENSIONS):
-                if dim not in profile:
+
+            background_facts = profile.get("background_facts")
+            if not isinstance(background_facts, dict):
+                issues.append(
+                    OntologyValidationIssue(
+                        code="invalid_background_facts",
+                        message="profile.background_facts must be an object",
+                        path=f"{base}.profile.background_facts",
+                    )
+                )
+                continue
+
+            for field in BACKGROUND_FACT_FIELDS:
+                if field not in background_facts:
                     issues.append(
                         OntologyValidationIssue(
-                            code="missing_profile_dimension",
-                            message=f"profile.{dim} is required in actor schema",
-                            path=f"{base}.profile.{dim}",
+                            code="missing_background_fact_field",
+                            message=f"profile.background_facts.{field} is required",
+                            path=f"{base}.profile.background_facts.{field}",
+                        )
+                    )
+
+            extra_fields = sorted(set(background_facts.keys()) - set(BACKGROUND_FACT_FIELDS))
+            for field in extra_fields:
+                issues.append(
+                    OntologyValidationIssue(
+                        code="unexpected_background_fact_field",
+                        message=f"profile.background_facts.{field} is not allowed",
+                        path=f"{base}.profile.background_facts.{field}",
+                    )
+                )
+
+            birth_year = background_facts.get("birth_year")
+            if birth_year is not None and not isinstance(birth_year, int):
+                issues.append(
+                    OntologyValidationIssue(
+                        code="invalid_background_fact_type",
+                        message="profile.background_facts.birth_year must be integer or null",
+                        path=f"{base}.profile.background_facts.birth_year",
+                    )
+                )
+
+            origin = background_facts.get("origin")
+            if origin is not None and not isinstance(origin, str):
+                issues.append(
+                    OntologyValidationIssue(
+                        code="invalid_background_fact_type",
+                        message="profile.background_facts.origin must be string or null",
+                        path=f"{base}.profile.background_facts.origin",
+                    )
+                )
+
+            for list_field in ("education", "career_trajectory", "key_experiences"):
+                if not _is_str_list(background_facts.get(list_field)):
+                    issues.append(
+                        OntologyValidationIssue(
+                            code="invalid_background_fact_type",
+                            message=f"profile.background_facts.{list_field} must be string[]",
+                            path=f"{base}.profile.background_facts.{list_field}",
                         )
                     )
 
@@ -138,7 +159,7 @@ def validate_actor_ontology_payload(payload: dict[str, Any]) -> list[OntologyVal
             issues.append(
                 OntologyValidationIssue(
                     code="missing_strategic_actor",
-                    message="at least one strategic actor (founder/ceo/top_management) is required",
+                    message="at least one strategic actor (type=StrategicActor) is required",
                     path="actors",
                 )
             )

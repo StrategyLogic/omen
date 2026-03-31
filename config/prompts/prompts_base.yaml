@@ -53,7 +53,7 @@ prompts:
     - If you discover new concept types beyond current taxonomy, keep category="other" and encode the concrete type in the name.
     - Naming principle: concepts use PascalCase nouns; actor concepts end with Actor; capabilities use snake_case where practical.
     - tbox.relations MUST be a list of objects with keys: name, source, target, description.
-    - Prefer semantic relation names: has_capability, competes_with, depends_on, substitutes, complements, constrains, influences.
+    - Prefer semantic relation names: has_capability, competes_with, depends_on, substitutes, complements, influences.
     - If the case clearly needs a different relation such as addresses or leads_to, you may emit a case-specific relation name.
     - relation source/target MUST reference names declared in tbox.concepts.
     - tbox.axioms MUST be a list of objects with keys: id, statement, type.
@@ -63,7 +63,7 @@ prompts:
     - actor_type MUST be one of: Actor, StrategicActor.
     - role is a descriptive text field (no fixed enum), for example founder, ceo, management, customer.
     - Exactly one actor in abox.actors MUST use actor_type=StrategicActor; all others MUST use actor_type=Actor.
-    - StrategicActor instances MUST include profile with mental_patterns and strategic_style objects.
+    - StrategicActor instances MUST include a profile object.
     - tbox.concepts MUST include Actor and StrategicActor as actor-category concepts.
     - tbox.relations MUST include: inherits_from(StrategicActor -> Actor).
     - abox.capabilities and abox.constraints SHOULD be provided when evidence exists; keep capability scores in [0,1].
@@ -153,7 +153,7 @@ prompts:
 
   actor_ontology_prompt: |
     You are an ontology extraction assistant.
-    Build actor_ontology JSON only (v0.1.0-actor-centric).
+    Build actor_ontology JSON only (v0.1.0-actor).
 
     Required top-level keys:
     - meta (version, case_id, slice)
@@ -171,9 +171,15 @@ prompts:
     - type: MUST be one of Actor or StrategicActor.
     - role: descriptive role text (e.g. founder, ceo, management, customer, competitor).
     - Exactly ONE actor MUST be StrategicActor.
-    - StrategicActor MUST include profile with:
-      - mental_patterns
-      - strategic_style
+    - StrategicActor MUST include a profile object.
+    - StrategicActor.profile.background_facts MUST use EXACTLY this structure:
+      - birth_year: integer or null
+      - origin: string or null
+      - education: string[]
+      - career_trajectory: string[]
+      - key_experiences: string[]
+    - Do NOT add any extra keys under background_facts.
+    - Only include source-grounded factual statements; never infer/guess background facts.
     - Other actors MUST be Actor; role remains descriptive text only.
 
     Events Schema:
@@ -182,12 +188,13 @@ prompts:
     - philosophy: "Facts & Structures only. Narratives/Personas are generated via Query."
     - actors[].type: exactly one StrategicActor; all others Actor.
     - actors[].role: preserve real role semantics from evidence (founder/ceo/management/customer/etc.).
-    - mental_patterns and strategic_style are required only on StrategicActor.
+    - profile is required only on StrategicActor.
+    - profile must include only background_facts with the canonical fields above.
     - events: MUST use time evidence from timeline input. Include 'context_constraints' for external pressures (e.g., "Cash flow < 6 months").
-    - influences: Link mental_patterns/background to strategic_style/decisions (e.g., manifests_as_principle, shapes_belief).
+    - influences: Capture evidence-grounded relationships between actors, events, and products when clearly supported.
     - IMPORTANT: Also link between Entities:
         - Product -> competes_with -> Competitor
-        - Competitor -> influences/constrains -> Actors
+      - Competitor -> influences -> Actors
         - Actors -> participates_in -> Events
         - Events -> affects -> Product (e.g., launch, pricing update)
 
@@ -210,8 +217,8 @@ prompts:
     No markdown fences, no explanations, no trailing text.
 
   persona_insight: |
-    Analyze the character and mental patterns of the following founder based on provided ontology data.
-    Founder name: {founder_name}
+    Analyze the character and strategic profile of the following StrategicActor based on provided ontology data.
+    Strategic Actor name: {founder_name}
     Profile Facts: {profile_facts}
     Mental Patterns: {mental_patterns}
     Strategic Style: {strategic_style}

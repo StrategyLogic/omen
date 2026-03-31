@@ -1,4 +1,4 @@
-"""Public service for document-to-ontology generation and validation."""
+"""Service for document-to-ontology generation and validation."""
 
 from __future__ import annotations
 

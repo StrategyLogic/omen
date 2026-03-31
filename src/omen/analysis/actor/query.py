@@ -282,15 +282,10 @@ def _build_actor_graph(actor_ontology: dict[str, Any], actor_events: list[dict[s
         actor_type = str(actor.get("type") or "").strip()
         actor_role = str(actor.get("role") or "").strip()
         is_strategic_actor = actor_id == strategic_actor_id or actor_type == "StrategicActor"
-        label_suffix = ""
-        if is_strategic_actor:
-            label_suffix = " (Strategic Actor)"
-        elif actor_role:
-            label_suffix = f" ({actor_role})"
         nodes.append(
             {
                 "id": actor_id,
-                "label": f"{str(actor.get('name') or actor_id)}{label_suffix}",
+                "label": str(actor.get("name") or actor_id),
                 "node_type": (
                     "strategic_actor" if is_strategic_actor
                     else "competitor" if actor_role.lower() == "competitor"

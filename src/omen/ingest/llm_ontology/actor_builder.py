@@ -120,16 +120,16 @@ def _normalize_background_facts(background: Any) -> dict[str, Any]:
     return facts
 
 
-def _extract_public_profile(profile: Any) -> dict[str, Any]:
+def _extract_profile(profile: Any) -> dict[str, Any]:
     background = profile.get("background_facts") if isinstance(profile, dict) else None
-    public_profile: dict[str, Any] = {
+    extract_profile: dict[str, Any] = {
         "background_facts": _normalize_background_facts(background)
     }
     if isinstance(profile, dict):
         strategic_style = profile.get("strategic_style")
         if isinstance(strategic_style, dict):
-            public_profile["strategic_style"] = dict(strategic_style)
-    return public_profile
+            extract_profile["strategic_style"] = dict(strategic_style)
+    return extract_profile
 
 
 def _extract_actor_profile(profile: Any) -> dict[str, Any] | None:
@@ -261,7 +261,7 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
             "role": normalized_role,
         }
         if is_strategic_actor:
-            actor_row["profile"] = _extract_public_profile(actor.get("profile"))
+            actor_row["profile"] = _extract_profile(actor.get("profile"))
         else:
             actor_profile = _extract_actor_profile(actor.get("profile"))
             if actor_profile is not None:

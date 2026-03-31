@@ -19,7 +19,7 @@ def _minimal_config() -> LLMConfig:
     )
 
 
-def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) -> None:
+def test_actor_builder_profile_for_chen_case(monkeypatch) -> None:
     repo_root = Path(__file__).resolve().parents[2]
     source = repo_root / "cases" / "actors" / "chen-jiaxing.md"
     assert source.exists(), f"missing fixed case: {source}"
@@ -35,8 +35,6 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
         "meta": {
             "version": "v0.1.0-actor-centric",
             "case_id": "chen-jiaxing",
-            "disclosure_level": "public-structure",
-            "strategic_dimensions": ["mental_patterns", "strategic_style"],
         },
         "actors": [
             {

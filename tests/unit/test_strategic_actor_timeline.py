@@ -61,7 +61,7 @@ def test_timeline_empty_state_returns_empty_rows() -> None:
     assert module.extract_timeline_rows({}) == []
 
 
-def test_actor_graph_uses_strategic_actor_and_role_labels() -> None:
+def test_actor_graph_uses_name_only_labels() -> None:
     payload = build_events_snapshot(
         strategy_ontology={"abox": {}},
         actor_ontology={
@@ -84,6 +84,6 @@ def test_actor_graph_uses_strategic_actor_and_role_labels() -> None:
     nodes = payload["actor_graph"]["nodes"]
     by_id = {node["id"]: node for node in nodes}
     assert by_id["a1"]["node_type"] == "strategic_actor"
-    assert by_id["a1"]["label"].endswith("(Strategic Actor)")
+    assert by_id["a1"]["label"] == "Leader"
     assert by_id["a2"]["node_type"] == "customer"
-    assert by_id["a2"]["label"].endswith("(customer)")
+    assert by_id["a2"]["label"] == "Buyer"

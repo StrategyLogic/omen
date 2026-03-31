@@ -44,7 +44,7 @@ def test_actor_baseline_command_writes_required_artifacts(tmp_path: Path, actor_
                 {
                     "id": "a1",
                     "name": "Actor A",
-                    "type": "founder",
+                    "type": "role",
                     "profile": {
                         "mental_patterns": {"redacted": True},
                         "strategic_style": {"redacted": True},
@@ -128,7 +128,7 @@ def test_actor_cloud_only_subcommands_return_guidance(tmp_path: Path, actor_case
     assert "not available in this edition" in captured.out
 
 
-def test_validate_actor_file_accepts_public_schema_with_extra_fields(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_validate_actor_file_accepts_schema_with_extra_fields(tmp_path: Path, monkeypatch, capsys) -> None:
     payload = {
         "meta": {
             "case_id": "xd",
@@ -140,7 +140,7 @@ def test_validate_actor_file_accepts_public_schema_with_extra_fields(tmp_path: P
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "founder",
+                "type": "role",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -148,7 +148,7 @@ def test_validate_actor_file_accepts_public_schema_with_extra_fields(tmp_path: P
             }
         ],
         "events": [],
-        "influences": [{"source": "a1", "target": "e1", "type": "influences", "origin": "semantic_enhancement"}],
+        "influences": [{"source": "a1", "target": "e1", "type": "influences", "origin": "system_generated"}],
     }
     actor_file = tmp_path / "actor_ontology.json"
     actor_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

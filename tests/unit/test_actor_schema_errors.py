@@ -21,7 +21,7 @@ def test_strategy_actor_ref_path_must_match_actor_filename() -> None:
     assert any(issue.path == "actor_ref.path" for issue in issues)
 
 
-def test_actor_public_schema_requires_public_metadata() -> None:
+def test_actor_schema_requires_metadata_suffix() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
@@ -33,7 +33,7 @@ def test_actor_public_schema_requires_public_metadata() -> None:
             {
                 "id": "a1",
                 "name": "A",
-                "type": "founder",
+                "type": "role",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -46,7 +46,7 @@ def test_actor_public_schema_requires_public_metadata() -> None:
     assert any(issue.path == "meta.version" for issue in issues)
 
 
-def test_public_export_ignores_extra_fields_like_origin() -> None:
+def test_schema_validator_ignores_extra_fields_like_origin() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
@@ -58,7 +58,7 @@ def test_public_export_ignores_extra_fields_like_origin() -> None:
             {
                 "id": "a1",
                 "name": "A",
-                "type": "founder",
+                "type": "role",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -66,13 +66,13 @@ def test_public_export_ignores_extra_fields_like_origin() -> None:
             }
         ],
         "events": [],
-        "influences": [{"source": "a", "target": "b", "type": "influences", "origin": "semantic_enhancement"}],
+        "influences": [{"source": "a", "target": "b", "type": "influences", "origin": "system_generated"}],
     }
     issues = validate_actor_ontology_payload(payload)
     assert issues == []
 
 
-def test_public_export_ignores_closed_subdimension_content() -> None:
+def test_schema_validator_ignores_closed_subdimension_content() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
@@ -84,7 +84,7 @@ def test_public_export_ignores_closed_subdimension_content() -> None:
             {
                 "id": "a1",
                 "name": "A",
-                "type": "founder",
+                "type": "role",
                 "profile": {
                     "mental_patterns": {"core_beliefs": ["x"]},
                     "strategic_style": {"redacted": True},

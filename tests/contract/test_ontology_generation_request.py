@@ -12,7 +12,7 @@ def test_ontology_generation_request_contract_accepts_valid_payload() -> None:
         "title": "X-Developer Replay",
         "document": {
             "content_type": "markdown",
-            "content": "# Intro\nThe founder launched product milestones.",
+            "content": "# Intro\nThe team launched product milestones.",
             "source_path": "cases/x-developer.md",
             "known_outcome": "gradual adoption",
         },

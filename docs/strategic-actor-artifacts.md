@@ -31,7 +31,7 @@ Required contract points:
 
 Constraint:
 
-- no founder-specific extension fields are required by the core contract.
+- no source-domain extension fields are required by the core contract.
 
 ## `analyze_status.json`
 

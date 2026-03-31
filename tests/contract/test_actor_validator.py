@@ -19,7 +19,7 @@ def test_actor_validator_report_fail() -> None:
     assert len(report["errors"]) == 1
 
 
-def test_actor_public_profile_passes_when_redacted_shape_is_valid() -> None:
+def test_actor_profile_passes_when_redacted_shape_is_valid() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
@@ -31,7 +31,7 @@ def test_actor_public_profile_passes_when_redacted_shape_is_valid() -> None:
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "founder",
+                "type": "role",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -44,20 +44,20 @@ def test_actor_public_profile_passes_when_redacted_shape_is_valid() -> None:
     assert validate_actor_ontology_payload(payload) == []
 
 
-def test_actor_public_profile_ignores_non_public_extra_fields() -> None:
+def test_actor_profile_ignores_non_schema_extra_fields() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
             "version": "v0.1.0-public",
             "disclosure_level": "public-structure",
             "strategic_dimensions": ["mental_patterns", "strategic_style"],
-            "actor_semantic_relations_added": 2,
+            "actor_relation_count": 2,
         },
         "actors": [
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "founder",
+                "type": "role",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -65,7 +65,7 @@ def test_actor_public_profile_ignores_non_public_extra_fields() -> None:
             }
         ],
         "events": [],
-        "influences": [{"source": "a1", "target": "x", "type": "influences", "origin": "semantic_enhancement"}],
+        "influences": [{"source": "a1", "target": "x", "type": "influences", "origin": "system_generated"}],
     }
     issues = validate_actor_ontology_payload(payload)
     assert issues == []

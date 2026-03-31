@@ -17,7 +17,7 @@ def test_actor_ontology_contract_minimal_shape() -> None:
     assert payload["meta"]["case_id"] == "xd"
 
 
-def test_actor_ontology_public_schema_allows_extra_fields() -> None:
+def test_actor_ontology_schema_allows_extra_fields() -> None:
     payload = {
         "meta": {
             "case_id": "xd",
@@ -30,7 +30,7 @@ def test_actor_ontology_public_schema_allows_extra_fields() -> None:
             {
                 "id": "a1",
                 "name": "Actor A",
-                "type": "founder",
+                "type": "role",
                 "profile": {
                     "mental_patterns": {"redacted": True},
                     "strategic_style": {"redacted": True},
@@ -40,7 +40,7 @@ def test_actor_ontology_public_schema_allows_extra_fields() -> None:
             }
         ],
         "events": [{"id": "e1"}],
-        "influences": [{"origin": "semantic_enhancement"}],
+        "influences": [{"origin": "system_generated"}],
     }
 
     issues = validate_actor_ontology_payload(payload)

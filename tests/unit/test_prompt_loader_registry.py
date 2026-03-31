@@ -10,7 +10,7 @@ def test_load_base_prompt_templates() -> None:
     prompts = load_tier_prompts("base")
 
     assert "persona_insight" in prompts
-    assert "Founder name:" in prompts["persona_insight"]
+    assert "{founder_name}" in prompts["persona_insight"]
 
 
 def test_analyze_prompt_bindings_match_open_pro_split() -> None:

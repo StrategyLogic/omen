@@ -17,8 +17,8 @@ def test_strategy_ontology_output_contract_accepts_minimal_valid_payload() -> No
             "axioms": [{"name": "transitivity"}],
         },
         "abox": {
-            "actors": [{"actor_id": "founder.xd"}],
-            "capabilities": [{"name": "semantic_depth", "score": 0.7}],
+            "actors": [{"actor_id": "actor.xd"}],
+            "capabilities": [{"name": "execution_depth", "score": 0.7}],
             "constraints": [{"name": "market_resistance"}],
             "events": [{"id": "event-1", "name": "Launch"}],
         },
@@ -28,7 +28,7 @@ def test_strategy_ontology_output_contract_accepts_minimal_valid_payload() -> No
             "counterfactual_rules": [{"rule": "r3"}],
         },
         "tech_space_ontology": {
-            "actors": ["founder.xd"],
+            "actors": ["actor.xd"],
             "capabilities": [{"name": "data_pipeline"}],
             "axioms": [{"name": "capability_supports_outcome"}],
         },
@@ -37,14 +37,14 @@ def test_strategy_ontology_output_contract_accepts_minimal_valid_payload() -> No
             "axioms": [{"name": "adoption_barrier"}],
             "market_attributes": {"adoption_resistance": 0.6},
         },
-        "shared_actors": ["founder.xd"],
+        "shared_actors": ["actor.xd"],
         "case_package": {"documents": []},
         "scenario_id": "xd-replay",
         "name": "X-Developer Replay",
         "time_steps": 12,
         "seed": 7,
-        "actors": ["founder.xd"],
-        "capabilities": [{"name": "semantic_depth"}],
+        "actors": ["actor.xd"],
+        "capabilities": [{"name": "execution_depth"}],
     }
 
     validate_with_contract(payload, "strategy-ontology-output.schema.json")

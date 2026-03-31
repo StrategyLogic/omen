@@ -18,7 +18,7 @@ class _FakeGeneration:
 
 
 def test_actor_baseline_runs_without_private_credentials(tmp_path: Path, monkeypatch) -> None:
-    case_dir = tmp_path / "cases" / "founder"
+    case_dir = tmp_path / "cases" / "actors"
     case_dir.mkdir(parents=True, exist_ok=True)
     doc = case_dir / "xd.md"
     doc.write_text("source", encoding="utf-8")

@@ -6,7 +6,7 @@ import math
 import random
 from dataclasses import dataclass
 
-from omen.models.state import ActorRuntimeState, SimulationState
+from omen.simulation.state import ActorRuntimeState, SimulationState
 
 ACTION_CATALOG: dict[str, dict[str, float]] = {
     "grow_semantic_layer": {"semantic_delta": 0.03, "cost": 20.0, "user_growth": 0.02},

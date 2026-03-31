@@ -23,7 +23,7 @@ def test_timeline_extraction_falls_back_to_chunk_grounded_events(monkeypatch, tm
         title="X-Developer Replay",
         content_type="markdown",
         source_path=str(tmp_path / "case.md"),
-        raw_text="Founders launched a workflow platform and iterated with pilots.",
+        raw_text="The team launched a workflow platform and iterated with pilots.",
         known_outcome="gradual adoption",
     )
     chunks = [

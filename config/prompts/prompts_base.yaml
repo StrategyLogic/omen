@@ -167,8 +167,8 @@ prompts:
     - IMPORTANT: Extract ALL actors mentioned in the case (founder, ceo, management, customers, competitors, etc.).
     - id: unique slug (e.g. 'actor-founder-1', 'actor-customer-apple').
     - name: display name.
-    - type: MUST be one of Actor or StrategicActor. Exactly ONE actor MUST be StrategicActor.
-    - role: descriptive role text (e.g. founder, ceo, management, customer, competitor). role MUST be a concise base label only. Do NOT include qualifiers in parentheses.
+    - type: MUST be one of Actor or StrategicActor.
+    - role: descriptive role text (e.g. founder, ceo, management, customer, competitor).
     - Profile for StrategicActor:
       - background_facts: birth_year, origin, education[], career_trajectory[], key_experiences[]
       - strategic_style: decision_style, value_proposition, decision_preferences[], non_negotiables[]
@@ -179,17 +179,16 @@ prompts:
     - id, name, type, date, description, context_constraints[], actors_involved[], evidence_refs[]
     Rules:
     - philosophy: "Facts & Structures only. Narratives/Personas are generated via Query."
-    - actors[].type: exactly one StrategicActor; all others Actor.
-    - actors[].role: preserve real role semantics from evidence (founder/ceo/management/customer/etc.).
-    - profile is required only on StrategicActor.
-    - profile must include only background_facts with the canonical fields above.
+    - actors[].type: MUST be 'StrategicActor' for the primary decision maker; all others Actor.
+    - actors[].role: MUST be a concise base label only. Do NOT include qualifiers in parentheses. Preserve real role semantics from evidence (founder/ceo/management/customer/etc.).
+    - strategic_style.non_negotiables: Active constraints chosen by the founder (e.g., "No manual input").
     - events: MUST use time evidence from timeline input. Include 'context_constraints' for external pressures (e.g., "Cash flow < 6 months").
-    - influences: Capture evidence-grounded relationships between actors, events, and products when clearly supported.
+    - influences: Capture evidence-grounded relationships between actors, events, and products when clearly supported. Link background to strategic_style/decisions (e.g., manifests_as_principle, shapes_belief).
     - IMPORTANT: Also link between Entities:
-        - Product -> competes_with -> Competitor
+      - Product -> competes_with -> Competitor
       - Competitor -> influences -> Actors
-        - Actors -> participates_in -> Events
-        - Events -> affects -> Product (e.g., launch, pricing update)
+      - Actors -> participates_in -> Events
+      - Events -> affects -> Product (e.g., launch, pricing update)
 
     query_skeleton: status, persona.
 

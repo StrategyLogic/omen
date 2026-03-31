@@ -83,7 +83,7 @@ def build_actor_graph_figure(payload: dict[str, Any]) -> Any:
     node_hover_text: list[str] = []
     node_colors: list[str] = []
     color_map = {
-        "founder_actor": "#DC2626",
+        "strategic_actor": "#DC2626",
         "actor": "#059669",
         "customer": "#0891B2",
         "competitor": "#EA580C",

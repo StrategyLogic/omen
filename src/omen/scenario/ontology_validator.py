@@ -352,18 +352,49 @@ def _normalize_relations(
 def _normalize_actors(actors: list[Any]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
 
+    def _normalize_actor_kind_and_role(raw_type: str, raw_role: str) -> tuple[str, str]:
+        token = str(raw_type or "").strip()
+        lowered = token.lower()
+        role = str(raw_role or "").strip()
+
+        if token in {"Actor", "StrategicActor"}:
+            if token == "StrategicActor":
+                return token, role or "strategic_actor"
+            return token, role or "actor"
+
+        strategic_role_tokens = {"founder", "ceo", "top_management", "top management"}
+        if lowered in strategic_role_tokens:
+            return "StrategicActor", role or lowered.replace(" ", "_")
+
+        if lowered.endswith("actor") and lowered not in {"actor", "strategicactor"}:
+            return "Actor", role or lowered.removesuffix("actor") or "actor"
+
+        return "Actor", role or (lowered if lowered else "actor")
+
     def _append_actor(actor: dict[str, Any]) -> None:
         actor_id = str(
             actor.get("actor_id") or actor.get("id") or _slugify(str(actor.get("name") or ""))
         ).strip()
         if not actor_id:
             return
-        actor_type = str(actor.get("actor_type") or actor.get("concept") or "actor").strip()
+        actor_type, role = _normalize_actor_kind_and_role(
+            str(actor.get("actor_type") or actor.get("concept") or "Actor"),
+            str(actor.get("role") or actor.get("name") or ""),
+        )
+        profile = actor.get("profile") if isinstance(actor.get("profile"), dict) else None
+        if actor_type == "StrategicActor" and profile is None:
+            profile = {
+                "mental_patterns": {},
+                "strategic_style": {},
+            }
         normalized.append(
             {
                 "actor_id": actor_id,
                 "actor_type": actor_type,
+                "role": role,
+                "shared_id": str(actor.get("shared_id") or "").strip() or None,
                 "labels": list(actor.get("labels") or []),
+                "profile": profile,
             }
         )
 
@@ -381,6 +412,47 @@ def _normalize_actors(actors: list[Any]) -> list[dict[str, Any]]:
                     _append_actor(child)
 
     return normalized
+
+
+def _ensure_actor_hierarchy_tbox(tbox: dict[str, Any]) -> None:
+    concepts = [item for item in list(tbox.get("concepts") or []) if isinstance(item, dict)]
+    concept_by_name = {str(item.get("name") or "").strip(): item for item in concepts}
+
+    if "Actor" not in concept_by_name:
+        concepts.append(
+            {
+                "name": "Actor",
+                "description": "Top-level action subject type.",
+                "category": "actor",
+            }
+        )
+    if "StrategicActor" not in concept_by_name:
+        concepts.append(
+            {
+                "name": "StrategicActor",
+                "description": "Actor subclass carrying strategic profile fields.",
+                "category": "actor",
+            }
+        )
+    tbox["concepts"] = concepts
+
+    relations = [item for item in list(tbox.get("relations") or []) if isinstance(item, dict)]
+    has_inheritance = any(
+        str(rel.get("name") or "").strip() == "inherits_from"
+        and str(rel.get("source") or "").strip() == "StrategicActor"
+        and str(rel.get("target") or "").strip() == "Actor"
+        for rel in relations
+    )
+    if not has_inheritance:
+        relations.append(
+            {
+                "name": "inherits_from",
+                "source": "StrategicActor",
+                "target": "Actor",
+                "description": "StrategicActor is a subtype of Actor.",
+            }
+        )
+    tbox["relations"] = relations
 
 
 def _normalize_reasoning_profile(value: Any) -> dict[str, Any]:
@@ -585,6 +657,23 @@ def _normalize_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[st
 
     abox = dict(payload.get("abox") or {})
     abox["actors"] = _normalize_actors(list(abox.get("actors") or []))
+
+    strategic_indexes = [idx for idx, actor in enumerate(abox["actors"]) if actor.get("actor_type") == "StrategicActor"]
+    if not strategic_indexes and abox["actors"]:
+        first = dict(abox["actors"][0])
+        first["actor_type"] = "StrategicActor"
+        if not isinstance(first.get("profile"), dict):
+            first["profile"] = {"mental_patterns": {}, "strategic_style": {}}
+        abox["actors"][0] = first
+    elif len(strategic_indexes) > 1:
+        first_idx = strategic_indexes[0]
+        for idx in strategic_indexes[1:]:
+            actor = dict(abox["actors"][idx])
+            actor["actor_type"] = "Actor"
+            actor.pop("profile", None)
+            abox["actors"][idx] = actor
+
+    _ensure_actor_hierarchy_tbox(tbox)
     normalized_events, event_warnings = _normalize_events(list(abox.get("events") or []))
     abox["events"] = normalized_events
     normalization_warnings.extend(event_warnings)
@@ -697,6 +786,30 @@ def _semantic_checks(
     issues.extend(_check_unique(concept_names, "tbox.concepts", "duplicate_concept", "concept"))
 
     actor_concepts = [c.name for c in concepts if c.category == "actor"]
+    required_actor_concepts = {"Actor", "StrategicActor"}
+    missing_actor_concepts = sorted(required_actor_concepts - set(actor_concepts))
+    for concept in missing_actor_concepts:
+        issues.append(
+            OntologyValidationIssue(
+                code="missing_actor_hierarchy_concept",
+                message=f"required actor concept missing: {concept}",
+                path="tbox.concepts",
+            )
+        )
+
+    has_actor_inheritance = any(
+        rel.name == "inherits_from" and rel.source == "StrategicActor" and rel.target == "Actor"
+        for rel in package.tbox.relations
+    )
+    if not has_actor_inheritance:
+        issues.append(
+            OntologyValidationIssue(
+                code="missing_actor_inheritance_relation",
+                message="tbox.relations must include inherits_from(StrategicActor -> Actor)",
+                path="tbox.relations",
+            )
+        )
+
     for concept in actor_concepts:
         if not looks_like_actor_concept(concept):
             issues.append(
@@ -758,6 +871,16 @@ def _semantic_checks(
     actor_ids = [a.actor_id for a in package.abox.actors]
     issues.extend(_check_unique(actor_ids, "abox.actors", "duplicate_actor_id", "actor id"))
     actor_id_set = set(actor_ids)
+
+    strategic_actor_count = sum(1 for actor in package.abox.actors if actor.actor_type == "StrategicActor")
+    if strategic_actor_count != 1:
+        issues.append(
+            OntologyValidationIssue(
+                code="strategic_actor_count_mismatch",
+                message="abox.actors must contain exactly one StrategicActor",
+                path="abox.actors",
+            )
+        )
 
     capability_names = {c.name for c in concepts if c.category == "capability"}
     mapped_actor_ids: set[str] = set()

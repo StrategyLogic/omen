@@ -1,10 +1,10 @@
-"""Pydantic models for case-by-case ontology input packages."""
+"""Pydantic models for ontology packages."""
 
 from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class OntologyMeta(BaseModel):
@@ -43,8 +43,17 @@ class TBoxDefinition(BaseModel):
 
 class ActorInstance(BaseModel):
     actor_id: str = Field(min_length=1)
-    actor_type: str = "actor"
+    actor_type: Literal["Actor", "StrategicActor"] = "Actor"
+    role: str = Field(min_length=1)
+    shared_id: str | None = None
     labels: list[str] = Field(default_factory=list)
+    profile: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def strategic_actor_profile_required(self) -> "ActorInstance":
+        if self.actor_type == "StrategicActor" and not isinstance(self.profile, dict):
+            raise ValueError("StrategicActor instances must include profile")
+        return self
 
 
 class CapabilityInstance(BaseModel):

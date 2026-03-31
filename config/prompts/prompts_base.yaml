@@ -58,9 +58,14 @@ prompts:
     - relation source/target MUST reference names declared in tbox.concepts.
     - tbox.axioms MUST be a list of objects with keys: id, statement, type.
     - axiom type may be activation, propagation, counterfactual, or case-specific custom type.
-    - abox.actors MUST be a list of objects with keys: actor_id, actor_type, shared_id, labels.
+    - abox.actors MUST be a list of objects with keys: actor_id, actor_type, role, shared_id, labels.
     - shared_id MUST be the literal name/brand from the document (e.g., "X-Developer") to facilitate entity linking.
-    - actor_type should reference actor concept names from tbox.concepts where possible.
+    - actor_type MUST be one of: Actor, StrategicActor.
+    - role is a descriptive text field (no fixed enum), for example founder, ceo, management, customer.
+    - Exactly one actor in abox.actors MUST use actor_type=StrategicActor; all others MUST use actor_type=Actor.
+    - StrategicActor instances MUST include profile with mental_patterns and strategic_style objects.
+    - tbox.concepts MUST include Actor and StrategicActor as actor-category concepts.
+    - tbox.relations MUST include: inherits_from(StrategicActor -> Actor).
     - abox.capabilities and abox.constraints SHOULD be provided when evidence exists; keep capability scores in [0,1].
     - Keep capability scores in [0,1].
     - Keep all actors in abox.actors mapped into scenario actors by actor_id.
@@ -83,7 +88,7 @@ prompts:
                     "axioms": [{"id": "AX-1", "statement": "...", "type": "activation"}]
                 },
                 "abox": {
-                    "actors": [{"actor_id": "example_actor", "actor_type": "ExampleActor", "shared_id": "Example Inc.", "labels": []}],
+                    "actors": [{"actor_id": "example_actor", "actor_type": "StrategicActor", "role": "founder", "shared_id": "Example Inc.", "labels": [], "profile": {"mental_patterns": {}, "strategic_style": {}}}],
                     "capabilities": [{"actor_id": "example_actor", "name": "example_capability", "score": 0.8}],
                     "constraints": [{"name": "budget", "value": 100}]
                 },
@@ -159,26 +164,25 @@ prompts:
     - influences (causal relationships)
     - query_skeleton (supported queries)
 
-    Actor Schema (Multi-Role):
-    - IMPORTANT: Extract ALL actors mentioned in the case (founder, investors, team members, customers, competitors, etc.).
-    - id: unique slug (e.g. 'founder-1', 'customer-apple').
-    - shared_id: The primary identifier string (e.g. "X-Developer") for mapping to StrategyOntology.
-    - name: The display name (e.g. "X-Developer Founder").
-    - type: 'founder' (primary), 'investor', 'competitor', 'customer', 'partner', 'team_member', 'organization'.
-    - Profile for Founder:
-        - background_facts: birth_year, origin, education[], career_trajectory[], key_experiences[]
-        - mental_patterns: core_beliefs[], cognitive_frames[], founder_dna, risk_profile{technical_risk, market_risk, financial_risk}
-        - strategic_style: decision_style, value_proposition, decision_preferences[], non_negotiables[]
-    - Profile for all other Actors (investor, customer, etc.):
-        - profile: interest, influence_level, alignment_with_founder, key_constraints[]
+    Actor Schema (Single Strategic Actor + Multi-Role Actors):
+    - IMPORTANT: Extract ALL actors mentioned in the case (founder, ceo, management team, customers, competitors, etc.).
+    - id: unique slug (e.g. 'actor-founder-1', 'actor-customer-apple').
+    - name: display name.
+    - type: MUST be one of Actor or StrategicActor.
+    - role: descriptive role text (e.g. founder, ceo, management, customer, competitor).
+    - Exactly ONE actor MUST be StrategicActor.
+    - StrategicActor MUST include profile with:
+      - mental_patterns
+      - strategic_style
+    - Other actors MUST be Actor; role remains descriptive text only.
 
     Events Schema:
     - id, name, type, date, description, context_constraints[], actors_involved[], evidence_refs[]
     Rules:
     - philosophy: "Facts & Structures only. Narratives/Personas are generated via Query."
-    - actors[].type: MUST be 'founder' for the primary decision maker.
-    - mental_patterns.core_beliefs: Stable convictions (e.g., "Data is the only truth").
-    - strategic_style.non_negotiables: Active constraints chosen by the founder (e.g., "No manual input").
+    - actors[].type: exactly one StrategicActor; all others Actor.
+    - actors[].role: preserve real role semantics from evidence (founder/ceo/management/customer/etc.).
+    - mental_patterns and strategic_style are required only on StrategicActor.
     - events: MUST use time evidence from timeline input. Include 'context_constraints' for external pressures (e.g., "Cash flow < 6 months").
     - influences: Link mental_patterns/background to strategic_style/decisions (e.g., manifests_as_principle, shapes_belief).
     - IMPORTANT: Also link between Entities:
@@ -187,7 +191,7 @@ prompts:
         - Actors -> participates_in -> Events
         - Events -> affects -> Product (e.g., launch, pricing update)
 
-    query_skeleton: status, why, persona.
+    query_skeleton: status, persona.
 
     Case ID: [[case_id]]
     Title: [[title]]

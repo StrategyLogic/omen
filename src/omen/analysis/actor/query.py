@@ -236,7 +236,7 @@ def _resolve_influence_endpoint(
     return ""
 
 
-def _pick_founder_id(actors: list[dict[str, Any]], case_id: str | None = None) -> str:
+def _pick_strategic_actor_id(actors: list[dict[str, Any]], case_id: str | None = None) -> str:
     if not actors:
         return ""
 
@@ -244,12 +244,15 @@ def _pick_founder_id(actors: list[dict[str, Any]], case_id: str | None = None) -
         actor_id = str(actor.get("id") or "").lower()
         actor_name = str(actor.get("name") or "").lower()
         actor_type = str(actor.get("type") or "").lower()
+        actor_role = str(actor.get("role") or "").lower()
         score = 0
-        if actor_type == "founder":
+        if actor_type == "strategicactor":
             score += 100
-        if "founder" in actor_id or "founder" in actor_name:
+        if any(token in actor_role for token in ("founder", "ceo", "top_management", "top management")):
             score += 60
-        if actor_type == "company":
+        if any(token in actor_id or token in actor_name for token in ("founder", "ceo", "strategic")):
+            score += 40
+        if actor_type == "actor":
             score += 25
         if case_id:
             key = str(case_id).lower()
@@ -269,28 +272,34 @@ def _build_actor_graph(actor_ontology: dict[str, Any], actor_events: list[dict[s
 
     actors = actor_ontology.get("actors") or []
     actor_dicts = [item for item in actors if isinstance(item, dict)]
-    founder_id = _pick_founder_id(actor_dicts, case_id=case_id)
+    strategic_actor_id = _pick_strategic_actor_id(actor_dicts, case_id=case_id)
     for actor in actors:
         if not isinstance(actor, dict):
             continue
         actor_id = str(actor.get("id") or "").strip()
         if not actor_id:
             continue
+        actor_type = str(actor.get("type") or "").strip()
+        actor_role = str(actor.get("role") or "").strip()
+        is_strategic_actor = actor_id == strategic_actor_id or actor_type == "StrategicActor"
+        label_suffix = ""
+        if is_strategic_actor:
+            label_suffix = " (Strategic Actor)"
+        elif actor_role:
+            label_suffix = f" ({actor_role})"
         nodes.append(
             {
                 "id": actor_id,
-                "label": (
-                    f"{str(actor.get('name') or actor_id)} (Founder)"
-                    if actor_id == founder_id
-                    else str(actor.get("name") or actor_id)
-                ),
+                "label": f"{str(actor.get('name') or actor_id)}{label_suffix}",
                 "node_type": (
-                    "founder_actor" if actor_id == founder_id
-                    else "competitor" if str(actor.get("type") or "").lower() == "competitor"
-                    else "customer" if str(actor.get("type") or "").lower() == "customer"
+                    "strategic_actor" if is_strategic_actor
+                    else "competitor" if actor_role.lower() == "competitor"
+                    else "customer" if actor_role.lower() == "customer"
                     else "actor"
                 ),
-                "is_founder": actor_id == founder_id,
+                "actor_type": actor_type,
+                "role": actor_role,
+                "is_strategic_actor": is_strategic_actor,
             }
         )
 
@@ -353,7 +362,7 @@ def _build_actor_graph(actor_ontology: dict[str, Any], actor_events: list[dict[s
         )
 
         applies_to = constraint.get("applies_to") or constraint.get("actors_affected") or []
-        linked_founder = False
+        linked_strategic_actor = False
         for actor_id in applies_to:
             actor_token = str(actor_id).strip()
             if not actor_token:
@@ -366,14 +375,14 @@ def _build_actor_graph(actor_ontology: dict[str, Any], actor_events: list[dict[s
                     "weight": 1.0,
                 }
             )
-            if actor_token == founder_id:
-                linked_founder = True
+            if actor_token == strategic_actor_id:
+                linked_strategic_actor = True
 
-        if founder_id and not linked_founder:
+        if strategic_actor_id and not linked_strategic_actor:
             edges.append(
                 {
                     "source": cid,
-                    "target": founder_id,
+                    "target": strategic_actor_id,
                     "label": "constraints",
                     "weight": 1.0,
                 }

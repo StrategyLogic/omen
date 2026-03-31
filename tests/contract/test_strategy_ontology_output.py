@@ -12,12 +12,27 @@ def test_strategy_ontology_output_contract_accepts_minimal_valid_payload() -> No
             "strategy": "evidence-first",
         },
         "tbox": {
-            "concepts": [{"name": "Actor"}],
+            "concepts": [
+                {"name": "Actor", "category": "actor"},
+                {"name": "StrategicActor", "category": "actor"},
+            ],
             "relations": [{"name": "influences"}],
             "axioms": [{"name": "transitivity"}],
         },
         "abox": {
-            "actors": [{"actor_id": "actor.xd"}],
+            "actors": [
+                {
+                    "actor_id": "actor.xd",
+                    "actor_type": "StrategicActor",
+                    "role": "founder",
+                    "profile": {"mental_patterns": {}, "strategic_style": {}},
+                },
+                {
+                    "actor_id": "actor.customer",
+                    "actor_type": "Actor",
+                    "role": "customer",
+                },
+            ],
             "capabilities": [{"name": "execution_depth", "score": 0.7}],
             "constraints": [{"name": "market_resistance"}],
             "events": [{"id": "event-1", "name": "Launch"}],

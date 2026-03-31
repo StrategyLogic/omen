@@ -5,6 +5,8 @@ from pathlib import Path
 import sys
 import types
 
+from omen.analysis.actor.query import build_events_snapshot
+
 
 def _load_ui_module():
     if "streamlit" not in sys.modules:
@@ -57,3 +59,31 @@ def test_timeline_empty_state_returns_empty_rows() -> None:
     module = _load_ui_module()
     assert module.extract_timeline_rows({"timeline": []}) == []
     assert module.extract_timeline_rows({}) == []
+
+
+def test_actor_graph_uses_strategic_actor_and_role_labels() -> None:
+    payload = build_events_snapshot(
+        strategy_ontology={"abox": {}},
+        actor_ontology={
+            "meta": {"case_id": "xd"},
+            "actors": [
+                {
+                    "id": "a1",
+                    "name": "Leader",
+                    "type": "StrategicActor",
+                    "role": "founder",
+                    "profile": {"mental_patterns": {}, "strategic_style": {}},
+                },
+                {"id": "a2", "name": "Buyer", "type": "Actor", "role": "customer"},
+            ],
+            "events": [{"id": "e1", "name": "Launch", "date": "2016", "actors_involved": ["a1", "a2"]}],
+            "influences": [],
+        },
+    )
+
+    nodes = payload["actor_graph"]["nodes"]
+    by_id = {node["id"]: node for node in nodes}
+    assert by_id["a1"]["node_type"] == "strategic_actor"
+    assert by_id["a1"]["label"].endswith("(Strategic Actor)")
+    assert by_id["a2"]["node_type"] == "customer"
+    assert by_id["a2"]["label"].endswith("(customer)")

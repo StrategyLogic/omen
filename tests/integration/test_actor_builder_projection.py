@@ -122,6 +122,8 @@ def test_actor_builder_profile_for_chen_case(monkeypatch) -> None:
         ],
     )
 
+    assert "constraints" not in actor_ontology
+
     assert actor_ontology["meta"] == {
         "version": "v0.1.0-actor",
         "case_id": "chen-jiaxing",

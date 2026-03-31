@@ -59,6 +59,8 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "deep_insight": "Deep Insights",
         "tab_persona": "👤 Strategic Persona",
         "actor_persona": "Background story",
+        "consistency_score": "Consistency Score",
+        "no_consistency_score": "No consistency score available.",
         "no_persona": "No persona payload found. Run `omen analyze actor --doc <name>` first.",
         "no_narrative": "No narrative available.",
         "key_traits": "Key Traits",
@@ -110,6 +112,8 @@ UI_TEXT: dict[str, dict[str, str]] = {
         "deep_insight": "关键洞察",
         "tab_persona": "👤 战略画像",
         "actor_persona": "背景故事",
+        "consistency_score": "一致性评分",
+        "no_consistency_score": "暂无一致性评分。",
         "no_persona": "未找到战略画像，请先执行 `omen analyze actor --doc <name>`。",
         "no_narrative": "暂无叙事内容。",
         "key_traits": "关键特质",
@@ -498,6 +502,21 @@ def _render_persona(persona_payload: dict[str, Any] | None) -> None:
         st.markdown(f"#### {_t('actor_persona')}")
         narrative = str(insight.get("narrative") or "").strip()
         st.write(narrative or _t("no_narrative"))
+
+        score_raw = insight.get("consistency_score")
+        score_text = ""
+        try:
+            if score_raw is not None:
+                score = float(score_raw)
+                score = max(0.0, min(1.0, score))
+                score_text = f"{score:.2f}"
+        except Exception:
+            score_text = ""
+
+        if score_text:
+            st.caption(f"{_t('consistency_score')}: {score_text}")
+        else:
+            st.caption(_t("no_consistency_score"))
 
     with right_col:
         st.markdown(f"#### {_t('key_traits')}")

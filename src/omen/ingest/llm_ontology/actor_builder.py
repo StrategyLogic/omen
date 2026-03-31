@@ -440,21 +440,6 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
             }
         )
 
-    constraints_raw = payload.get("constraints")
-    constraint_items = [item for item in constraints_raw if isinstance(item, dict)] if isinstance(constraints_raw, list) else []
-    constraints: list[dict[str, Any]] = []
-    for idx, constraint in enumerate(constraint_items, start=1):
-        constraint_id = str(constraint.get("id") or f"constraint-{idx}").strip() or f"constraint-{idx}"
-        applies_to = [str(item).strip() for item in (constraint.get("applies_to") or constraint.get("actors_affected") or []) if str(item).strip()]
-        constraints.append(
-            {
-                "id": constraint_id,
-                "type": str(constraint.get("type") or constraint.get("name") or "constraint").strip() or "constraint",
-                "category": str(constraint.get("category") or "").strip(),
-                "applies_to": applies_to,
-            }
-        )
-
     influences_raw = payload.get("influences")
     influence_items = [item for item in influences_raw if isinstance(item, dict)] if isinstance(influences_raw, list) else []
     influences: list[dict[str, Any]] = []
@@ -486,7 +471,6 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
         "actors": actors,
         "events": events,
         "products": products,
-        "constraints": constraints,
         "influences": influences,
         "query_skeleton": {"query_types": list(QUERY_TYPES)},
     }

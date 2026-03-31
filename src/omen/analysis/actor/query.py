@@ -341,48 +341,6 @@ def _build_actor_graph(actor_ontology: dict[str, Any], actor_events: list[dict[s
                 }
             )
 
-    constraints = actor_ontology.get("constraints") or []
-    for constraint in constraints:
-        if not isinstance(constraint, dict):
-            continue
-        cid = str(constraint.get("id") or "").strip()
-        if not cid:
-            continue
-        nodes.append(
-            {
-                "id": cid,
-                "label": str(constraint.get("type") or constraint.get("category") or cid),
-                "node_type": "constraint",
-            }
-        )
-
-        applies_to = constraint.get("applies_to") or constraint.get("actors_affected") or []
-        linked_strategic_actor = False
-        for actor_id in applies_to:
-            actor_token = str(actor_id).strip()
-            if not actor_token:
-                continue
-            edges.append(
-                {
-                    "source": cid,
-                    "target": actor_token,
-                    "label": "constraints",
-                    "weight": 1.0,
-                }
-            )
-            if actor_token == strategic_actor_id:
-                linked_strategic_actor = True
-
-        if strategic_actor_id and not linked_strategic_actor:
-            edges.append(
-                {
-                    "source": cid,
-                    "target": strategic_actor_id,
-                    "label": "constraints",
-                    "weight": 1.0,
-                }
-            )
-
     influences = actor_ontology.get("influences") or []
     known_node_ids = {node["id"] for node in nodes if isinstance(node, dict) and node.get("id")}
     for influence in influences:

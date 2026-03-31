@@ -122,7 +122,20 @@ def _normalize_background_facts(background: Any) -> dict[str, Any]:
 
 def _extract_public_profile(profile: Any) -> dict[str, Any]:
     background = profile.get("background_facts") if isinstance(profile, dict) else None
-    return {"background_facts": _normalize_background_facts(background)}
+    public_profile: dict[str, Any] = {
+        "background_facts": _normalize_background_facts(background)
+    }
+    if isinstance(profile, dict):
+        strategic_style = profile.get("strategic_style")
+        if isinstance(strategic_style, dict):
+            public_profile["strategic_style"] = dict(strategic_style)
+    return public_profile
+
+
+def _extract_actor_profile(profile: Any) -> dict[str, Any] | None:
+    if not isinstance(profile, dict):
+        return None
+    return dict(profile)
 
 
 def _fallback_related_actors(events: list[dict[str, Any]], *, strategic_actor_id: str) -> list[dict[str, Any]]:
@@ -249,6 +262,10 @@ def _to_actor_schema(payload: dict[str, Any], *, case_id: str) -> dict[str, Any]
         }
         if is_strategic_actor:
             actor_row["profile"] = _extract_public_profile(actor.get("profile"))
+        else:
+            actor_profile = _extract_actor_profile(actor.get("profile"))
+            if actor_profile is not None:
+                actor_row["profile"] = actor_profile
         actors.append(actor_row)
     if not actors:
         actors = [

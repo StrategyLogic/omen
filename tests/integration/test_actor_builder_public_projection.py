@@ -50,7 +50,12 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
                         "career_trajectory": ["Engineer", "Founder"],
                     },
                     "mental_patterns": {"redacted": True},
-                    "strategic_style": {"redacted": True},
+                    "strategic_style": {
+                        "decision_style": "data-driven",
+                        "value_proposition": "replace process tools",
+                        "decision_preferences": ["automation first"],
+                        "non_negotiables": ["no manual input"],
+                    },
                 },
             },
             {
@@ -64,6 +69,11 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
                 "name": "Pilot customer organization",
                 "type": "role",
                 "role": "customer (pilot team)",
+                "profile": {
+                    "interest": "Validate delivery outcomes",
+                    "influence_level": "medium",
+                    "alignment_with_strategic_actor": "high",
+                },
             },
             {
                 "id": "actor-tech-managers",
@@ -133,10 +143,15 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
             "education": [],
             "career_trajectory": ["Engineer", "Founder"],
             "key_experiences": [],
-        }
+        },
+        "strategic_style": {
+            "decision_style": "data-driven",
+            "value_proposition": "replace process tools",
+            "decision_preferences": ["automation first"],
+            "non_negotiables": ["no manual input"],
+        },
     }
     assert "mental_patterns" not in primary["profile"]
-    assert "strategic_style" not in primary["profile"]
 
     actor_ids = {actor["id"] for actor in actors}
     assert "actor-x-developer-team" in actor_ids
@@ -144,5 +159,10 @@ def test_actor_builder_projects_public_profile_for_fixed_chen_case(monkeypatch) 
 
     by_id = {actor["id"]: actor for actor in actors}
     assert by_id["actor-pilot-customer"]["role"] == "customer"
+    assert by_id["actor-pilot-customer"]["profile"] == {
+        "interest": "Validate delivery outcomes",
+        "influence_level": "medium",
+        "alignment_with_strategic_actor": "high",
+    }
     assert by_id["actor-tech-managers"]["role"] == "target customer segment"
     assert by_id["actor-developers"]["role"] == "end-user"

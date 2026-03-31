@@ -38,6 +38,10 @@ def test_actor_ontology_schema_allows_extra_fields() -> None:
                         "career_trajectory": [],
                         "key_experiences": [],
                     },
+                    "strategic_style": {
+                        "decision_style": "principled",
+                        "non_negotiables": ["quality bar"],
+                    },
                     "custom_impl": {"ok": True},
                 },
                 "custom_field": "ignored",

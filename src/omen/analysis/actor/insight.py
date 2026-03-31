@@ -152,7 +152,7 @@ def generate_persona_insight(
 
     runtime_client = llm_client
     if runtime_client is None:
-        config = load_llm_config(config_path or "config/llm.toml", require_embeddings=False)
+        config = load_llm_config(config_path or "config/llm.toml")
         runtime_client = create_chat_client(config)
 
     language = _normalize_output_language(output_language)

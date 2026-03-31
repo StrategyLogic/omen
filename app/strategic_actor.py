@@ -329,8 +329,6 @@ def _run_actor_pipeline(
         strategy=None,
         known_outcome=known_outcome,
         config_path=config_path,
-        require_embeddings=False,
-        use_embeddings=False,
     )
     known_outcome_effective = generation.inferred_known_outcome or known_outcome
 

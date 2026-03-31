@@ -53,7 +53,7 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
-def _load_llm_config_from_env(*, require_embeddings: bool = True) -> LLMConfig:
+def _load_llm_config_from_env() -> LLMConfig:
     deepseek_api_key = str(os.getenv("DEEPSEEK_API_KEY") or "").strip()
     if not deepseek_api_key:
         raise FileNotFoundError(
@@ -61,15 +61,7 @@ def _load_llm_config_from_env(*, require_embeddings: bool = True) -> LLMConfig:
             "Set DEEPSEEK_API_KEY in deployment environment or provide config/llm.toml."
         )
 
-    voyage_api_key = str(os.getenv("VOYAGE_API_KEY") or "").strip()
-    if require_embeddings and not voyage_api_key:
-        raise FileNotFoundError(
-            "LLM config file not found and VOYAGE_API_KEY is missing (required for embeddings). "
-            "Set VOYAGE_API_KEY in deployment environment or provide config/llm.toml."
-        )
-
-    if not voyage_api_key:
-        voyage_api_key = "chat-only"
+    voyage_api_key = str(os.getenv("VOYAGE_API_KEY") or "").strip() or "chat-only"
 
     return LLMConfig(
         provider="deepseek",
@@ -86,7 +78,7 @@ def _load_llm_config_from_env(*, require_embeddings: bool = True) -> LLMConfig:
     )
 
 
-def load_llm_config(config_path: str | Path = "config/llm.toml", *, require_embeddings: bool = True) -> LLMConfig:
+def load_llm_config(config_path: str | Path = "config/llm.toml") -> LLMConfig:
     try:
         dotenv_module = importlib.import_module("dotenv")
         dotenv_module.load_dotenv(override=False)
@@ -94,7 +86,7 @@ def load_llm_config(config_path: str | Path = "config/llm.toml", *, require_embe
         pass
     path = Path(config_path)
     if not path.exists():
-        return _load_llm_config_from_env(require_embeddings=require_embeddings)
+        return _load_llm_config_from_env()
 
     payload = tomllib.loads(path.read_text(encoding="utf-8"))
 
@@ -103,10 +95,7 @@ def load_llm_config(config_path: str | Path = "config/llm.toml", *, require_embe
     runtime = payload.get("runtime", {})
 
     deepseek_api_key = _resolve_env_placeholder(str(auth.get("deepseek_api_key", "")))
-    if require_embeddings:
-        voyage_api_key = _resolve_env_placeholder(str(auth.get("voyage_api_key", "")))
-    else:
-        voyage_api_key = _resolve_optional_env_placeholder(str(auth.get("voyage_api_key", ""))) or "chat-only"
+    voyage_api_key = _resolve_optional_env_placeholder(str(auth.get("voyage_api_key", ""))) or "chat-only"
 
     return LLMConfig(
         provider="deepseek",

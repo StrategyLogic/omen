@@ -1,12 +1,15 @@
-"""Actor OSS insight capability surface.
-"""
+"""Actor insight surface (LLM-based generation)."""
 
 from __future__ import annotations
 
 import datetime
+import json
 from typing import Any
 
+from omen.ingest.llm_ontology.clients import create_chat_client
+from omen.ingest.llm_ontology.config import load_llm_config
 from omen.ingest.llm_ontology.prompt_registry import get_analyze_prompt_version_token
+from omen.ingest.llm_ontology.prompts import build_json_retry_prompt, build_persona_insight_prompt
 
 
 def _normalize_output_language(value: str | None) -> str:
@@ -14,6 +17,12 @@ def _normalize_output_language(value: str | None) -> str:
     if lang.startswith("zh"):
         return "zh"
     return "en"
+
+
+def _language_instruction(output_language: str) -> str:
+    if output_language == "zh":
+        return "Output language requirement: All natural-language fields must be written in Simplified Chinese (简体中文)."
+    return "Output language requirement: All natural-language fields must be written in English."
 
 
 def _pick_primary_actor(actor_ontology: dict[str, Any]) -> dict[str, Any]:
@@ -30,6 +39,100 @@ def _pick_primary_actor(actor_ontology: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _events_for_actor(actor_ontology: dict[str, Any], actor_id: str) -> list[dict[str, Any]]:
+    events = actor_ontology.get("events") or []
+    if not isinstance(events, list):
+        return []
+
+    matched: list[dict[str, Any]] = []
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        involved = {str(item).strip() for item in (event.get("actors_involved") or []) if str(item).strip()}
+        if actor_id and actor_id in involved:
+            matched.append(event)
+    matched.sort(key=lambda item: str(item.get("date") or item.get("time") or ""))
+    return matched
+
+
+def _extract_json_object(text: str) -> dict[str, Any]:
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    if start == -1:
+        raise ValueError("LLM response does not contain a JSON object")
+    payload, _ = decoder.raw_decode(text[start:])
+    if not isinstance(payload, dict):
+        raise ValueError("LLM response JSON payload is not an object")
+    return payload
+
+
+def _invoke_json_prompt(llm_client: Any, prompt: str) -> dict[str, Any]:
+    response = llm_client.invoke(prompt)
+    content = response.content if isinstance(response.content, str) else json.dumps(response.content)
+    try:
+        return _extract_json_object(content)
+    except Exception:
+        retry_prompt = build_json_retry_prompt(prompt)
+        retry_response = llm_client.invoke(retry_prompt)
+        retry_content = retry_response.content if isinstance(retry_response.content, str) else json.dumps(retry_response.content)
+        return _extract_json_object(retry_content)
+
+
+def _normalize_traits(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+
+    traits: list[dict[str, str]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        trait = str(item.get("trait") or item.get("name") or "").strip()
+        evidence_summary = str(item.get("evidence_summary") or item.get("evidence") or "").strip()
+        if trait and evidence_summary:
+            traits.append({"trait": trait, "evidence_summary": evidence_summary})
+    return traits
+
+
+def _build_persona_prompt(
+    *,
+    actor_name: str,
+    profile: dict[str, Any],
+    events: list[dict[str, Any]],
+    output_language: str,
+) -> str:
+    base_prompt = build_persona_insight_prompt().format(
+        actor_name=actor_name,
+        background_facts=json.dumps(profile.get("background_facts") or {}, ensure_ascii=False),
+        strategic_style=json.dumps(profile.get("strategic_style") or {}, ensure_ascii=False),
+    )
+
+    prompt = (
+        base_prompt
+        + "\n"
+        + _language_instruction(output_language)
+        + "\n\nReturn JSON object only with keys: persona_insight.narrative, persona_insight.key_traits, persona_insight.consistency_score."
+        + "\nkey_traits must be an array of objects with trait and evidence_summary."
+        + "\nconsistency_score must be a number in [0,1]."
+    )
+
+    if output_language == "zh":
+        prompt += "\n叙事要求：narrative 必须是 200-300 字，叙事风格，清楚说明背景、决策风格与关键事件的内在动力。"
+    else:
+        prompt += "\nNarrative requirement: 180-260 words, narrative style, clearly connecting background, decision style, and major events."
+
+    event_view = [
+        {
+            "id": str(item.get("id") or "").strip(),
+            "name": str(item.get("name") or item.get("event") or "").strip(),
+            "date": str(item.get("date") or item.get("time") or "").strip(),
+            "description": str(item.get("description") or "").strip(),
+        }
+        for item in events[:10]
+    ]
+    prompt += "\n\nRelated strategic events (JSON):\n" + json.dumps(event_view, ensure_ascii=False)
+    return prompt
+
+
 def generate_persona_insight(
     *,
     case_id: str,
@@ -39,41 +142,45 @@ def generate_persona_insight(
     config_path: str | None = None,
     output_language: str = "en",
 ) -> dict[str, Any]:
-    del strategy_ontology, llm_client, config_path
+    del strategy_ontology
 
     actor = _pick_primary_actor(actor_ontology)
     actor_name = str(actor.get("name") or "Strategic Actor").strip() or "Strategic Actor"
+    actor_id = str(actor.get("id") or "").strip()
     profile = actor.get("profile") or {}
-    profile_dict = profile if isinstance(profile, dict) else {}
+    events = _events_for_actor(actor_ontology, actor_id)
 
-    mental_patterns = profile_dict.get("mental_patterns") or {}
-    strategic_style = profile_dict.get("strategic_style") or {}
-    core_beliefs = [str(item).strip() for item in (mental_patterns.get("core_beliefs") or []) if str(item).strip()]
-    non_negotiables = [str(item).strip() for item in (strategic_style.get("non_negotiables") or []) if str(item).strip()]
-    decision_style = str(strategic_style.get("decision_style") or "intentional").strip() or "intentional"
+    runtime_client = llm_client
+    if runtime_client is None:
+        config = load_llm_config(config_path or "config/llm.toml", require_embeddings=False)
+        runtime_client = create_chat_client(config)
 
     language = _normalize_output_language(output_language)
-    if language == "zh":
-        narrative = (
-            f"{actor_name} 的战略行为呈现明显的原则驱动特征，"
-            f"决策风格为“{decision_style}”，"
-            f"核心信念聚焦在“{core_beliefs[0] if core_beliefs else '长期价值'}”，"
-            f"并持续守住“{non_negotiables[0] if non_negotiables else '关键非妥协项'}”。"
-        )
-        key_traits = [
-            {"trait": "原则驱动", "evidence_summary": "在约束条件下保持战略一致性。"},
-            {"trait": "结构化判断", "evidence_summary": "以证据和逻辑链条组织决策。"},
-        ]
-    else:
-        narrative = (
-            f"{actor_name} shows a principle-driven strategic profile with a '{decision_style}' decision style, "
-            f"anchored in '{core_beliefs[0] if core_beliefs else 'long-term value'}' and guarded by "
-            f"'{non_negotiables[0] if non_negotiables else 'clear non-negotiables'}'."
-        )
-        key_traits = [
-            {"trait": "Principle-Driven", "evidence_summary": "Maintains coherence under constraints."},
-            {"trait": "Structured Reasoning", "evidence_summary": "Uses evidence-based decision framing."},
-        ]
+    prompt = _build_persona_prompt(
+      actor_name=actor_name,
+      profile=profile,
+      events=events,
+      output_language=language,
+    )
+    payload = _invoke_json_prompt(runtime_client, prompt)
+
+    insight = payload.get("persona_insight") if isinstance(payload.get("persona_insight"), dict) else payload
+    if not isinstance(insight, dict):
+        raise ValueError("persona_insight payload must be a JSON object")
+
+    narrative = str(insight.get("narrative") or "").strip()
+    traits = _normalize_traits(insight.get("key_traits"))
+    if not narrative:
+        raise ValueError("persona_insight.narrative is required")
+    if len(traits) < 3:
+        raise ValueError("persona_insight.key_traits must contain at least 3 valid items")
+
+    score_raw = insight.get("consistency_score") or 0
+    try:
+        consistency_score = float(score_raw)
+    except Exception:
+        consistency_score = 0.85
+    consistency_score = max(0.0, min(1.0, consistency_score))
 
     return {
         "query": {"type": "persona", "case_id": case_id},
@@ -84,7 +191,7 @@ def generate_persona_insight(
         },
         "persona_insight": {
             "narrative": narrative,
-            "key_traits": key_traits,
-            "consistency_score": 0.85,
+            "key_traits": traits,
+            "consistency_score": consistency_score,
         },
     }

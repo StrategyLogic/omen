@@ -55,9 +55,7 @@ def load_scenario_with_ontology(
     ontology = None
     if ontology_path is not None:
         ontology = load_ontology_input(ontology_path)
-    elif isinstance(payload, dict) and all(
-        key in payload for key in ("meta", "tbox", "abox", "reasoning_profile")
-    ):
+    elif isinstance(payload, dict) and all(key in payload for key in ("meta", "tbox", "abox")):
         ontology = validate_ontology_input_or_raise(payload)
 
     if ontology is None:

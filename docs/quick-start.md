@@ -38,7 +38,7 @@ flowchart LR
 
 ### 🛠️ 配置 Omen 环境
 
-下载 Omen 源代码后，在仓库根目录下执行以下命令，安装包含项目依赖：
+下载 Omen 源代码后，在仓库根目录下执行以下命令，安装项目依赖：
 
 ```bash
 python -m pip install --upgrade pip setuptools wheel

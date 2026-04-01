@@ -146,3 +146,13 @@ def validate_case_package_or_raise(
 
 def validate_cross_case_output_contract_or_raise(payload: dict) -> CrossCaseOutputContract:
     return CrossCaseOutputContract.model_validate(payload)
+
+
+def format_validation_report(*, target_artifact: str, errors: list[dict]) -> dict:
+    return {
+        "status": "pass" if not errors else "fail",
+        "target_artifact": target_artifact,
+        "schema_version": "spec7-actor-v1",
+        "errors": errors,
+        "warnings": [],
+    }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from omen.explain.causal_trace import extract_reality_gaps
 from omen.explain.evidence_linker import build_outcome_evidence_links
 from omen.explain.rule_trace import build_rule_trace_references
 
@@ -120,11 +121,13 @@ def build_explanation_report(result: dict, comparison: dict | None = None) -> di
         comparison,
         rule_trace_references=rule_trace_references,
     )
+    reality_gap_analysis = extract_reality_gaps(result, comparison=comparison)
 
     explanation = {
         "run_id": result.get("run_id"),
         "branch_points": branch_points,
         "causal_chain": causal_chain,
+        "reality_gap_analysis": reality_gap_analysis,
         "applied_axioms": applied_axioms,
         "rule_trace_references": rule_trace_references,
         "outcome_evidence_links": outcome_evidence_links,

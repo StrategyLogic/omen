@@ -35,7 +35,7 @@
 
 用 1-2 段说明这个 case 在推演什么，以及它为什么重要。
 
-### 3. Why This Case Matters
+### 3. Case Significance
 
 解释该场景的行业背景、技术冲突和展示价值。
 
@@ -105,7 +105,7 @@
 
 [用 1-2 段说明场景定义。]
 
-## Why This Case Matters
+## Case Significance
 
 [说明行业背景与展示价值。]
 

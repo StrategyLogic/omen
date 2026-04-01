@@ -1,0 +1,23 @@
+templates:
+  system_prompt: |
+    SYSTEM: You are a schema-first extractor.
+  user_prompt: |
+    CASE [[case_id]] / [[title]]
+    Strategy preference: [[preferred_strategy]]
+  timeline_events_prompt: |
+    Timeline extract for [[case_id]] with excerpt: [[excerpt]]
+  persona_insight: |
+    Strategic persona analysis template.
+prompt_meta:
+  system_prompt:
+    id: base.system_prompt
+    version: 1.0.0
+  user_prompt:
+    id: base.user_prompt
+    version: 1.0.0
+  timeline_events_prompt:
+    id: base.timeline_events_prompt
+    version: 1.0.0
+  persona_insight:
+    id: base.persona_insight
+    version: 1.0.0

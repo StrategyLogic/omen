@@ -1,4 +1,4 @@
-from omen.ingest.assertion_builder import build_assertions_from_candidates
+from omen.ingest.llm_ontology.builders.assertion import build_assertions_from_candidates
 
 
 def test_assertion_builder_rejects_unmapped_or_conflict() -> None:

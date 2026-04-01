@@ -1,4 +1,4 @@
-"""Core state models for ontology battle simulation."""
+"""Runtime state models for simulation execution."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ class ActorRuntimeState:
     budget: float
     user_base: float
     functional_profile: dict[str, float]
-    user_edge_count: int = 0
+    user_edge_count: int
 
 
 @dataclass(slots=True)

@@ -1,4 +1,4 @@
-from omen.ingest.text_processing import clean_text, split_into_chunks
+from omen.ingest.documents import clean_text, split_into_chunks
 
 
 def test_clean_text_merges_soft_line_breaks() -> None:

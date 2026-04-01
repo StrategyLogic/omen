@@ -1,22 +1,25 @@
-"""Pydantic models for case-by-case ontology input packages."""
+"""Pydantic models for ontology packages."""
 
 from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class OntologyMeta(BaseModel):
     version: str = Field(min_length=1)
     case_id: str = Field(min_length=1)
     domain: str = Field(min_length=1)
+    strategy: str = Field(min_length=1, default="case_specific_strategy")
 
 
 class ConceptDef(BaseModel):
     name: str = Field(min_length=1)
-    description: str = Field(min_length=1)
-    category: Literal["actor", "capability", "constraint", "event", "outcome", "game", "other"]
+    description: str = ""
+    category: Literal["actor", "capability", "constraint", "event", "outcome", "game", "other"] = (
+        "other"
+    )
 
 
 class RelationDef(BaseModel):
@@ -28,8 +31,8 @@ class RelationDef(BaseModel):
 
 class AxiomDef(BaseModel):
     id: str = Field(min_length=1)
-    statement: str = Field(min_length=1)
-    type: Literal["activation", "propagation", "counterfactual"]
+    statement: str | None = None
+    type: str | None = None
 
 
 class TBoxDefinition(BaseModel):
@@ -40,8 +43,17 @@ class TBoxDefinition(BaseModel):
 
 class ActorInstance(BaseModel):
     actor_id: str = Field(min_length=1)
-    actor_type: str = Field(min_length=1)
+    actor_type: Literal["Actor", "StrategicActor"] = "Actor"
+    role: str = Field(min_length=1)
+    shared_id: str | None = None
     labels: list[str] = Field(default_factory=list)
+    profile: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def strategic_actor_profile_required(self) -> "ActorInstance":
+        if self.actor_type == "StrategicActor" and not isinstance(self.profile, dict):
+            raise ValueError("StrategicActor instances must include profile")
+        return self
 
 
 class CapabilityInstance(BaseModel):
@@ -64,8 +76,8 @@ class EventInstance(BaseModel):
 
 class ABoxDefinition(BaseModel):
     actors: list[ActorInstance] = Field(min_length=1)
-    capabilities: list[CapabilityInstance] = Field(min_length=1)
-    constraints: list[ConstraintInstance] = Field(min_length=1)
+    capabilities: list[CapabilityInstance] = Field(default_factory=list)
+    constraints: list[ConstraintInstance] = Field(default_factory=list)
     events: list[EventInstance] = Field(default_factory=list)
 
 
@@ -75,13 +87,24 @@ class RuleRef(BaseModel):
 
 
 class ReasoningProfile(BaseModel):
-    activation_rules: list[RuleRef] = Field(min_length=1)
-    propagation_rules: list[RuleRef] = Field(min_length=1)
-    counterfactual_rules: list[RuleRef] = Field(min_length=1)
+    activation_rules: list[RuleRef] = Field(default_factory=list)
+    propagation_rules: list[RuleRef] = Field(default_factory=list)
+    counterfactual_rules: list[RuleRef] = Field(default_factory=list)
 
 
 class OntologyInputPackage(BaseModel):
     meta: OntologyMeta
     tbox: TBoxDefinition
     abox: ABoxDefinition
-    reasoning_profile: ReasoningProfile
+    reasoning_profile: ReasoningProfile = Field(default_factory=ReasoningProfile)
+    tech_space_ontology: dict[str, Any] | None = None
+    market_space_ontology: dict[str, Any] | None = None
+    shared_actors: list[str] = Field(default_factory=list)
+
+
+class ActorOntologyEnvelope(BaseModel):
+    meta: dict[str, Any]
+    actors: list[dict[str, Any]] = Field(default_factory=list)
+    events: list[dict[str, Any]] = Field(default_factory=list)
+    influences: list[dict[str, Any]] = Field(default_factory=list)
+    query_skeleton: dict[str, Any] = Field(default_factory=dict)

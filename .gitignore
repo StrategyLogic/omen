@@ -48,7 +48,7 @@ htmlcov/
 # Other
 *.pyo
 *.~ 
-.env*
+.env
 config/llm.toml
 .local.md
 output/

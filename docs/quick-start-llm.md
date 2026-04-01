@@ -21,15 +21,21 @@ python -m pip install -e .
 
 ### 配置 LLM
 
-先复制模板：
+首先准备环境变量文件：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，填入你的 API Key（如 `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`）。
+
+然后复制模型配置文件：
 
 ```bash
 cp config/llm.example.toml config/llm.toml
 ```
 
-然后编辑 `config/llm.toml`，填入你要使用的模型配置（如 provider、model、api_key 环境变量名等）。
-
-如你的配置依赖环境变量，请在 `.env` 中设置对应密钥。
+编辑 `config/llm.toml`，确认 `provider`、`model` 以及引用的环境变量名是否正确。
 
 ## 2. 准备输入文档
 
@@ -74,8 +80,14 @@ omen validate actor --doc x-developer --output-dir output/actors
 - 输出 `status=pass`：可进入后续 UI 展示或下游流程
 - 输出 `status=fail`：根据 `errors` 字段逐项修复输入文档或配置后重试
 
-## 4. 常见问题
+---
 
-- 命令找不到 `omen`：确认虚拟环境已激活，或使用 `python -m pip install -e .` 重新安装。
-- LLM 调用失败：检查 `config/llm.toml` 与环境变量是否匹配。
-- `--doc` 报文件不存在：确认 `cases/actors/<doc>.md` 文件名与命令参数一致。
+## 常见问题
+
+模型支持：当前版本仅支持 OpenAI Protocal 和 DeepSeek，确认 `config/llm.toml` 中 `provider` 字段正确设置。
+
+找不到 `omen` 命令：确认虚拟环境已激活，或使用 `python -m pip install -e .` 重新安装。
+
+LLM 调用失败：检查 `config/llm.toml` 与环境变量是否匹配。
+
+`--doc` 报文件不存在：确认 `cases/actors/<doc>.md` 文件名与命令参数一致。

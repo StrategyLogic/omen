@@ -6,6 +6,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
+from omen.ingest.llm_ontology.schema.actor import VERSION as ACTOR_SCHEMA_VERSION
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 
@@ -143,7 +144,6 @@ def validate_case_package_or_raise(
 
     return package
 
-
 def validate_cross_case_output_contract_or_raise(payload: dict) -> CrossCaseOutputContract:
     return CrossCaseOutputContract.model_validate(payload)
 
@@ -152,7 +152,7 @@ def format_validation_report(*, target_artifact: str, errors: list[dict]) -> dic
     return {
         "status": "pass" if not errors else "fail",
         "target_artifact": target_artifact,
-        "schema_version": "spec7-actor-v1",
+        "schema_version": ACTOR_SCHEMA_VERSION,
         "errors": errors,
         "warnings": [],
     }

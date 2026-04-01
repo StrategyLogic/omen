@@ -4,17 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omen"
-version = "0.1.0"
-description = "Open-source strategic simulation engine for technology-market evolution"
+version = "0.2.0"
+description = "Open-source strategic reasoning engine for technology-market evolution"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 authors = [{ name = "StrategyLogic" }]
 license = { text = "AGPL-3.0-or-later" }
 dependencies = [
   "pydantic>=2.8.0",
-  "pytest>=8.2",
   "jsonschema>=4.23.0",
-  # used by src/omen/ingest/pdf_extract.py
   "pypdf>=4.2.0",
   "PyYAML>=6.0",
   "langchain>=0.3.0",
@@ -32,6 +30,7 @@ omen = "omen.cli.main:main"
 
 [project.optional-dependencies]
 dev = [
+  "pytest>=8.2",
   "ruff>=0.6.0",
   "mypy>=1.10",
 ]

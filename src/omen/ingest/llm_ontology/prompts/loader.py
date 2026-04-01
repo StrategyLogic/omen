@@ -58,7 +58,7 @@ def get_prompt_config_dir() -> Path:
 
 def get_prompt_file_path(tier: str) -> Path:
     normalized_tier = str(tier).strip().lower()
-    return get_prompt_config_dir() / f"prompts_{normalized_tier}.yaml"
+    return get_prompt_config_dir() / f"{normalized_tier}.yaml"
 
 
 @lru_cache(maxsize=8)

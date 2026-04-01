@@ -137,14 +137,6 @@ omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --
 omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
 ```
 
-### Spec 7 Strategic Actor OSS 常用命令
-
-```bash
-omen analyze actor --doc x-developer --config config/llm.toml
-streamlit run app/strategic_actor.py
-omen validate actor --doc x-developer --output-dir output/actors
-```
-
 ### 查看运行结果
 
 **本地文件保护**：输出的文件在项目根目录下的 `output/` 中，默认已在 `.gitignore` 排除，它不会被跟踪或误上传，避免你的数据被泄漏。

@@ -300,12 +300,14 @@ Omen 提供可校验、可重复运行的自动化流程，能够从非结构化
 | `elon-musk.md` | 特斯拉/SpaceX 创始人，多产业颠覆者 |
 | `jack-ma.md` | 阿里巴巴创始人，电商生态构建者 |
 | `jeff-bezos.md` | 亚马逊创始人，长期主义与飞轮效应 |
-| `shenda.md` | 深大智能，传统企业数字化转型案例 |
+| `shenda.md` | 盛大集团创始人，多元化经营与平台转型案例 |
 | `steve-jobs.md` | 苹果创始人，产品哲学与创新驱动 |
 
-### 如何运行演示
+### 如何使用
 
-**首次使用**：先运行 CLI 生成一个简单案例
+> 如果你尚未安装 Omen，请先阅读[快速指南（LLM）](../quick-start-llm.md)，完成环境配置和模型接入。
+
+**首次使用**：运行 CLI 生成一个简单案例：
 
 ```bash
 omen analyze actor --doc chen-jiaxing
@@ -324,3 +326,9 @@ streamlit run app/strategic_actor.py
 ```
 
 **尝试其他案例**：如 `elon-musk` 或 `steve-jobs`
+
+---
+
+## 进阶指南
+
+- [构建战略行动者](../guides/build-strategic-actor.md)：从零开始构建自定义战略行动者。

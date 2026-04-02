@@ -61,6 +61,23 @@ def _write_output(
     return output_path
 
 
+def _print_llm_check_result(report: dict[str, Any]) -> None:
+    ok = bool(report.get("ok", False))
+    if ok:
+        print("LLM connectivity check: SUCCESS")
+        return
+
+    failed_steps = [
+        str(step.get("name", "unknown"))
+        for step in report.get("steps", [])
+        if step.get("status") != "passed"
+    ]
+    if failed_steps:
+        print(f"LLM connectivity check: FAILURE ({', '.join(failed_steps)})")
+    else:
+        print("LLM connectivity check: FAILURE")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="omen", description="Omen strategic simulation CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -334,6 +351,34 @@ def main() -> None:
     )
     case_replay_check_llm.add_argument("--output", required=False, help="Optional output JSON path")
     case_replay_check_llm.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Add timestamp suffix to output filename to avoid overwrite",
+    )
+
+    check_llm = sub.add_parser(
+        "check-llm",
+        help="run generic LLM connectivity check with default sample case file",
+    )
+    check_llm.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
+    )
+    check_llm.add_argument(
+        "--case-file",
+        required=False,
+        default="cases/x-developer.md",
+        help="Default case file used to build connectivity probe text",
+    )
+    check_llm.add_argument(
+        "--sample-text",
+        required=False,
+        help="Optional probe text override; if omitted, read from --case-file",
+    )
+    check_llm.add_argument("--output", required=False, help="Optional output JSON path")
+    check_llm.add_argument(
         "--incremental",
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
@@ -718,6 +763,38 @@ def main() -> None:
             args.incremental,
         )
         print(f"Saved llm check report to {output_path}")
+        _print_llm_check_result(report)
+        if not report.get("ok", False):
+            raise SystemExit(2)
+    elif args.command == "check-llm":
+        from omen.ingest.llm_ontology.healthcheck import run_llm_healthcheck
+
+        def _step_logger(step: str, status: str, message: str) -> None:
+            print(f"[LLM-CHECK][{step}][{status}] {message}", flush=True)
+
+        sample_text = args.sample_text
+        if not sample_text:
+            case_file = Path(args.case_file)
+            if case_file.exists():
+                sample_text = case_file.read_text(encoding="utf-8")[:1000]
+            else:
+                sample_text = "omen connectivity probe"
+
+        report = run_llm_healthcheck(
+            config_path=args.config,
+            sample_text=sample_text,
+            logger=_step_logger,
+        )
+
+        rendered = json.dumps(report, ensure_ascii=False, indent=2)
+        output_path = _write_output(
+            rendered,
+            args.output,
+            "llm_check.json",
+            args.incremental,
+        )
+        print(f"Saved llm check report to {output_path}")
+        _print_llm_check_result(report)
         if not report.get("ok", False):
             raise SystemExit(2)
     elif args.command == "case":

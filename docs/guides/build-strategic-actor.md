@@ -1,6 +1,6 @@
 # 构建 Strategic Actor
 
-本指南说明如何从案例文档构建 Strategic Actor 产物。
+本指南说明如何从案例文档构建自定义的 Strategic Actor 产物。
 
 ## 工作目录
 
@@ -46,22 +46,7 @@ omen analyze actor --doc elon-musk
 
 ## 使用流程
 
-如果你尚未安装 Omen 或准备输入文档，请先阅读 [快速上手指南](quick-start.md)。Omen 使用大语言模型进行结构化提取，需要配置模型服务：
-
-```bash
-cp config/llm.example.toml config/llm.toml
-# 编辑 config/llm.toml，填入你的模型配置
-```
-
-配置示例（OpenAI 兼容接口）：
-
-```toml
-[llm]
-provider = "openai"
-model = "gpt-4"
-api_key = "your-api-key"
-base_url = "https://api.openai.com/v1"
-```
+如果你尚未安装 Omen，请先阅读 [快速指南（LLM）](../quick-start-llm.md)，完成环境配置和模型接入。
 
 ### 1. 准备输入文档
 
@@ -69,8 +54,17 @@ base_url = "https://api.openai.com/v1"
 
 #### 命名规范
 
-- 文件名建议使用小写-kebab 形式，例如：`chen-jiaxing.md`、`elon-musk.md`
-- 命令中的 `--doc` 参数使用文件名（不含扩展名）
+- 文件名建议使用小写形式，例如：`chen-jiaxing.md`、`elon-musk.md`
+- 文件名将作为命令中的 `--doc` 参数（不含 `.md` 扩展名）
+
+例如：新增 `cases/actors/lily.md` 文档，执行分析的命令如下：
+
+```bash
+# 文件名 lily 作为 --doc 的参数
+omen analyze actor --doc lily
+```
+
+#### 内容结构
 
 Omen 未作强制模板要求，但建议包含以下内容：
 
@@ -101,7 +95,7 @@ Omen 未作强制模板要求，但建议包含以下内容：
 
 ### 2. 构建 Strategic Actor
 
-Omen 提供了 UI 和 CLI 两种方式构建 Strategic Actor，以支持用户直接使用、接入 AI Agent 以及自动化流程。
+Omen 提供了 UI 和 CLI 两种方式构建 Strategic Actor，以支持用户直接使用、接入 AI Agent 以及自动化流程多种应用模式。
 
 #### 2.1 使用 UI 构建
 
@@ -134,7 +128,7 @@ streamlit run app/strategic_actor.py
 omen analyze actor --doc chen-jiaxing
 ```
 
-构建完成后，检查 `output/actors/<actor_id>/` 是否包含以下文件：
+构建完成后，检查 `output/actors/<actor_name>/` 是否包含以下文件：
 
 | 文件 | 必须 | 说明 |
 |------|------|------|
@@ -178,7 +172,7 @@ omen validate actor --doc chen-jiaxing
 | `--date` | 状态快照精确日期 | `--date 2019-10-24` |
 | `--force` | 强制重新生成，忽略缓存 | `--force` |
 
-##### 使用示例
+##### 参数使用示例
 
 ```bash
 # 分析并指定输出目录
@@ -195,11 +189,19 @@ omen analyze actor --doc chen-jiaxing --force
 
 ## 常见问题
 
-**Q：重复运行会产生多次大模型 Token 消耗吗？**
+**Q：Omen Token 消耗严重吗？**
 
-A：默认情况下，Omen 会复用缓存，避免重复消耗大模型 Token。只有在命令中加上 `--force` 参数时，才会强制重新生成，Omen 每一次分析都优先使用本地缓存的结果，如果没有找到缓存才会调用大模型进行生成，帮助你节省 Token 消耗。
+A：Omen 以“本地优先”为工具设计原则，充分利用本地缓存和本地计算资源。在分析工作流中，Omen 每一个分析步骤都优先使用本地缓存的结果，如果没有找到缓存才会调用大模型进行生成，帮助你节省 Token 消耗。
 
-**Q：如何调整分析精度？**
+**Q：分析一份文档大概需要多少 Token？**
+
+A：Token 消耗取决于文档长度和复杂度。以 10000 字左右的文档为例，经过 DeepSeek 测试，分析成本仅为 ￥1 分钱。
+
+**Q：同一份文档变更时，如何更新本体生成？**
+
+A：只需在命令中加上 `--force` 参数，Omen 会强制调用大模型，重新生成。
+
+**Q：如何调整分析精度和生成质量？**
 
 A：在 `config/llm.toml` 中调整模型参数（如 `temperature`、`top_p`），或更换更强的模型。
 

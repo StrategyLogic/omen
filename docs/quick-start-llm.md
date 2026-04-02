@@ -21,21 +21,39 @@ python -m pip install -e .
 
 ### 配置 LLM
 
-首先准备环境变量文件：
+需要配置两份文件：环境变量文件 `.env` 和模型配置文件 `config/llm.toml`。
+
+#### 环境变量
+
+管理模型 API Key 等敏感信息。运行以下命令复制示例文件：
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入你的 API Key（如 `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`）。
+然后编辑 `.env` 文件，填入你的 API Key（如 `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`）。
 
-然后复制模型配置文件：
+#### 模型配置
+
+配置调用的模型名称和参数。运行以下命令复制模型配置示例文件：
 
 ```bash
 cp config/llm.example.toml config/llm.toml
 ```
 
-编辑 `config/llm.toml`，确认 `provider`、`model` 以及引用的环境变量名是否正确。
+然后编辑 `config/llm.toml`，确认 `provider`、`model` 以及引用的环境变量名是否正确。
+
+#### 检查 LLM 连通性
+
+配置完成后，请测试连通性，确保大模型调用正常。
+
+```bash
+omen check-llm
+```
+检查完成后将自动打印 `LLM connectivity check` 状态：
+
+- `SUCCESS` 表示通过。
+- `FAILURE` 表示失败，需要检查模型配置或密钥。
 
 ## 2. 运行示例
 
@@ -71,7 +89,7 @@ ls -lah output/actors/chen-jiaxing/
 omen validate actor --doc chen-jiaxing --output-dir output/actors
 ```
 
-判定标准：
+校验标准：
 
 - 输出 `status=pass`：可进入后续 UI 展示或下游流程
 - 输出 `status=fail`：根据 `errors` 字段逐项修复输入文档或配置后重试
@@ -101,3 +119,8 @@ streamlit run app/strategic_actor.py
 LLM 调用失败：检查 `config/llm.toml` 与环境变量是否匹配。
 
 `--doc` 报文件不存在：确认 `cases/actors/<doc>.md` 文件名与命令参数一致。
+
+## 相关文档
+
+- [战略行动者](concept/strategic-actor.md)
+- [构建战略行动者](guides/build-strategic-actor.md)

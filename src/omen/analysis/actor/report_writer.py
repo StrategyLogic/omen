@@ -33,6 +33,25 @@ def attach_evidence_index_and_flags(
     return artifact
 
 
+def attach_strategic_freedom_summary(artifact: dict[str, Any]) -> dict[str, Any]:
+    scenario_results = list(artifact.get("scenario_results") or [])
+    overview: list[dict[str, Any]] = []
+    for result in scenario_results:
+        scenario_key = str(result.get("scenario_key") or "")
+        freedom = result.get("strategic_freedom") or {}
+        overview.append(
+            {
+                "scenario_key": scenario_key,
+                "strategic_freedom_score": float(freedom.get("score", 0.0)),
+                "required_count": len(list(freedom.get("required") or [])),
+                "warning_count": len(list(freedom.get("warning") or [])),
+                "blocking_count": len(list(freedom.get("blocking") or [])),
+            }
+        )
+    artifact["strategic_freedom_overview"] = overview
+    return artifact
+
+
 def write_deterministic_run_artifact(output_path: str | Path, artifact: dict[str, Any]) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)

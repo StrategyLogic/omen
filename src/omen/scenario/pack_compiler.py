@@ -12,10 +12,107 @@ from omen.scenario.ontology_models import ScenarioCompilationRequest
 
 _REQUIRED_SLOTS = ("A", "B", "C")
 
+_SLOT_ALIASES: dict[str, str] = {
+    "a": "A",
+    "slot_a": "A",
+    "internal": "A",
+    "internal_ecosystem": "A",
+    "meego": "A",
+    "symbian": "A",
+    "内部": "A",
+    "内部生态": "A",
+    "正面": "A",
+    "正面硬刚": "A",
+    "b": "B",
+    "slot_b": "B",
+    "open": "B",
+    "open_alliance": "B",
+    "android": "B",
+    "联盟": "B",
+    "开放": "B",
+    "牵手android": "B",
+    "c": "C",
+    "slot_c": "C",
+    "platform": "C",
+    "platform_alliance": "C",
+    "microsoft": "C",
+    "微软": "C",
+    "微软联盟": "C",
+    "外部平台": "C",
+}
+
 
 def _normalize_lines(text: str) -> list[str]:
-    lines = [line.strip() for line in text.splitlines()]
+    normalized = (
+        text.replace("；", "\n")
+        .replace(";", "\n")
+        .replace("。", "\n")
+    )
+    lines = [line.strip() for line in normalized.splitlines()]
     return [line for line in lines if line]
+
+
+def _normalize_label(value: Any) -> str:
+    return str(value or "").strip().lower().replace(" ", "_")
+
+
+def _infer_slot_from_text(title: str, description: str) -> str | None:
+    merged = f"{title} {description}".lower()
+    if any(token in merged for token in ("meego", "symbian", "内部", "正面")):
+        return "A"
+    if any(token in merged for token in ("android", "开放", "联盟")):
+        return "B"
+    if any(token in merged for token in ("microsoft", "微软", "平台")):
+        return "C"
+    return None
+
+
+def _resolve_slot(entry: dict[str, Any]) -> str:
+    candidates = [
+        entry.get("slot"),
+        entry.get("intent"),
+        entry.get("intent_label"),
+        entry.get("scenario_intent"),
+    ]
+    for candidate in candidates:
+        label = _normalize_label(candidate)
+        if label in _SLOT_ALIASES:
+            return _SLOT_ALIASES[label]
+
+    inferred = _infer_slot_from_text(
+        str(entry.get("title") or ""),
+        str(entry.get("description") or ""),
+    )
+    if inferred:
+        return inferred
+
+    raise AmbiguousScenarioDescriptionError(
+        f"unable to map scenario to deterministic slot: title={entry.get('title')!r}"
+    )
+
+
+def _normalize_request_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    raw_scenarios = payload.get("scenarios") or []
+    scenarios: list[dict[str, Any]] = []
+    for index, raw in enumerate(raw_scenarios):
+        if not isinstance(raw, dict):
+            raise AmbiguousScenarioDescriptionError(
+                f"scenario at index {index} must be an object"
+            )
+        title = str(raw.get("title") or "").strip() or f"Scenario {index + 1}"
+        description = str(raw.get("description") or "").strip()
+        slot = _resolve_slot(raw)
+        scenarios.append(
+            {
+                "slot": slot,
+                "title": title,
+                "description": description,
+            }
+        )
+
+    normalized["scenarios"] = scenarios
+    return normalized
 
 
 def _derive_target_outcome(slot: str, title: str, description: str) -> str:
@@ -31,8 +128,9 @@ def _derive_target_outcome(slot: str, title: str, description: str) -> str:
 
 def _derive_constraints(description: str) -> list[str]:
     lines = _normalize_lines(description)
-    if lines:
-        return lines[:3]
+    deduped = list(dict.fromkeys(lines))
+    if deduped:
+        return deduped[:3]
     return ["约束信息不足"]
 
 
@@ -61,7 +159,7 @@ def _default_resistance(slot: str) -> dict[str, float]:
 
 
 def compile_nl_scenarios_to_pack(payload: dict[str, Any]) -> dict[str, Any]:
-    request = ScenarioCompilationRequest.model_validate(payload)
+    request = ScenarioCompilationRequest.model_validate(_normalize_request_payload(payload))
     slots = {scenario.slot for scenario in request.scenarios}
     missing = [slot for slot in _REQUIRED_SLOTS if slot not in slots]
     if missing:

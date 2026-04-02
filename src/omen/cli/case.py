@@ -9,10 +9,17 @@ from pathlib import Path
 from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
+from omen.analysis.actor.insight import build_recommendation_from_condition_sets
 from omen.analysis.actor.comparability import build_comparability_metadata
+from omen.analysis.actor.formation import assemble_capability_dilemma_fit
 from omen.analysis.actor.report_writer import (
+    attach_strategic_freedom_summary,
     build_fixed_order_scenario_comparison,
     write_deterministic_run_artifact,
+)
+from omen.analysis.actor.strategy import (
+    calculate_strategic_freedom_factor,
+    generate_condition_sets,
 )
 from omen.analysis.actor.query import build_events_snapshot
 from omen.scenario.loader import compile_and_validate_deterministic_pack
@@ -37,24 +44,36 @@ def run_deterministic_simulate_from_nl(
     calculation_policy_version: str,
 ) -> dict[str, Any]:
     pack = compile_and_validate_deterministic_pack(nl_payload)
+
+    capability_templates = {
+        "A": {"ecosystem_control": 0.75, "execution_velocity": 0.58},
+        "B": {"ecosystem_control": 0.5, "execution_velocity": 0.72},
+        "C": {"ecosystem_control": 0.4, "execution_velocity": 0.65},
+    }
+
     scenario_results = []
     for scenario in pack["scenarios"]:
         scenario_key = scenario["scenario_key"]
+        capability_fit = assemble_capability_dilemma_fit(
+            scenario_key=scenario_key,
+            capability_scores=capability_templates.get(scenario_key, {}),
+        )
+        strategic_score = calculate_strategic_freedom_factor(
+            capability_fit=capability_fit["fit"],
+            resistance_baseline=scenario["resistance_baseline"],
+        )
+        strategic_conditions = generate_condition_sets(
+            scenario_key=scenario_key,
+            strategic_freedom_score=strategic_score,
+            resistance_baseline=scenario["resistance_baseline"],
+        )
+
         scenario_results.append(
             {
                 "scenario_key": scenario_key,
-                "capability_dilemma_fit": {
-                    "scenario_key": scenario_key,
-                    "fit": "medium",
-                    "capability_scores": {},
-                },
+                "capability_dilemma_fit": capability_fit,
                 "resistance": scenario["resistance_baseline"],
-                "strategic_freedom": {
-                    "score": 0.5,
-                    "required": ["明确董事会授权范围"],
-                    "warning": ["关键高管存在路线分歧"],
-                    "blocking": [],
-                },
+                "strategic_freedom": strategic_conditions,
                 "evidence_refs": [],
                 "confidence_level": "reduced-confidence",
             }
@@ -65,7 +84,7 @@ def run_deterministic_simulate_from_nl(
         scenario_pack_version=pack["pack_version"],
         calculation_policy_version=calculation_policy_version,
     )
-    return {
+    artifact = {
         "run_id": f"det-{uuid.uuid4().hex[:12]}",
         "run_timestamp": datetime.datetime.now().isoformat(),
         "actor_profile_ref": actor_profile_ref,
@@ -75,10 +94,11 @@ def run_deterministic_simulate_from_nl(
             scenario_results,
             order=DETERMINISTIC_PACK_REQUIRED_SLOTS,
         ),
-        "recommendation_summary": "Deterministic simulation completed.",
+        "recommendation_summary": build_recommendation_from_condition_sets(scenario_results),
         "comparability": comparability,
         "export_status": "success",
     }
+    return attach_strategic_freedom_summary(artifact)
 
 
 def run_deterministic_compare_from_nl(

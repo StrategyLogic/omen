@@ -7,6 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from omen.ingest.llm_ontology.schema import VERSION as ACTOR_SCHEMA_VERSION
+from omen.scenario.ingest_validator import IncompleteDeterministicPackError
 from omen.scenario.ontology_models import DeterministicScenarioPackModel
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
@@ -168,5 +169,30 @@ def validate_deterministic_scenario_pack_or_raise(
     existing = {scenario.scenario_key for scenario in pack.scenarios}
     missing = [slot for slot in required_slots if slot not in existing]
     if missing:
-        raise ValueError(f"deterministic scenario pack missing required slots: {missing}")
+        raise IncompleteDeterministicPackError(
+            f"deterministic scenario pack missing required slots: {missing}"
+        )
+
+    for scenario in pack.scenarios:
+        if not scenario.target_outcome.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing target_outcome"
+            )
+        if not scenario.constraints:
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing constraints"
+            )
+        if not scenario.dilemma_tradeoffs:
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing dilemma_tradeoffs"
+            )
+
+        if not any(item.strip() for item in scenario.constraints):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} constraints are empty after normalization"
+            )
+        if not any(item.strip() for item in scenario.dilemma_tradeoffs):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} dilemma_tradeoffs are empty after normalization"
+            )
     return pack

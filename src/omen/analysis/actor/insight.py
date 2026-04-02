@@ -229,3 +229,33 @@ def apply_contradiction_confidence_flag(
         groups[group] = groups.get(group, 0) + 1
     has_conflict = any(count > 1 for count in groups.values())
     return "reduced-confidence" if has_conflict else "full-confidence"
+
+
+def build_recommendation_from_condition_sets(
+    scenario_results: list[dict[str, Any]],
+) -> str:
+    if not scenario_results:
+        return "No deterministic scenario result available."
+
+    ranked = sorted(
+        scenario_results,
+        key=lambda item: float((item.get("strategic_freedom") or {}).get("score", 0.0)),
+        reverse=True,
+    )
+    best = ranked[0]
+    best_key = str(best.get("scenario_key") or "unknown")
+    conditions = best.get("strategic_freedom") or {}
+    blocking = list(conditions.get("blocking") or [])
+    required = list(conditions.get("required") or [])
+
+    if blocking:
+        return (
+            f"Scenario {best_key} has highest strategic potential but is currently blocked: "
+            f"{'; '.join(blocking[:2])}."
+        )
+
+    required_hint = required[0] if required else "需补齐关键执行前提"
+    return (
+        f"Recommend scenario {best_key} as primary path. "
+        f"First required condition: {required_hint}."
+    )

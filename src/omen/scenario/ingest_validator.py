@@ -21,6 +21,10 @@ class IncompleteDeterministicPackError(ScenarioCompilationError):
     """Raised when compiled deterministic pack misses required scenario slots."""
 
 
+class DeferredScopeFeatureError(ScenarioCompilationError):
+    """Raised when request includes capabilities deferred out of current release scope."""
+
+
 def validate_precision_profile_or_raise(payload: dict) -> PrecisionEvaluationProfile:
     return PrecisionEvaluationProfile.model_validate(payload)
 

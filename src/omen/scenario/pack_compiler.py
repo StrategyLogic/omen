@@ -6,6 +6,7 @@ from typing import Any
 
 from omen.scenario.ingest_validator import (
     AmbiguousScenarioDescriptionError,
+    DeferredScopeFeatureError,
     IncompleteDeterministicPackError,
 )
 from omen.scenario.ontology_models import ScenarioCompilationRequest
@@ -39,6 +40,20 @@ _SLOT_ALIASES: dict[str, str] = {
     "微软": "C",
     "微软联盟": "C",
     "外部平台": "C",
+}
+
+_DEFERRED_DYNAMIC_KEYS = {
+    "dynamic_authoring",
+    "dynamic_scenarios",
+    "free_form_scenarios",
+    "scenario_generator",
+}
+
+_DEFERRED_SCENARIO_KEYS = {
+    "dynamic_variants",
+    "alternative_branches",
+    "free_form_prompt",
+    "free_form_constraints",
 }
 
 
@@ -92,6 +107,13 @@ def _resolve_slot(entry: dict[str, Any]) -> str:
 
 
 def _normalize_request_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    for key in _DEFERRED_DYNAMIC_KEYS:
+        if key in payload:
+            raise DeferredScopeFeatureError(
+                f"`{key}` is deferred scope in this release. "
+                "Only deterministic A/B/C scenario packs are supported."
+            )
+
     normalized = dict(payload)
     raw_scenarios = payload.get("scenarios") or []
     scenarios: list[dict[str, Any]] = []
@@ -99,6 +121,12 @@ def _normalize_request_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(raw, dict):
             raise AmbiguousScenarioDescriptionError(
                 f"scenario at index {index} must be an object"
+            )
+        deferred = [key for key in _DEFERRED_SCENARIO_KEYS if key in raw]
+        if deferred:
+            raise DeferredScopeFeatureError(
+                f"scenario at index {index} uses deferred dynamic authoring keys: {deferred}. "
+                "Please provide deterministic scenario descriptions only."
             )
         title = str(raw.get("title") or "").strip() or f"Scenario {index + 1}"
         description = str(raw.get("description") or "").strip()

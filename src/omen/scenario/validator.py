@@ -7,7 +7,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from omen.ingest.llm_ontology.schema import VERSION as ACTOR_SCHEMA_VERSION
-from omen.scenario.ingest_validator import IncompleteDeterministicPackError
+from omen.scenario.ingest_validator import (
+    DeferredScopeFeatureError,
+    IncompleteDeterministicPackError,
+)
 from omen.scenario.ontology_models import DeterministicScenarioPackModel
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
@@ -165,6 +168,33 @@ def validate_deterministic_scenario_pack_or_raise(
     *,
     required_slots: tuple[str, ...] = ("A", "B", "C"),
 ) -> DeterministicScenarioPackModel:
+    for key in (
+        "enterprise_resistance_extensions",
+        "enterprise_template_catalog",
+        "resistance_extension_profiles",
+    ):
+        if key in payload:
+            raise DeferredScopeFeatureError(
+                f"`{key}` is deferred scope. Enterprise resistance extensions are not supported in this release."
+            )
+
+    for index, scenario in enumerate(payload.get("scenarios") or []):
+        if not isinstance(scenario, dict):
+            continue
+        deferred_keys = [
+            key
+            for key in (
+                "custom_resistance_dimensions",
+                "enterprise_resistance_profile",
+                "department_resistance_breakdown",
+            )
+            if key in scenario
+        ]
+        if deferred_keys:
+            raise DeferredScopeFeatureError(
+                f"scenario index {index} uses deferred enterprise resistance keys: {deferred_keys}."
+            )
+
     pack = DeterministicScenarioPackModel.model_validate(payload)
     existing = {scenario.scenario_key for scenario in pack.scenarios}
     missing = [slot for slot in required_slots if slot not in existing]

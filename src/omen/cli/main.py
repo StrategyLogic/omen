@@ -29,6 +29,7 @@ from omen.scenario.ontology_loader import load_ontology_input
 from omen.scenario.ingest_validator import validate_extracted_entity_candidates_or_raise
 from omen.scenario.ingest_validator import validate_ontology_assertion_candidates_or_raise
 from omen.scenario.ingest_validator import validate_precision_profile_or_raise
+from omen.scenario.ingest_validator import DeferredScopeFeatureError
 from omen.simulation.replay import (
     compare_run_results,
     create_counterfactual_config,
@@ -389,23 +390,35 @@ def main() -> None:
     register_case_commands(sub)
 
     args = parser.parse_args()
+
+    def _print_deferred_scope_message(exc: Exception) -> None:
+        print(f"Deferred scope: {exc}")
+        print(
+            "This release supports deterministic A/B/C packs only. "
+            "Dynamic scenario authoring and enterprise resistance extensions are deferred."
+        )
+
     if args.command == "simulate":
         if args.deterministic_nl_json:
-            nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
-            payload = run_deterministic_simulate_from_nl(
-                nl_payload=nl_payload,
-                actor_profile_ref=args.actor_profile_ref,
-                calculation_policy_version=args.calc_policy_version,
-            )
-            rendered = json.dumps(payload, ensure_ascii=False, indent=2)
-            output_path = _write_output(
-                rendered,
-                args.output,
-                "deterministic_result.json",
-                args.incremental,
-            )
-            print(f"Saved deterministic simulation result to {output_path}")
-            return
+            try:
+                nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
+                payload = run_deterministic_simulate_from_nl(
+                    nl_payload=nl_payload,
+                    actor_profile_ref=args.actor_profile_ref,
+                    calculation_policy_version=args.calc_policy_version,
+                )
+                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+                output_path = _write_output(
+                    rendered,
+                    args.output,
+                    "deterministic_result.json",
+                    args.incremental,
+                )
+                print(f"Saved deterministic simulation result to {output_path}")
+                return
+            except DeferredScopeFeatureError as exc:
+                _print_deferred_scope_message(exc)
+                raise SystemExit(2) from exc
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         if args.seed is None:
@@ -424,21 +437,25 @@ def main() -> None:
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
         if args.deterministic_nl_json:
-            nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
-            payload = run_deterministic_compare_from_nl(
-                nl_payload=nl_payload,
-                actor_profile_ref=args.actor_profile_ref,
-                calculation_policy_version=args.calc_policy_version,
-            )
-            rendered = json.dumps(payload, ensure_ascii=False, indent=2)
-            output_path = _write_output(
-                rendered,
-                args.output,
-                "deterministic_comparison.json",
-                args.incremental,
-            )
-            print(f"Saved deterministic comparison to {output_path}")
-            return
+            try:
+                nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
+                payload = run_deterministic_compare_from_nl(
+                    nl_payload=nl_payload,
+                    actor_profile_ref=args.actor_profile_ref,
+                    calculation_policy_version=args.calc_policy_version,
+                )
+                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+                output_path = _write_output(
+                    rendered,
+                    args.output,
+                    "deterministic_comparison.json",
+                    args.incremental,
+                )
+                print(f"Saved deterministic comparison to {output_path}")
+                return
+            except DeferredScopeFeatureError as exc:
+                _print_deferred_scope_message(exc)
+                raise SystemExit(2) from exc
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         baseline = run_simulation(config, ontology_setup=ontology_setup)

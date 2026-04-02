@@ -7,10 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from omen.scenario.ontology_loader import bind_ontology_to_scenario, load_ontology_input
+from omen.scenario.pack_compiler import compile_nl_scenarios_to_pack
 from omen.scenario.ontology_validator import validate_ontology_input_or_raise
 from omen.scenario.validator import (
     ScenarioConfig,
     validate_case_package_or_raise,
+    validate_deterministic_scenario_pack_or_raise,
     validate_scenario_or_raise,
 )
 from omen.types import CasePackage
@@ -63,3 +65,9 @@ def load_scenario_with_ontology(
 
     ontology_metadata = bind_ontology_to_scenario(ontology, scenario)
     return scenario, ontology_metadata
+
+
+def compile_and_validate_deterministic_pack(payload: dict[str, Any]) -> dict[str, Any]:
+    compiled = compile_nl_scenarios_to_pack(payload)
+    validate_deterministic_scenario_pack_or_raise(compiled)
+    return compiled

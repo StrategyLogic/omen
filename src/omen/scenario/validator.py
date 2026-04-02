@@ -7,6 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from omen.ingest.llm_ontology.schema import VERSION as ACTOR_SCHEMA_VERSION
+from omen.scenario.ontology_models import DeterministicScenarioPackModel
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 
@@ -156,3 +157,16 @@ def format_validation_report(*, target_artifact: str, errors: list[dict]) -> dic
         "errors": errors,
         "warnings": [],
     }
+
+
+def validate_deterministic_scenario_pack_or_raise(
+    payload: dict,
+    *,
+    required_slots: tuple[str, ...] = ("A", "B", "C"),
+) -> DeterministicScenarioPackModel:
+    pack = DeterministicScenarioPackModel.model_validate(payload)
+    existing = {scenario.scenario_key for scenario in pack.scenarios}
+    missing = [slot for slot in required_slots if slot not in existing]
+    if missing:
+        raise ValueError(f"deterministic scenario pack missing required slots: {missing}")
+    return pack

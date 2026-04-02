@@ -1,0 +1,22 @@
+{
+  "pack_id": "strategic_actor_nokia_v1",
+  "pack_version": "1.0.0",
+  "case_id": "nokia_elop",
+  "scenarios": [
+    {
+      "slot": "A",
+      "title": "正面硬刚",
+      "description": "埃洛普坚持内部生态升级，主攻 MeeGo 与 Symbian 重整，目标是与 Apple 正面对抗。"
+    },
+    {
+      "slot": "B",
+      "title": "牵手 Android",
+      "description": "埃洛普推动 Nokia 加入 Android 阵营，追求生存与规模，但承担同质化风险。"
+    },
+    {
+      "slot": "C",
+      "title": "微软联盟",
+      "description": "埃洛普绑定微软平台，优先短期资源整合与交易效率，接受长期自主性下降。"
+    }
+  ]
+}

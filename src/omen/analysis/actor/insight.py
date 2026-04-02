@@ -190,3 +190,42 @@ def generate_persona_insight(
             "consistency_score": consistency_score,
         },
     }
+
+
+def map_major_conclusions_to_evidence(
+    conclusions: list[dict[str, Any]],
+    evidence_records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    by_id = {
+        str(item.get("evidence_id") or item.get("id") or "").strip(): item
+        for item in evidence_records
+        if isinstance(item, dict)
+    }
+    mapped: list[dict[str, Any]] = []
+    for conclusion in conclusions:
+        if not isinstance(conclusion, dict):
+            continue
+        refs = [str(ref).strip() for ref in (conclusion.get("evidence_refs") or []) if str(ref).strip()]
+        mapped.append(
+            {
+                "conclusion": str(conclusion.get("text") or conclusion.get("summary") or "").strip(),
+                "evidence_refs": refs,
+                "evidence_items": [by_id[ref] for ref in refs if ref in by_id],
+            }
+        )
+    return mapped
+
+
+def apply_contradiction_confidence_flag(
+    evidence_records: list[dict[str, Any]],
+) -> str:
+    groups: dict[str, int] = {}
+    for record in evidence_records:
+        if not isinstance(record, dict):
+            continue
+        group = str(record.get("contradiction_group") or "").strip()
+        if not group:
+            continue
+        groups[group] = groups.get(group, 0) + 1
+    has_conflict = any(count > 1 for count in groups.values())
+    return "reduced-confidence" if has_conflict else "full-confidence"

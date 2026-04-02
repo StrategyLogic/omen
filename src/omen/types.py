@@ -11,6 +11,10 @@ Action = Dict[str, Any]
 Scenario = Dict[str, Any]
 
 
+DETERMINISTIC_PACK_NOKIA = "strategic_actor_nokia_v1"
+DETERMINISTIC_PACK_REQUIRED_SLOTS = ("A", "B", "C")
+
+
 class CaseManifest(BaseModel):
     case_id: str = Field(min_length=1)
     case_name: str = Field(min_length=1)
@@ -44,3 +48,52 @@ class CasePackage(BaseModel):
     required_artifacts: list[str] = Field(min_length=1)
     ontology_presence: bool = True
     runtime_support: RuntimeSupportDeclaration
+
+
+class CapabilityDilemmaFit(BaseModel):
+    scenario_key: str = Field(min_length=1)
+    fit: str = Field(min_length=1)
+    capability_scores: dict[str, float] = Field(default_factory=dict)
+
+
+class ResistanceBaselineScore(BaseModel):
+    structural_conflict: float = Field(ge=0.0, le=1.0)
+    resource_reallocation_drag: float = Field(ge=0.0, le=1.0)
+    cultural_misalignment: float = Field(ge=0.0, le=1.0)
+    veto_node_intensity: float = Field(ge=0.0, le=1.0)
+    aggregate_resistance: float = Field(ge=0.0, le=1.0)
+
+
+class StrategicFreedomConditions(BaseModel):
+    score: float = Field(ge=0.0, le=1.0)
+    required: list[str] = Field(default_factory=list)
+    warning: list[str] = Field(default_factory=list)
+    blocking: list[str] = Field(default_factory=list)
+
+
+class DeterministicScenarioResult(BaseModel):
+    scenario_key: str = Field(min_length=1)
+    capability_dilemma_fit: CapabilityDilemmaFit
+    resistance: ResistanceBaselineScore
+    strategic_freedom: StrategicFreedomConditions
+    evidence_refs: list[str] = Field(default_factory=list)
+    confidence_level: str = Field(min_length=1)
+
+
+class DeterministicRunComparability(BaseModel):
+    comparable: bool
+    blocking_reasons: list[str] = Field(default_factory=list)
+    actor_profile_version: str = Field(min_length=1)
+    scenario_pack_version: str = Field(min_length=1)
+    calculation_policy_version: str = Field(min_length=1)
+
+
+class DeterministicRunArtifact(BaseModel):
+    run_id: str = Field(min_length=1)
+    run_timestamp: str = Field(min_length=1)
+    actor_profile_ref: str = Field(min_length=1)
+    scenario_pack_ref: str = Field(min_length=1)
+    scenario_results: list[DeterministicScenarioResult] = Field(default_factory=list)
+    recommendation_summary: str = Field(min_length=1)
+    comparability: DeterministicRunComparability
+    export_status: str = Field(min_length=1)

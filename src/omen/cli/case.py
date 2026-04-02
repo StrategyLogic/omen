@@ -2,18 +2,103 @@
 
 from __future__ import annotations
 
+import datetime
 import json
+import uuid
 from pathlib import Path
 from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
+from omen.analysis.actor.comparability import build_comparability_metadata
+from omen.analysis.actor.report_writer import (
+    build_fixed_order_scenario_comparison,
+    write_deterministic_run_artifact,
+)
 from omen.analysis.actor.query import build_events_snapshot
+from omen.scenario.loader import compile_and_validate_deterministic_pack
+from omen.types import DETERMINISTIC_PACK_REQUIRED_SLOTS
 from omen.ingest.llm_ontology.services.actor import generate_actor_and_events_from_document
 from omen.ingest.llm_ontology.prompts.registry import ensure_analyze_prompt_available
 from omen.ingest.llm_ontology.assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.ui.artifacts import ensure_case_output_dir
 from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
+
+
+def _load_json_file(path: str | Path) -> dict[str, Any]:
+    file_path = Path(path)
+    return json.loads(file_path.read_text(encoding="utf-8"))
+
+
+def run_deterministic_simulate_from_nl(
+    *,
+    nl_payload: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
+    pack = compile_and_validate_deterministic_pack(nl_payload)
+    scenario_results = []
+    for scenario in pack["scenarios"]:
+        scenario_key = scenario["scenario_key"]
+        scenario_results.append(
+            {
+                "scenario_key": scenario_key,
+                "capability_dilemma_fit": {
+                    "scenario_key": scenario_key,
+                    "fit": "medium",
+                    "capability_scores": {},
+                },
+                "resistance": scenario["resistance_baseline"],
+                "strategic_freedom": {
+                    "score": 0.5,
+                    "required": ["明确董事会授权范围"],
+                    "warning": ["关键高管存在路线分歧"],
+                    "blocking": [],
+                },
+                "evidence_refs": [],
+                "confidence_level": "reduced-confidence",
+            }
+        )
+
+    comparability = build_comparability_metadata(
+        actor_profile_version=actor_profile_ref,
+        scenario_pack_version=pack["pack_version"],
+        calculation_policy_version=calculation_policy_version,
+    )
+    return {
+        "run_id": f"det-{uuid.uuid4().hex[:12]}",
+        "run_timestamp": datetime.datetime.now().isoformat(),
+        "actor_profile_ref": actor_profile_ref,
+        "scenario_pack_ref": pack["pack_id"],
+        "scenario_results": scenario_results,
+        "scenario_comparison": build_fixed_order_scenario_comparison(
+            scenario_results,
+            order=DETERMINISTIC_PACK_REQUIRED_SLOTS,
+        ),
+        "recommendation_summary": "Deterministic simulation completed.",
+        "comparability": comparability,
+        "export_status": "success",
+    }
+
+
+def run_deterministic_compare_from_nl(
+    *,
+    nl_payload: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
+    payload = run_deterministic_simulate_from_nl(
+        nl_payload=nl_payload,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
+    )
+    payload["comparison_type"] = "deterministic_pack"
+    payload["recommendation_summary"] = "Deterministic compare completed."
+    return payload
+
+
+def save_deterministic_payload(output_path: str | Path, payload: dict[str, Any]) -> Path:
+    return write_deterministic_run_artifact(output_path, payload)
 
 
 def register_case_commands(subparsers: Any) -> None:

@@ -108,3 +108,53 @@ class ActorOntologyEnvelope(BaseModel):
     events: list[dict[str, Any]] = Field(default_factory=list)
     influences: list[dict[str, Any]] = Field(default_factory=list)
     query_skeleton: dict[str, Any] = Field(default_factory=dict)
+
+
+class NLScenarioDescription(BaseModel):
+    slot: Literal["A", "B", "C"]
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+
+
+class ScenarioCompilationRequest(BaseModel):
+    pack_id: str = Field(min_length=1)
+    pack_version: str = Field(min_length=1)
+    case_id: str = Field(min_length=1)
+    scenarios: list[NLScenarioDescription] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_slots(self) -> "ScenarioCompilationRequest":
+        slots = [item.slot for item in self.scenarios]
+        if len(slots) != len(set(slots)):
+            raise ValueError("scenario slots must be unique")
+        return self
+
+
+class ResistanceBaselineModel(BaseModel):
+    structural_conflict: float = Field(ge=0.0, le=1.0)
+    resource_reallocation_drag: float = Field(ge=0.0, le=1.0)
+    cultural_misalignment: float = Field(ge=0.0, le=1.0)
+    veto_node_intensity: float = Field(ge=0.0, le=1.0)
+    aggregate_resistance: float = Field(ge=0.0, le=1.0)
+
+
+class DeterministicScenarioModel(BaseModel):
+    scenario_key: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    target_outcome: str = Field(min_length=1)
+    constraints: list[str] = Field(min_length=1)
+    dilemma_tradeoffs: list[str] = Field(min_length=1)
+    resistance_baseline: ResistanceBaselineModel
+
+
+class DeterministicScenarioPackModel(BaseModel):
+    pack_id: str = Field(min_length=1)
+    pack_version: str = Field(min_length=1)
+    scenarios: list[DeterministicScenarioModel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_scenario_keys(self) -> "DeterministicScenarioPackModel":
+        keys = [item.scenario_key for item in self.scenarios]
+        if len(keys) != len(set(keys)):
+            raise ValueError("scenario_key values must be unique")
+        return self

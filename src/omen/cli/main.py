@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from omen.cli.case import handle_case_command, register_case_commands
+from omen.cli.case import (
+    run_deterministic_compare_from_nl,
+    run_deterministic_simulate_from_nl,
+)
 from omen.cli.actor import (
     handle_analyze_command,
     handle_validate_command,
@@ -76,6 +80,23 @@ def main() -> None:
     )
     simulate.add_argument("--output", required=False, help="Optional output JSON path")
     simulate.add_argument(
+        "--deterministic-nl-json",
+        required=False,
+        help="Optional NL scenario JSON for deterministic compilation and simulation",
+    )
+    simulate.add_argument(
+        "--actor-profile-ref",
+        required=False,
+        default="actor_profile_v1",
+        help="Actor profile version reference used in deterministic artifact",
+    )
+    simulate.add_argument(
+        "--calc-policy-version",
+        required=False,
+        default="deterministic_v1",
+        help="Calculation policy version used in deterministic artifact",
+    )
+    simulate.add_argument(
         "--incremental",
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
@@ -117,6 +138,23 @@ def main() -> None:
         help="Budget delta applied to --budget-actor in variation run",
     )
     compare.add_argument("--output", required=False, help="Optional comparison JSON path")
+    compare.add_argument(
+        "--deterministic-nl-json",
+        required=False,
+        help="Optional NL scenario JSON for deterministic compilation and compare",
+    )
+    compare.add_argument(
+        "--actor-profile-ref",
+        required=False,
+        default="actor_profile_v1",
+        help="Actor profile version reference used in deterministic artifact",
+    )
+    compare.add_argument(
+        "--calc-policy-version",
+        required=False,
+        default="deterministic_v1",
+        help="Calculation policy version used in deterministic artifact",
+    )
     compare.add_argument(
         "--incremental",
         action="store_true",
@@ -307,6 +345,22 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "simulate":
+        if args.deterministic_nl_json:
+            nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
+            payload = run_deterministic_simulate_from_nl(
+                nl_payload=nl_payload,
+                actor_profile_ref=args.actor_profile_ref,
+                calculation_policy_version=args.calc_policy_version,
+            )
+            rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+            output_path = _write_output(
+                rendered,
+                args.output,
+                "deterministic_result.json",
+                args.incremental,
+            )
+            print(f"Saved deterministic simulation result to {output_path}")
+            return
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         if args.seed is None:
@@ -324,6 +378,22 @@ def main() -> None:
         output_path = _write_output(rendered, args.output, "explanation.json", args.incremental)
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
+        if args.deterministic_nl_json:
+            nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
+            payload = run_deterministic_compare_from_nl(
+                nl_payload=nl_payload,
+                actor_profile_ref=args.actor_profile_ref,
+                calculation_policy_version=args.calc_policy_version,
+            )
+            rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+            output_path = _write_output(
+                rendered,
+                args.output,
+                "deterministic_comparison.json",
+                args.incremental,
+            )
+            print(f"Saved deterministic comparison to {output_path}")
+            return
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         baseline = run_simulation(config, ontology_setup=ontology_setup)

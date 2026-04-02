@@ -75,6 +75,27 @@ def _event_description_text(event: dict[str, Any]) -> str:
     return ""
 
 
+def normalize_deterministic_evidence_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        evidence_id = str(item.get("evidence_id") or item.get("id") or "").strip()
+        if not evidence_id:
+            continue
+        normalized.append(
+            {
+                "evidence_id": evidence_id,
+                "source_label": str(item.get("source_label") or item.get("source") or "").strip(),
+                "source_timestamp": str(item.get("source_timestamp") or item.get("date") or "").strip(),
+                "claim_excerpt": str(item.get("claim_excerpt") or item.get("excerpt") or "").strip(),
+                "evidence_strength": str(item.get("evidence_strength") or item.get("strength") or "moderate"),
+                "contradiction_group": str(item.get("contradiction_group") or "").strip() or None,
+            }
+        )
+    return normalized
+
+
 def _timeline_row(
     *,
     event_id: str,

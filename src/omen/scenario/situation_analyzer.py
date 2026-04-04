@@ -88,7 +88,7 @@ def _validate_source_scope_or_raise(text: str) -> None:
 def build_scenario_ontology_from_situation(
     *,
     situation_file: str | Path,
-    actor_ref: str,
+    actor_ref: str | None,
     pack_id: str,
     pack_version: str,
 ) -> dict:
@@ -103,6 +103,9 @@ def build_scenario_ontology_from_situation(
     for key in ("A", "B", "C"):
         v = _DEFAULT_RESISTANCE[key]
         aggregate = round(sum(v) / 4.0, 3)
+        rationale = [f"Derived from situation source: {path}"]
+        if actor_ref:
+            rationale.append(f"Actor reference: {actor_ref}")
         scenarios.append(
             {
                 "scenario_key": key,
@@ -116,10 +119,7 @@ def build_scenario_ontology_from_situation(
                     "cultural_misalignment": v[2],
                     "veto_node_intensity": v[3],
                     "aggregate_resistance": aggregate,
-                    "assumption_rationale": [
-                        f"Derived from situation source: {path}",
-                        f"Actor reference: {actor_ref}",
-                    ],
+                    "assumption_rationale": rationale,
                 },
                 "modeling_notes": [
                     f"Situation excerpt: {excerpt}" if excerpt else "No source excerpt extracted",
@@ -166,3 +166,65 @@ def scenario_ontology_to_deterministic_pack(ontology: dict) -> dict:
         "pack_version": ontology["pack_version"],
         "scenarios": scenarios,
     }
+
+
+def scenario_ontology_to_markdown(ontology: dict) -> str:
+    lines: list[str] = []
+    lines.append(f"# Scenario Ontology: {ontology.get('derived_from_situation_id', 'unknown')}")
+    lines.append("")
+    lines.append(f"- pack_id: {ontology.get('pack_id', 'unknown')}")
+    lines.append(f"- pack_version: {ontology.get('pack_version', 'unknown')}")
+    lines.append(f"- ontology_version: {ontology.get('ontology_version', 'unknown')}")
+
+    source_meta = ontology.get("source_meta") or {}
+    source_path = source_meta.get("source_path")
+    if source_path:
+        lines.append(f"- source_path: {source_path}")
+    generated_at = source_meta.get("generated_at")
+    if generated_at:
+        lines.append(f"- generated_at: {generated_at}")
+
+    for scenario in ontology.get("scenarios", []):
+        key = scenario.get("scenario_key", "?")
+        title = scenario.get("title", "")
+        lines.append("")
+        lines.append(f"## Scenario {key}: {title}")
+        lines.append("")
+        lines.append(f"- objective: {scenario.get('objective', '')}")
+
+        constraints = scenario.get("constraints") or []
+        lines.append("- constraints:")
+        for item in constraints:
+            lines.append(f"  - {item}")
+
+        tradeoffs = scenario.get("tradeoff_pressure") or []
+        lines.append("- tradeoff_pressure:")
+        for item in tradeoffs:
+            lines.append(f"  - {item}")
+
+        resistance = scenario.get("resistance_assumptions") or {}
+        lines.append("- resistance_assumptions:")
+        for field in (
+            "structural_conflict",
+            "resource_reallocation_drag",
+            "cultural_misalignment",
+            "veto_node_intensity",
+            "aggregate_resistance",
+        ):
+            if field in resistance:
+                lines.append(f"  - {field}: {resistance[field]}")
+
+        rationale = resistance.get("assumption_rationale") or []
+        if rationale:
+            lines.append("- assumption_rationale:")
+            for item in rationale:
+                lines.append(f"  - {item}")
+
+        modeling_notes = scenario.get("modeling_notes") or []
+        if modeling_notes:
+            lines.append("- modeling_notes:")
+            for item in modeling_notes:
+                lines.append(f"  - {item}")
+
+    lines.append("")
+    return "\n".join(lines)

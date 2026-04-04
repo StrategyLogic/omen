@@ -16,6 +16,7 @@ from omen.scenario.validator import (
     validate_scenario_ontology_slice_or_raise,
     validate_scenario_or_raise,
 )
+from omen.scenario.situation_analyzer import scenario_ontology_to_markdown
 from omen.types import CasePackage
 
 
@@ -90,4 +91,13 @@ def save_scenario_ontology_slice(path: str | Path, payload: dict[str, Any]) -> P
         json.dumps(validated.model_dump(), ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    return output_path
+
+
+def save_scenario_ontology_markdown(path: str | Path, payload: dict[str, Any]) -> Path:
+    output_path = Path(path)
+    validated = validate_scenario_ontology_slice_or_raise(payload)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown = scenario_ontology_to_markdown(validated.model_dump())
+    output_path.write_text(markdown, encoding="utf-8")
     return output_path

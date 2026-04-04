@@ -20,7 +20,7 @@ def _prepare_scenario_artifact(tmp_path: Path, monkeypatch) -> Path:
             "omen",
             "analyze",
             "situation",
-            "--input",
+            "--doc",
             str(SITUATION_INPUT),
             "--actor",
             "actors/steve-jobs.md",

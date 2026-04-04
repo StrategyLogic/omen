@@ -26,7 +26,7 @@ dynamic_authoring: enabled
             "omen",
             "analyze",
             "situation",
-            "--input",
+            "--doc",
             str(deferred_source),
             "--actor",
             "actors/steve-jobs.md",

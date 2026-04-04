@@ -14,6 +14,7 @@ ACTOR_REF = "actors/steve-jobs.md"
 
 def test_analyze_situation_then_simulate_happy_path(tmp_path: Path, monkeypatch) -> None:
     scenario_output = tmp_path / "nokia_scenario.json"
+    scenario_summary = tmp_path / "nokia_scenario.md"
     sim_output = tmp_path / "det_result.json"
 
     monkeypatch.setattr(
@@ -23,8 +24,8 @@ def test_analyze_situation_then_simulate_happy_path(tmp_path: Path, monkeypatch)
             "omen",
             "analyze",
             "situation",
-            "--input",
-            str(SITUATION_INPUT),
+            "--doc",
+            "nokia-elop-2010.md",
             "--actor",
             ACTOR_REF,
             "--output",
@@ -37,9 +38,13 @@ def test_analyze_situation_then_simulate_happy_path(tmp_path: Path, monkeypatch)
     assert exc_info.value.code == 0
 
     assert scenario_output.exists()
+    assert scenario_summary.exists()
     scenario_payload = json.loads(scenario_output.read_text(encoding="utf-8"))
     keys = [item["scenario_key"] for item in scenario_payload["scenarios"]]
     assert keys == ["A", "B", "C"]
+    summary_text = scenario_summary.read_text(encoding="utf-8")
+    assert "# Scenario Ontology:" in summary_text
+    assert "## Scenario A:" in summary_text
 
     monkeypatch.setattr(
         sys,
@@ -124,3 +129,57 @@ def test_simulate_rejects_missing_required_slot(tmp_path: Path, monkeypatch) -> 
         main()
 
     assert exc_info.value.code == 2
+
+
+def test_analyze_situation_without_actor_happy_path(tmp_path: Path, monkeypatch) -> None:
+    scenario_output = tmp_path / "nokia_no_actor.json"
+    scenario_summary = tmp_path / "nokia_no_actor.md"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "analyze",
+            "situation",
+            "--doc",
+            str(SITUATION_INPUT),
+            "--output",
+            str(scenario_output),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 0
+    assert scenario_output.exists()
+    assert scenario_summary.exists()
+
+    payload = json.loads(scenario_output.read_text(encoding="utf-8"))
+    keys = [item["scenario_key"] for item in payload["scenarios"]]
+    assert keys == ["A", "B", "C"]
+
+
+def test_analyze_situation_filename_resolves_cases_folder(tmp_path: Path, monkeypatch) -> None:
+    scenario_output = tmp_path / "nokia_by_filename.json"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "analyze",
+            "situation",
+            "--doc",
+            "nokia-elop-2010.md",
+            "--output",
+            str(scenario_output),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 0
+    assert scenario_output.exists()

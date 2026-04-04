@@ -183,3 +183,64 @@ def test_analyze_situation_filename_resolves_cases_folder(tmp_path: Path, monkey
 
     assert exc_info.value.code == 0
     assert scenario_output.exists()
+
+
+def test_analyze_situation_doc_without_md_suffix(tmp_path: Path, monkeypatch) -> None:
+    scenario_output = tmp_path / "nokia_no_suffix.json"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "analyze",
+            "situation",
+            "--doc",
+            "nokia-elop-2010",
+            "--output",
+            str(scenario_output),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 0
+    assert scenario_output.exists()
+
+
+def test_analyze_situation_defaults_output_under_data_scenarios(monkeypatch) -> None:
+    default_json = Path("data/scenarios/nokia-elop-2010.json")
+    default_md = Path("data/scenarios/nokia-elop-2010.md")
+    backup_json = default_json.read_text(encoding="utf-8") if default_json.exists() else None
+    backup_md = default_md.read_text(encoding="utf-8") if default_md.exists() else None
+
+    try:
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "omen",
+                "analyze",
+                "situation",
+                "--doc",
+                "nokia-elop-2010.md",
+            ],
+        )
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 0
+        assert default_json.exists()
+        assert default_md.exists()
+    finally:
+        if backup_json is None and default_json.exists():
+            default_json.unlink()
+        elif backup_json is not None:
+            default_json.write_text(backup_json, encoding="utf-8")
+
+        if backup_md is None and default_md.exists():
+            default_md.unlink()
+        elif backup_md is not None:
+            default_md.write_text(backup_md, encoding="utf-8")

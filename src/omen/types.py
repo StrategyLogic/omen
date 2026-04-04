@@ -71,11 +71,27 @@ class StrategicFreedomConditions(BaseModel):
     blocking: list[str] = Field(default_factory=list)
 
 
+class ScenarioSelectedDimensions(BaseModel):
+    scenario_key: str = Field(min_length=1)
+    selected_dimension_keys: list[str] = Field(default_factory=list)
+    selection_rationale: list[str] = Field(default_factory=list)
+
+
+class ConditionDerivationTrace(BaseModel):
+    scenario_key: str = Field(min_length=1)
+    ontology_refs: list[str] = Field(default_factory=list)
+    selected_dimensions: list[str] = Field(default_factory=list)
+    derivation_steps: list[str] = Field(default_factory=list)
+    missing_evidence_reasons: list[str] = Field(default_factory=list)
+
+
 class DeterministicScenarioResult(BaseModel):
     scenario_key: str = Field(min_length=1)
     capability_dilemma_fit: CapabilityDilemmaFit
     resistance: ResistanceBaselineScore
     strategic_freedom: StrategicFreedomConditions
+    selected_dimensions: ScenarioSelectedDimensions | None = None
+    derivation_trace: ConditionDerivationTrace | None = None
     evidence_refs: list[str] = Field(default_factory=list)
     confidence_level: str = Field(min_length=1)
 

@@ -13,6 +13,7 @@ from omen.scenario.validator import (
     ScenarioConfig,
     validate_case_package_or_raise,
     validate_deterministic_scenario_pack_or_raise,
+    validate_scenario_ontology_slice_or_raise,
     validate_scenario_or_raise,
 )
 from omen.types import CasePackage
@@ -71,3 +72,22 @@ def compile_and_validate_deterministic_pack(payload: dict[str, Any]) -> dict[str
     compiled = compile_nl_scenarios_to_pack(payload)
     validate_deterministic_scenario_pack_or_raise(compiled)
     return compiled
+
+
+def load_scenario_ontology_slice(path: str | Path) -> dict[str, Any]:
+    scenario_path = Path(path)
+    with scenario_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    validated = validate_scenario_ontology_slice_or_raise(payload)
+    return validated.model_dump()
+
+
+def save_scenario_ontology_slice(path: str | Path, payload: dict[str, Any]) -> Path:
+    output_path = Path(path)
+    validated = validate_scenario_ontology_slice_or_raise(payload)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(validated.model_dump(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return output_path

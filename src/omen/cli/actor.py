@@ -25,6 +25,10 @@ from omen.ui.artifacts import (
   ensure_actor_output_dir,
 )
 from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
+from omen.cli.situation import (
+  handle_situation_analyze_command,
+  register_situation_analyze_commands,
+)
 
 
 ACTOR_DEFAULT_OUTPUT_ROOT = "output/actors"
@@ -57,6 +61,8 @@ def _add_actor_common_args(parser: Any) -> None:
 def register_analyze_commands(subparsers: Any) -> None:
   analyze = subparsers.add_parser("analyze", help="top-level analysis commands")
   analyze_sub = analyze.add_subparsers(dest="analyze_object", required=True)
+
+  register_situation_analyze_commands(analyze_sub)
 
   actor = analyze_sub.add_parser("actor", help="strategic actor analysis flow")
   _add_actor_common_args(actor)
@@ -241,6 +247,9 @@ def _run_persona(
 
 
 def handle_analyze_command(args: Any) -> int:
+  if args.analyze_object == "situation":
+    return handle_situation_analyze_command(args)
+
   if args.analyze_object != "actor":
     print(f"Analyze object `{args.analyze_object}` is not supported")
     return 3

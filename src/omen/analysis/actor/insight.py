@@ -259,3 +259,16 @@ def build_recommendation_from_condition_sets(
         f"Recommend scenario {best_key} as primary path. "
         f"First required condition: {required_hint}."
     )
+
+
+def apply_partial_evidence_confidence_policy(
+    *,
+    evidence_refs: list[str],
+) -> tuple[str, list[str]]:
+    refs = [str(item).strip() for item in evidence_refs if str(item).strip()]
+    if refs:
+        return "full-confidence", []
+    return (
+        "reduced-confidence",
+        ["No evidence refs linked for this scenario in current iteration"],
+    )

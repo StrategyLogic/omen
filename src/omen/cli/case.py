@@ -10,14 +10,19 @@ from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.insight import build_recommendation_from_condition_sets
+from omen.analysis.actor.insight import apply_partial_evidence_confidence_policy
 from omen.analysis.actor.comparability import build_comparability_metadata
-from omen.analysis.actor.formation import assemble_capability_dilemma_fit
+from omen.analysis.actor.formation import (
+    assemble_capability_dilemma_fit,
+    project_scenario_selected_dimensions,
+)
 from omen.analysis.actor.report_writer import (
     attach_strategic_freedom_summary,
     build_fixed_order_scenario_comparison,
     write_deterministic_run_artifact,
 )
 from omen.analysis.actor.strategy import (
+    build_condition_derivation_trace,
     calculate_strategic_freedom_factor,
     generate_condition_sets,
 )
@@ -44,6 +49,19 @@ def run_deterministic_simulate_from_nl(
     calculation_policy_version: str,
 ) -> dict[str, Any]:
     pack = compile_and_validate_deterministic_pack(nl_payload)
+    return run_deterministic_simulate_from_pack(
+        pack=pack,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
+    )
+
+
+def run_deterministic_simulate_from_pack(
+    *,
+    pack: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
 
     capability_templates = {
         "A": {"ecosystem_control": 0.75, "execution_velocity": 0.58},
@@ -67,15 +85,36 @@ def run_deterministic_simulate_from_nl(
             strategic_freedom_score=strategic_score,
             resistance_baseline=scenario["resistance_baseline"],
         )
+        selected_dimensions = project_scenario_selected_dimensions(
+            scenario_key=scenario_key,
+            capability_scores=capability_templates.get(scenario_key, {}),
+        )
+        derivation_trace = build_condition_derivation_trace(
+            scenario_key=scenario_key,
+            scenario_ontology={
+                "objective": scenario.get("target_outcome", ""),
+                "constraints": scenario.get("constraints", []),
+                "tradeoff_pressure": scenario.get("dilemma_tradeoffs", []),
+                "resistance_assumptions": scenario.get("resistance_baseline", {}),
+            },
+            selected_dimensions=selected_dimensions,
+            strategic_conditions=strategic_conditions,
+        )
+        confidence_level, missing_reasons = apply_partial_evidence_confidence_policy(
+            evidence_refs=[],
+        )
+        derivation_trace["missing_evidence_reasons"] = missing_reasons
 
         scenario_results.append(
             {
                 "scenario_key": scenario_key,
                 "capability_dilemma_fit": capability_fit,
+                "selected_dimensions": selected_dimensions,
                 "resistance": scenario["resistance_baseline"],
                 "strategic_freedom": strategic_conditions,
+                "derivation_trace": derivation_trace,
                 "evidence_refs": [],
-                "confidence_level": "reduced-confidence",
+                "confidence_level": confidence_level,
             }
         )
 
@@ -107,8 +146,22 @@ def run_deterministic_compare_from_nl(
     actor_profile_ref: str,
     calculation_policy_version: str,
 ) -> dict[str, Any]:
-    payload = run_deterministic_simulate_from_nl(
-        nl_payload=nl_payload,
+    pack = compile_and_validate_deterministic_pack(nl_payload)
+    return run_deterministic_compare_from_pack(
+        pack=pack,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
+    )
+
+
+def run_deterministic_compare_from_pack(
+    *,
+    pack: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
+    payload = run_deterministic_simulate_from_pack(
+        pack=pack,
         actor_profile_ref=actor_profile_ref,
         calculation_policy_version=calculation_policy_version,
     )

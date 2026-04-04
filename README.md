@@ -118,6 +118,10 @@ python -m pip install -e ".[dev]"
 
 ### Run Example
 ```bash
+# scenario-first pipeline (source -> data -> output)
+omen analyze situation --input cases/situations/nokia-elop-2010.md --actor actors/steve-jobs.md --output data/scenarios/nokia-elop-2010_scenario.json
+omen simulate --scenario data/scenarios/nokia-elop-2010_scenario.json --output output/spec8_quickstart/nokia-elop-2010_result.json
+
 # run simulate
 omen simulate --scenario data/scenarios/ontology.json
 

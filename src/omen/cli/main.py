@@ -10,7 +10,9 @@ from typing import Any
 
 from omen.cli.case import handle_case_command, register_case_commands
 from omen.cli.case import (
+    run_deterministic_compare_from_pack,
     run_deterministic_compare_from_nl,
+    run_deterministic_simulate_from_pack,
     run_deterministic_simulate_from_nl,
 )
 from omen.cli.actor import (
@@ -19,12 +21,18 @@ from omen.cli.actor import (
     register_analyze_commands,
     register_validate_commands,
 )
+from omen.cli.situation import handle_situation_analyze_command
 from omen.explain.precision_report import build_precision_report
 from omen.explain.report import build_explanation_report
 from omen.ingest.llm_ontology.builders.assertion import build_assertions_from_candidates
 from omen.ingest.llm_ontology.builders.candidate import build_candidates_from_text
 from omen.ingest.documents import build_source_inventory, extract_pdf_pages
-from omen.scenario.loader import load_case_package_from_scenario, load_scenario_with_ontology
+from omen.scenario.loader import (
+    load_case_package_from_scenario,
+    load_scenario_ontology_slice,
+    load_scenario_with_ontology,
+)
+from omen.scenario.situation_analyzer import scenario_ontology_to_deterministic_pack
 from omen.scenario.ontology_loader import load_ontology_input
 from omen.scenario.ingest_validator import validate_extracted_entity_candidates_or_raise
 from omen.scenario.ingest_validator import validate_ontology_assertion_candidates_or_raise
@@ -391,6 +399,18 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    def _is_scenario_ontology_input(path: str | Path) -> bool:
+        try:
+            payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        except Exception:
+            return False
+        return (
+            isinstance(payload, dict)
+            and "pack_id" in payload
+            and "scenarios" in payload
+            and ("ontology_version" in payload or "derived_from_situation_id" in payload)
+        )
+
     def _print_deferred_scope_message(exc: Exception) -> None:
         print(f"Deferred scope: {exc}")
         print(
@@ -418,6 +438,30 @@ def main() -> None:
                 return
             except DeferredScopeFeatureError as exc:
                 _print_deferred_scope_message(exc)
+                raise SystemExit(2) from exc
+        if _is_scenario_ontology_input(args.scenario):
+            try:
+                scenario_ontology = load_scenario_ontology_slice(args.scenario)
+                pack_payload = scenario_ontology_to_deterministic_pack(scenario_ontology)
+                payload = run_deterministic_simulate_from_pack(
+                    pack=pack_payload,
+                    actor_profile_ref=args.actor_profile_ref,
+                    calculation_policy_version=args.calc_policy_version,
+                )
+                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+                output_path = _write_output(
+                    rendered,
+                    args.output,
+                    "deterministic_result.json",
+                    args.incremental,
+                )
+                print(f"Saved deterministic simulation result to {output_path}")
+                return
+            except DeferredScopeFeatureError as exc:
+                _print_deferred_scope_message(exc)
+                raise SystemExit(2) from exc
+            except Exception as exc:
+                print(f"Deterministic simulate failed: {exc}")
                 raise SystemExit(2) from exc
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
@@ -455,6 +499,30 @@ def main() -> None:
                 return
             except DeferredScopeFeatureError as exc:
                 _print_deferred_scope_message(exc)
+                raise SystemExit(2) from exc
+        if _is_scenario_ontology_input(args.scenario):
+            try:
+                scenario_ontology = load_scenario_ontology_slice(args.scenario)
+                pack_payload = scenario_ontology_to_deterministic_pack(scenario_ontology)
+                payload = run_deterministic_compare_from_pack(
+                    pack=pack_payload,
+                    actor_profile_ref=args.actor_profile_ref,
+                    calculation_policy_version=args.calc_policy_version,
+                )
+                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+                output_path = _write_output(
+                    rendered,
+                    args.output,
+                    "deterministic_comparison.json",
+                    args.incremental,
+                )
+                print(f"Saved deterministic comparison to {output_path}")
+                return
+            except DeferredScopeFeatureError as exc:
+                _print_deferred_scope_message(exc)
+                raise SystemExit(2) from exc
+            except Exception as exc:
+                print(f"Deterministic compare failed: {exc}")
                 raise SystemExit(2) from exc
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
@@ -817,6 +885,8 @@ def main() -> None:
     elif args.command == "case":
         raise SystemExit(handle_case_command(args))
     elif args.command == "analyze":
+        if getattr(args, "analyze_object", None) == "situation":
+            raise SystemExit(handle_situation_analyze_command(args))
         raise SystemExit(handle_analyze_command(args))
     elif args.command == "validate":
         raise SystemExit(handle_validate_command(args))

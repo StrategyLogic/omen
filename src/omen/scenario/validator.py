@@ -12,6 +12,7 @@ from omen.scenario.ingest_validator import (
     IncompleteDeterministicPackError,
 )
 from omen.scenario.ontology_models import DeterministicScenarioPackModel
+from omen.scenario.ontology_models import ScenarioOntologySliceModel
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 
@@ -226,3 +227,59 @@ def validate_deterministic_scenario_pack_or_raise(
                 f"scenario {scenario.scenario_key} dilemma_tradeoffs are empty after normalization"
             )
     return pack
+
+
+def validate_scenario_ontology_slice_or_raise(
+    payload: dict,
+    *,
+    required_slots: tuple[str, ...] = ("A", "B", "C"),
+) -> ScenarioOntologySliceModel:
+    for key in (
+        "enterprise_resistance_extensions",
+        "enterprise_template_catalog",
+        "resistance_extension_profiles",
+    ):
+        if key in payload:
+            raise DeferredScopeFeatureError(
+                f"`{key}` is deferred scope. Enterprise resistance extensions are not supported in this release."
+            )
+
+    for index, scenario in enumerate(payload.get("scenarios") or []):
+        if not isinstance(scenario, dict):
+            continue
+        deferred_keys = [
+            key
+            for key in (
+                "custom_resistance_dimensions",
+                "enterprise_resistance_profile",
+                "department_resistance_breakdown",
+            )
+            if key in scenario
+        ]
+        if deferred_keys:
+            raise DeferredScopeFeatureError(
+                f"scenario index {index} uses deferred enterprise resistance keys: {deferred_keys}."
+            )
+
+    ontology = ScenarioOntologySliceModel.model_validate(payload)
+    existing = {item.scenario_key for item in ontology.scenarios}
+    missing = [slot for slot in required_slots if slot not in existing]
+    if missing:
+        raise IncompleteDeterministicPackError(
+            f"scenario ontology missing required slots: {missing}"
+        )
+
+    for scenario in ontology.scenarios:
+        if not scenario.objective.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing objective"
+            )
+        if not any(item.strip() for item in scenario.constraints):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} constraints are empty after normalization"
+            )
+        if not any(item.strip() for item in scenario.tradeoff_pressure):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} tradeoff_pressure is empty after normalization"
+            )
+    return ontology

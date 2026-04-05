@@ -1,4 +1,4 @@
-"""LLM pipeline for situation analyze and scenario decomposition."""
+"""LLM services for situation extraction/enhancement and scenario decomposition."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.llm_ontology.clients import create_chat_client
-from omen.ingest.llm_ontology.config import load_llm_config
+from omen.ingest.llm_ontology.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.llm_ontology.prompts import build_json_retry_prompt
+from omen.ingest.llm_ontology.prompts.registry import get_prompt_template
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
@@ -24,25 +24,21 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 
 def _invoke_json(prompt: str, *, config_path: str) -> dict[str, Any]:
-    config = load_llm_config(config_path)
-    chat = create_chat_client(config)
-    response = chat.invoke(prompt)
-    content = response.content if isinstance(response.content, str) else json.dumps(response.content)
+    content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
     try:
         return _extract_json_object(content)
     except Exception:
         retry_prompt = build_json_retry_prompt(prompt)
-        retry_response = chat.invoke(retry_prompt)
-        retry_content = (
-            retry_response.content
-            if isinstance(retry_response.content, str)
-            else json.dumps(retry_response.content)
-        )
+        retry_content = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
         return _extract_json_object(retry_content)
 
 
 def _read_source_text(path: str | Path) -> str:
     return Path(path).read_text(encoding="utf-8")
+
+
+def _render_base_prompt(template_key: str, values: dict[str, object]) -> str:
+    return render_prompt_template(get_prompt_template(template_key, tier="base"), values)
 
 
 def _as_dict_list(value: Any, *, key_name: str = "name") -> list[dict[str, Any]]:
@@ -98,53 +94,6 @@ def _normalize_source_trace(value: Any, *, source_path: str, situation_id: str) 
     ]
 
 
-def _build_extract_prompt(*, source_text: str, source_path: str, actor_ref: str | None) -> str:
-    return (
-        "You are a strategy analyst. Extract SituationContext from the source document.\n"
-        "Return ONLY valid JSON object with keys: "
-        "title, core_question, current_state, core_dilemma, key_decision_point, "
-        "target_outcomes (array), hard_constraints (array), known_unknowns (array).\n"
-        f"actor_ref: {actor_ref or 'none'}\n"
-        f"source_path: {source_path}\n"
-        "source_document:\n"
-        f"{source_text}\n"
-    )
-
-
-def _build_enhance_prompt(*, source_text: str, source_path: str, context: dict[str, Any], situation_id: str) -> str:
-    return (
-        "You are a strategy analyst. Build Situation_v0_1_0 from source document and context.\n"
-        "Return ONLY valid JSON object with keys: "
-        "version, id, context, signals, tech_space_seed, market_space_seed, uncertainty_space, source_trace.\n"
-        "Rules:\n"
-        "- version must be '0.1.0'\n"
-        "- id must equal provided situation_id\n"
-        "- context must preserve all provided context fields\n"
-        "- signals must be non-empty\n"
-        f"situation_id: {situation_id}\n"
-        f"source_path: {source_path}\n"
-        f"context_json: {json.dumps(context, ensure_ascii=False)}\n"
-        "source_document:\n"
-        f"{source_text}\n"
-    )
-
-
-def _build_scenario_prompt(*, situation_artifact: dict[str, Any], pack_id: str, pack_version: str) -> str:
-    return (
-        "You are a strategy analyst. Decompose situation artifact into deterministic scenarios A/B/C.\n"
-        "Return ONLY valid JSON object with keys: pack_id, pack_version, derived_from_situation_id, ontology_version, scenarios.\n"
-        "Scenario requirements:\n"
-        "- Must include exactly A, B, C each once\n"
-        "- A intent: Aggressive/Alternative challenger, optimistic positive-signal assumptions\n"
-        "- B intent: Baseline/Conservative maintainer, linear extrapolation from current state\n"
-        "- C intent: Collapse/Contingency extreme-risk, negative-signal breakout\n"
-        "- each scenario must include goal, target, objective, variables, constraints, tradeoff_pressure, resistance_assumptions, modeling_notes\n"
-        f"pack_id: {pack_id}\n"
-        f"pack_version: {pack_version}\n"
-        f"situation_artifact_json: {json.dumps(situation_artifact, ensure_ascii=False)}\n"
-    )
-
-
 def analyze_situation_document(
     *,
     situation_file: str | Path,
@@ -158,20 +107,26 @@ def analyze_situation_document(
     situation_id = path.stem
 
     context = _invoke_json(
-        _build_extract_prompt(
-            source_text=source_text,
-            source_path=str(path),
-            actor_ref=actor_ref,
+        _render_base_prompt(
+            "situation_extract_prompt",
+            {
+                "actor_ref": actor_ref or "none",
+                "source_path": str(path),
+                "source_text": source_text,
+            },
         ),
         config_path=config_path,
     )
 
     enhanced = _invoke_json(
-        _build_enhance_prompt(
-            source_text=source_text,
-            source_path=str(path),
-            context=context,
-            situation_id=situation_id,
+        _render_base_prompt(
+            "situation_enhance_prompt",
+            {
+                "situation_id": situation_id,
+                "source_path": str(path),
+                "context_json": json.dumps(context, ensure_ascii=False),
+                "source_text": source_text,
+            },
         ),
         config_path=config_path,
     )
@@ -208,10 +163,13 @@ def decompose_scenario_from_situation(
     config_path: str = "config/llm.toml",
 ) -> dict[str, Any]:
     payload = _invoke_json(
-        _build_scenario_prompt(
-            situation_artifact=situation_artifact,
-            pack_id=pack_id,
-            pack_version=pack_version,
+        _render_base_prompt(
+            "situation_decompose_prompt",
+            {
+                "pack_id": pack_id,
+                "pack_version": pack_version,
+                "situation_artifact_json": json.dumps(situation_artifact, ensure_ascii=False),
+            },
         ),
         config_path=config_path,
     )

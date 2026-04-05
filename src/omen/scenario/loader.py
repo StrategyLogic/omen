@@ -6,9 +6,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from omen.ingest.llm_ontology.builders.situation import (
+    scenario_ontology_to_markdown,
+    situation_artifact_to_markdown,
+)
 from omen.scenario.ontology_loader import bind_ontology_to_scenario, load_ontology_input
 from omen.scenario.pack_compiler import compile_nl_scenarios_to_pack
-from omen.scenario.situation_analyzer import situation_artifact_to_markdown
 from omen.scenario.ontology_validator import validate_ontology_input_or_raise
 from omen.scenario.validator import (
     ScenarioConfig,
@@ -18,7 +21,6 @@ from omen.scenario.validator import (
     validate_scenario_ontology_slice_or_raise,
     validate_scenario_or_raise,
 )
-from omen.scenario.situation_analyzer import scenario_ontology_to_markdown
 from omen.types import CasePackage
 
 

@@ -5,6 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from omen.ingest.llm_ontology.builders.situation import (
+    build_scenario_ontology_from_situation_artifact,
+    validate_situation_source_or_raise,
+)
 from omen.scenario.loader import (
     load_situation_artifact,
     save_scenario_ontology_markdown,
@@ -12,11 +16,7 @@ from omen.scenario.loader import (
     save_situation_artifact,
     save_situation_markdown,
 )
-from omen.scenario.situation_analyzer import (
-    build_scenario_ontology_from_situation_artifact,
-    validate_situation_source_or_raise,
-)
-from omen.scenario.situation_pipeline import (
+from omen.ingest.llm_ontology.services.situation import (
     analyze_situation_document,
     decompose_scenario_from_situation,
 )

@@ -36,7 +36,7 @@ from omen.scenario.loader import (
     load_scenario_ontology_slice,
     load_scenario_with_ontology,
 )
-from omen.scenario.situation_analyzer import scenario_ontology_to_deterministic_pack
+from omen.ingest.llm_ontology.builders.situation import scenario_ontology_to_deterministic_pack
 from omen.scenario.ontology_loader import load_ontology_input
 from omen.scenario.ingest_validator import validate_extracted_entity_candidates_or_raise
 from omen.scenario.ingest_validator import validate_ontology_assertion_candidates_or_raise

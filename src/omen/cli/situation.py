@@ -35,8 +35,27 @@ def _resolve_situation_doc_path(raw_doc: str) -> Path:
     return Path("cases/situations") / f"{stem}.md"
 
 
-def _resolve_default_output_path(input_path: Path) -> Path:
-    return Path("data/scenarios") / "strategic_actor_nokia_v1" / f"{input_path.stem}_situation.json"
+def _derive_case_name_from_path(input_path: Path) -> str:
+    stem = input_path.stem.strip().lower()
+    if stem.endswith("_situation"):
+        stem = stem[: -len("_situation")]
+    for separator in ("-", "_"):
+        if separator in stem:
+            head = stem.split(separator, 1)[0].strip()
+            if head:
+                return head
+    return stem or "case"
+
+
+def _derive_default_pack_id(input_path: Path, *, actor_ref: str | None) -> str:
+    case_name = _derive_case_name_from_path(input_path)
+    if actor_ref:
+        return f"strategic_actor_{case_name}_v1"
+    return f"{case_name}_v1"
+
+
+def _resolve_default_output_path(input_path: Path, pack_id: str) -> Path:
+    return Path("data/scenarios") / pack_id / f"{input_path.stem}_situation.json"
 
 
 def _resolve_splitter_default_output_path(situation_path: Path, pack_id: str) -> Path:
@@ -44,6 +63,14 @@ def _resolve_splitter_default_output_path(situation_path: Path, pack_id: str) ->
     if stem.endswith("_situation"):
         stem = stem[: -len("_situation")]
     return Path("data/scenarios") / pack_id / f"{stem}.json"
+
+
+def _derive_pack_id_from_situation_artifact(situation_artifact: dict[str, Any], situation_path: Path) -> str:
+    source_meta = situation_artifact.get("source_meta") or {}
+    actor_ref = source_meta.get("actor_ref")
+    source_path = source_meta.get("source_path")
+    base_path = Path(str(source_path)) if source_path else situation_path
+    return _derive_default_pack_id(base_path, actor_ref=str(actor_ref) if actor_ref else None)
 
 
 def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
@@ -74,7 +101,7 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--pack-id",
         required=False,
-        default="strategic_actor_nokia_v1",
+        default=None,
         help="Deterministic pack id for scenario slot policy",
     )
     situation.add_argument(
@@ -109,7 +136,7 @@ def register_scenario_command(subparsers: Any) -> None:
     scenario.add_argument(
         "--pack-id",
         required=False,
-        default="strategic_actor_nokia_v1",
+        default=None,
         help="Deterministic pack id for scenario slot policy",
     )
     scenario.add_argument(
@@ -139,14 +166,20 @@ def handle_situation_analyze_command(args: Any) -> int:
             return 2
 
         validate_situation_source_or_raise(input_path)
-        output_path_arg = Path(args.output) if args.output else (
-            Path("data/scenarios") / str(args.pack_id) / f"{input_path.stem}_situation.json"
+        pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=args.actor)
+        output_path_arg = (
+            Path(args.output)
+            if args.output
+            else _resolve_default_output_path(input_path, pack_id)
         )
+
+        if args.actor:
+            print("Building scenario pack with strategic actor context...")
 
         situation_artifact = analyze_situation_document(
             situation_file=input_path,
             actor_ref=args.actor,
-            pack_id=str(args.pack_id),
+            pack_id=pack_id,
             pack_version=str(args.pack_version),
             config_path=str(args.config),
         )
@@ -176,22 +209,26 @@ def handle_scenario_command(args: Any) -> int:
             return 2
 
         situation_artifact = load_situation_artifact(situation_path)
+        pack_id = str(args.pack_id) if args.pack_id else _derive_pack_id_from_situation_artifact(
+            situation_artifact,
+            situation_path,
+        )
         output_path_arg = (
             Path(args.output)
             if args.output
-            else _resolve_splitter_default_output_path(situation_path, str(args.pack_id))
+            else _resolve_splitter_default_output_path(situation_path, pack_id)
         )
 
         decomposition = decompose_scenario_from_situation(
             situation_artifact=situation_artifact,
-            pack_id=str(args.pack_id),
+            pack_id=pack_id,
             pack_version=str(args.pack_version),
             config_path=str(args.config),
         )
         ontology = build_scenario_ontology_from_situation_artifact(
             situation_artifact=situation_artifact,
             llm_decomposition=decomposition,
-            pack_id=str(args.pack_id),
+            pack_id=pack_id,
             pack_version=str(args.pack_version),
         )
         output_path = save_scenario_ontology_slice(output_path_arg, ontology)

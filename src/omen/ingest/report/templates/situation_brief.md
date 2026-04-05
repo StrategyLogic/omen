@@ -6,7 +6,7 @@
 **Source:** [[source_path]]
 **Generated:** [[generated_at]]
 
-[[executive_summary]]
+**Executive Summary:** [[executive_summary]]
 
 ---
 

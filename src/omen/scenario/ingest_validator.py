@@ -9,6 +9,22 @@ from omen.ingest.models import (
 )
 
 
+class ScenarioCompilationError(ValueError):
+    """Base error for scenario compilation validation failures."""
+
+
+class AmbiguousScenarioDescriptionError(ScenarioCompilationError):
+    """Raised when NL scenario description cannot be deterministically compiled."""
+
+
+class IncompleteDeterministicPackError(ScenarioCompilationError):
+    """Raised when compiled deterministic pack misses required scenario slots."""
+
+
+class DeferredScopeFeatureError(ScenarioCompilationError):
+    """Raised when request includes capabilities deferred out of current release scope."""
+
+
 def validate_precision_profile_or_raise(payload: dict) -> PrecisionEvaluationProfile:
     return PrecisionEvaluationProfile.model_validate(payload)
 

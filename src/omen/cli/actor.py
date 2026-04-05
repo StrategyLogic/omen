@@ -8,10 +8,11 @@ from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
-from omen.ingest.llm_ontology.services.actor import generate_actor_and_events_from_document
-from omen.ingest.llm_ontology.services.strategy import generate_strategy_ontology_from_document
-from omen.ingest.llm_ontology.prompts.registry import ensure_analyze_prompt_available
-from omen.ingest.llm_ontology.assembler import attach_actor_ref, attach_timeline_events
+from omen.scenario.loader import compile_and_validate_deterministic_pack
+from omen.ingest.synthesizer.services.actor import generate_actor_and_events_from_document
+from omen.ingest.synthesizer.services.strategy import generate_strategy_ontology_from_document
+from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+from omen.ingest.synthesizer.assembler import attach_actor_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.scenario.ontology_validator import (
     validate_actor_ontology_payload,
@@ -24,6 +25,10 @@ from omen.ui.artifacts import (
   ensure_actor_output_dir,
 )
 from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
+from omen.cli.situation import (
+  handle_situation_analyze_command,
+  register_situation_analyze_commands,
+)
 
 
 ACTOR_DEFAULT_OUTPUT_ROOT = "output/actors"
@@ -57,12 +62,29 @@ def register_analyze_commands(subparsers: Any) -> None:
   analyze = subparsers.add_parser("analyze", help="top-level analysis commands")
   analyze_sub = analyze.add_subparsers(dest="analyze_object", required=True)
 
+  register_situation_analyze_commands(analyze_sub)
+
   actor = analyze_sub.add_parser("actor", help="strategic actor analysis flow")
   _add_actor_common_args(actor)
 
   actor_sub = actor.add_subparsers(dest="actor_command", required=False)
   persona = actor_sub.add_parser("persona", help="output persona only")
   _add_actor_common_args(persona)
+
+  compile_pack = actor_sub.add_parser(
+    "compile-pack",
+    help="compile natural-language scenarios into deterministic pack JSON",
+  )
+  compile_pack.add_argument(
+    "--nl-json",
+    required=True,
+    help="Path to natural-language scenario compilation JSON",
+  )
+  compile_pack.add_argument(
+    "--output",
+    required=False,
+    help="Optional output path for compiled deterministic pack JSON",
+  )
 
   strategy = actor_sub.add_parser("strategy", help="cloud-only in OSS baseline")
   _add_actor_common_args(strategy)
@@ -225,15 +247,32 @@ def _run_persona(
 
 
 def handle_analyze_command(args: Any) -> int:
+  if args.analyze_object == "situation":
+    return handle_situation_analyze_command(args)
+
   if args.analyze_object != "actor":
     print(f"Analyze object `{args.analyze_object}` is not supported")
     return 3
 
+  actor_command = getattr(args, "actor_command", None)
+
+  if actor_command == "compile-pack":
+    try:
+      nl_payload = json.loads(Path(args.nl_json).read_text(encoding="utf-8"))
+      compiled = compile_and_validate_deterministic_pack(nl_payload)
+      output_path = Path(args.output) if args.output else Path("output") / "deterministic_compiled_pack.json"
+      output_path.parent.mkdir(parents=True, exist_ok=True)
+      output_path.write_text(json.dumps(compiled, ensure_ascii=False, indent=2), encoding="utf-8")
+      print(f"Saved compiled deterministic pack to {output_path}")
+      print("Deterministic compile result: SUCCESS")
+      return 0
+    except Exception as exc:
+      print(f"Deterministic compile result: FAILURE ({exc})")
+      return 2
+
   if not getattr(args, "doc", None):
     print("Analyze actor requires --doc <name_or_path>")
     return 2
-
-  actor_command = getattr(args, "actor_command", None)
 
   try:
     case_id, _ = _ensure_actor_artifacts(args)

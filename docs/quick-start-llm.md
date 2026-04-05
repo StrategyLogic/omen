@@ -122,5 +122,5 @@ LLM 调用失败：检查 `config/llm.toml` 与环境变量是否匹配。
 
 ## 相关文档
 
-- [战略行动者](concept/strategic-actor.md)
-- [构建战略行动者](guides/build-strategic-actor.md)
+- [战略主体](concepts/strategic-actor.md)
+- [构建战略主体](guides/build-strategic-actor.md)

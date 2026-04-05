@@ -1,8 +1,8 @@
 """Ingest helpers for Spec 4 precision and ontology evidence workflows."""
 
-from omen.ingest.llm_ontology.builders.assertion import build_assertions_from_candidates
-from omen.ingest.llm_ontology.builders.candidate import build_candidates_from_text
-from omen.ingest.documents import (
+from omen.ingest.synthesizer.builders.assertion import build_assertions_from_candidates
+from omen.ingest.synthesizer.builders.candidate import build_candidates_from_text
+from omen.ingest.processor import (
     build_source_inventory,
     clean_text,
     extract_pdf_pages,

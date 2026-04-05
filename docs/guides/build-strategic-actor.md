@@ -1,6 +1,6 @@
 # 构建 Strategic Actor
 
-本指南说明如何从案例文档构建自定义的 Strategic Actor 产物。
+本指南说明如何从案例文档构建自定义的战略行动者产出物。
 
 ## 工作目录
 
@@ -22,9 +22,11 @@ omen/
 │        └─ generation.json
 ```
 
-只需要在仓库根目录 `cases/actors/` 中放中准备的案例文档，例如：`cases/actors/elon-musk.md`
+### 运行示例
 
-然后运行分析命令：
+选择一个根目录 `cases/actors/` 中预置的案例文档，如：`elon-musk.md`
+
+运行分析命令，填写文档名称，不需要加 `.md` 扩展名：
 
 ```bash
 omen analyze actor --doc elon-musk
@@ -34,15 +36,15 @@ omen analyze actor --doc elon-musk
 
 ### 生成物清单
 
-分析命令将在 `output/actors/<actor_name>/` 下生成以下文件：
+Omen 将在 `output/actors/<actor_name>/` 下生成以下文件：
 
 | 名称 | 文件 | 说明 |
 |------|------|------|
 | 战略本体 | `strategy_ontology.json` | 战略上下文与结构化语义主文件 |
-| 战略行动者本体 | `actor_ontology.json` | 行动者本体数据（角色、事件、查询骨架等） |
-| 战略状态快照 | `analyze_status.json` | 战略状态快照，包含事件清单和关系描述 |
-| 战略画像 | `analyze_persona.json` | 战略行动者画像分析结果（叙事、关键特质等） |
-| 生成元数据 | `generation.json` | 本次生成元数据与校验信息（是否复用、校验问题等） |
+| 战略主体集 | `actor_ontology.json` | 包含参与者、行动者的本体数据（角色、事件、查询骨架等） |
+| 战略状态快照 | `analyze_status.json` | 包含事件清单和关系描述 |
+| 战略画像 | `analyze_persona.json` | 行动者画像分析结果（叙事、关键特质等） |
+| 生成元数据 | `generation.json` | 本次生成过程与校验信息（是否复用、校验问题等） |
 
 ## 使用流程
 
@@ -138,8 +140,6 @@ omen analyze actor --doc chen-jiaxing
 | `analyze_persona.json` | ✅ | 战略画像 |
 | `generation.json` | ✅ | 生成元数据 |
 
-如果校验失败，会显示具体错误和警告信息。
-
 ### 3. 高级命令使用
 
 #### 校验生成物
@@ -161,6 +161,8 @@ omen validate actor --doc chen-jiaxing
   "warnings": []
 }
 ```
+
+如果校验失败，会显示具体错误和警告信息。
 
 #### 自定义参数
 
@@ -191,7 +193,7 @@ omen analyze actor --doc chen-jiaxing --force
 
 **Q：Omen Token 消耗严重吗？**
 
-A：Omen 以“本地优先”为工具设计原则，充分利用本地缓存和本地计算资源。在分析工作流中，Omen 每一个分析步骤都优先使用本地缓存的结果，如果没有找到缓存才会调用大模型进行生成，帮助你节省 Token 消耗。
+A：Omen 以“本地优先”为工具设计原则，充分利用本地缓存和本地计算资源。在分析工作流中，Omen 每一个步骤都优先使用本地缓存，如果没有才会调用大模型进行生成，帮助你节省 Token 消耗。
 
 **Q：分析一份文档大概需要多少 Token？**
 

@@ -108,3 +108,147 @@ class ActorOntologyEnvelope(BaseModel):
     events: list[dict[str, Any]] = Field(default_factory=list)
     influences: list[dict[str, Any]] = Field(default_factory=list)
     query_skeleton: dict[str, Any] = Field(default_factory=dict)
+
+
+class SituationSourceDocument(BaseModel):
+    situation_id: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    company_context: str = Field(min_length=1)
+    dilemma_narrative: str = Field(min_length=1)
+    analysis_scope: str = Field(min_length=1)
+    created_at: str = Field(min_length=1)
+
+
+class SituationAnalysisRequest(BaseModel):
+    situation_id: str = Field(min_length=1)
+    doc: str = Field(min_length=1)
+    actor_ref: str | None = None
+    target_pack_id: str = Field(min_length=1)
+    target_pack_version: str = Field(min_length=1)
+    output_path: str | None = None
+
+
+class SituationContextModel(BaseModel):
+    title: str = Field(min_length=1)
+    core_question: str = Field(min_length=1)
+    current_state: str = Field(min_length=1)
+    core_dilemma: str = Field(min_length=1)
+    key_decision_point: str = Field(min_length=1)
+    target_outcomes: list[str] = Field(min_length=1)
+    hard_constraints: list[str] = Field(min_length=1)
+    known_unknowns: list[str] = Field(default_factory=list)
+
+
+class SituationEnhanceRequestModel(BaseModel):
+    situation_id: str = Field(min_length=1)
+    source_doc_ref: str = Field(min_length=1)
+    context: SituationContextModel
+    target_pack_id: str = Field(min_length=1)
+    target_pack_version: str = Field(min_length=1)
+
+
+class SituationArtifactModel(BaseModel):
+    version: str = Field(min_length=1)
+    id: str = Field(min_length=1)
+    context: SituationContextModel
+    signals: list[dict[str, Any]] = Field(min_length=1)
+    tech_space_seed: list[dict[str, Any]] = Field(default_factory=list)
+    market_space_seed: list[dict[str, Any]] = Field(default_factory=list)
+    uncertainty_space: dict[str, Any] = Field(default_factory=dict)
+    source_trace: list[dict[str, Any]] = Field(default_factory=list)
+    source_meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class ScenarioSplitRequestModel(BaseModel):
+    situation_artifact_path: str = Field(min_length=1)
+    target_pack_id: str = Field(min_length=1)
+    target_pack_version: str = Field(min_length=1)
+    output_path: str | None = None
+
+
+class ResistanceAssumptionsModel(BaseModel):
+    structural_conflict: float = Field(ge=0.0, le=1.0)
+    resource_reallocation_drag: float = Field(ge=0.0, le=1.0)
+    cultural_misalignment: float = Field(ge=0.0, le=1.0)
+    veto_node_intensity: float = Field(ge=0.0, le=1.0)
+    aggregate_resistance: float = Field(ge=0.0, le=1.0)
+    assumption_rationale: list[str] = Field(min_length=1)
+
+
+class ScenarioOntologyNodeModel(BaseModel):
+    scenario_key: Literal["A", "B", "C"]
+    title: str = Field(min_length=1)
+    goal: str = Field(min_length=1)
+    target: str = Field(min_length=1)
+    objective: str = Field(min_length=1)
+    variables: list[dict[str, Any]] = Field(min_length=1)
+    constraints: list[str] = Field(min_length=1)
+    tradeoff_pressure: list[str] = Field(min_length=1)
+    resistance_assumptions: ResistanceAssumptionsModel
+    modeling_notes: list[str] = Field(min_length=1)
+
+
+class ScenarioOntologySliceModel(BaseModel):
+    pack_id: str = Field(min_length=1)
+    pack_version: str = Field(min_length=1)
+    derived_from_situation_id: str = Field(min_length=1)
+    ontology_version: str = Field(min_length=1)
+    scenarios: list[ScenarioOntologyNodeModel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_scenario_keys(self) -> "ScenarioOntologySliceModel":
+        keys = [item.scenario_key for item in self.scenarios]
+        if len(keys) != len(set(keys)):
+            raise ValueError("scenario_key values must be unique")
+        return self
+
+
+class NLScenarioDescription(BaseModel):
+    slot: Literal["A", "B", "C"]
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+
+
+class ScenarioCompilationRequest(BaseModel):
+    pack_id: str = Field(min_length=1)
+    pack_version: str = Field(min_length=1)
+    case_id: str = Field(min_length=1)
+    scenarios: list[NLScenarioDescription] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_slots(self) -> "ScenarioCompilationRequest":
+        slots = [item.slot for item in self.scenarios]
+        if len(slots) != len(set(slots)):
+            raise ValueError("scenario slots must be unique")
+        return self
+
+
+class ResistanceBaselineModel(BaseModel):
+    structural_conflict: float = Field(ge=0.0, le=1.0)
+    resource_reallocation_drag: float = Field(ge=0.0, le=1.0)
+    cultural_misalignment: float = Field(ge=0.0, le=1.0)
+    veto_node_intensity: float = Field(ge=0.0, le=1.0)
+    aggregate_resistance: float = Field(ge=0.0, le=1.0)
+
+
+class DeterministicScenarioModel(BaseModel):
+    scenario_key: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    target_outcome: str = Field(min_length=1)
+    constraints: list[str] = Field(min_length=1)
+    dilemma_tradeoffs: list[str] = Field(min_length=1)
+    resistance_baseline: ResistanceBaselineModel
+
+
+class DeterministicScenarioPackModel(BaseModel):
+    pack_id: str = Field(min_length=1)
+    pack_version: str = Field(min_length=1)
+    scenarios: list[DeterministicScenarioModel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_scenario_keys(self) -> "DeterministicScenarioPackModel":
+        keys = [item.scenario_key for item in self.scenarios]
+        if len(keys) != len(set(keys)):
+            raise ValueError("scenario_key values must be unique")
+        return self

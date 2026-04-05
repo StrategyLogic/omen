@@ -6,7 +6,14 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
-from omen.ingest.llm_ontology.schema import VERSION as ACTOR_SCHEMA_VERSION
+from omen.ingest.synthesizer.schema import VERSION as ACTOR_SCHEMA_VERSION
+from omen.scenario.ingest_validator import (
+    DeferredScopeFeatureError,
+    IncompleteDeterministicPackError,
+)
+from omen.scenario.ontology_models import DeterministicScenarioPackModel
+from omen.scenario.ontology_models import ScenarioOntologySliceModel
+from omen.scenario.ontology_models import SituationArtifactModel
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 
@@ -156,3 +163,147 @@ def format_validation_report(*, target_artifact: str, errors: list[dict]) -> dic
         "errors": errors,
         "warnings": [],
     }
+
+
+def validate_deterministic_scenario_pack_or_raise(
+    payload: dict,
+    *,
+    required_slots: tuple[str, ...] = ("A", "B", "C"),
+) -> DeterministicScenarioPackModel:
+    for key in (
+        "enterprise_resistance_extensions",
+        "enterprise_template_catalog",
+        "resistance_extension_profiles",
+    ):
+        if key in payload:
+            raise DeferredScopeFeatureError(
+                f"`{key}` is deferred scope. Enterprise resistance extensions are not supported in this release."
+            )
+
+    for index, scenario in enumerate(payload.get("scenarios") or []):
+        if not isinstance(scenario, dict):
+            continue
+        deferred_keys = [
+            key
+            for key in (
+                "custom_resistance_dimensions",
+                "enterprise_resistance_profile",
+                "department_resistance_breakdown",
+            )
+            if key in scenario
+        ]
+        if deferred_keys:
+            raise DeferredScopeFeatureError(
+                f"scenario index {index} uses deferred enterprise resistance keys: {deferred_keys}."
+            )
+
+    pack = DeterministicScenarioPackModel.model_validate(payload)
+    existing = {scenario.scenario_key for scenario in pack.scenarios}
+    missing = [slot for slot in required_slots if slot not in existing]
+    if missing:
+        raise IncompleteDeterministicPackError(
+            f"deterministic scenario pack missing required slots: {missing}"
+        )
+
+    for scenario in pack.scenarios:
+        if not scenario.target_outcome.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing target_outcome"
+            )
+        if not scenario.constraints:
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing constraints"
+            )
+        if not scenario.dilemma_tradeoffs:
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing dilemma_tradeoffs"
+            )
+
+        if not any(item.strip() for item in scenario.constraints):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} constraints are empty after normalization"
+            )
+        if not any(item.strip() for item in scenario.dilemma_tradeoffs):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} dilemma_tradeoffs are empty after normalization"
+            )
+    return pack
+
+
+def validate_scenario_ontology_slice_or_raise(
+    payload: dict,
+    *,
+    required_slots: tuple[str, ...] = ("A", "B", "C"),
+) -> ScenarioOntologySliceModel:
+    for key in (
+        "enterprise_resistance_extensions",
+        "enterprise_template_catalog",
+        "resistance_extension_profiles",
+    ):
+        if key in payload:
+            raise DeferredScopeFeatureError(
+                f"`{key}` is deferred scope. Enterprise resistance extensions are not supported in this release."
+            )
+
+    for index, scenario in enumerate(payload.get("scenarios") or []):
+        if not isinstance(scenario, dict):
+            continue
+        deferred_keys = [
+            key
+            for key in (
+                "custom_resistance_dimensions",
+                "enterprise_resistance_profile",
+                "department_resistance_breakdown",
+            )
+            if key in scenario
+        ]
+        if deferred_keys:
+            raise DeferredScopeFeatureError(
+                f"scenario index {index} uses deferred enterprise resistance keys: {deferred_keys}."
+            )
+
+    ontology = ScenarioOntologySliceModel.model_validate(payload)
+    existing = {item.scenario_key for item in ontology.scenarios}
+    missing = [slot for slot in required_slots if slot not in existing]
+    if missing:
+        raise IncompleteDeterministicPackError(
+            f"scenario ontology missing required slots: {missing}"
+        )
+
+    for scenario in ontology.scenarios:
+        if not scenario.goal.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing goal"
+            )
+        if not scenario.target.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing target"
+            )
+        if not scenario.objective.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing objective"
+            )
+        if not scenario.variables:
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing variables"
+            )
+        if not any(item.strip() for item in scenario.constraints):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} constraints are empty after normalization"
+            )
+        if not any(item.strip() for item in scenario.tradeoff_pressure):
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} tradeoff_pressure is empty after normalization"
+            )
+    return ontology
+
+
+def validate_situation_artifact_or_raise(payload: dict) -> SituationArtifactModel:
+    artifact = SituationArtifactModel.model_validate(payload)
+    if artifact.version != "0.1.0":
+        raise IncompleteDeterministicPackError(
+            f"situation artifact version must be 0.1.0, got {artifact.version!r}"
+        )
+    if not artifact.signals:
+        raise IncompleteDeterministicPackError("situation artifact missing signals")
+    return artifact

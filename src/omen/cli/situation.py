@@ -1,0 +1,310 @@
+"""Situation analysis CLI commands."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from omen.ingest.processor import fetch_url_text, save_url_source_text
+from omen.ingest.synthesizer.builders.situation import (
+    build_scenario_ontology_from_situation_artifact,
+    validate_situation_source_or_raise,
+)
+from omen.scenario.loader import (
+    load_situation_artifact,
+    save_auxiliary_json,
+    save_scenario_ontology_markdown,
+    save_scenario_ontology_slice,
+    save_situation_artifact,
+    save_situation_markdown,
+)
+from omen.ingest.synthesizer.services.situation import (
+    analyze_situation_document,
+    build_situation_confidence_trace,
+    decompose_scenario_from_situation,
+    generate_situation_case_document,
+)
+from omen.scenario.ingest_validator import DeferredScopeFeatureError
+
+
+def _resolve_situation_doc_path(raw_doc: str) -> Path:
+    raw = str(raw_doc).strip()
+    if "/" in raw:
+        candidate = Path(raw)
+        if not candidate.suffix:
+            candidate = candidate.with_suffix(".md")
+        return candidate
+
+    stem = raw[:-3] if raw.endswith(".md") else raw
+    return Path("cases/situations") / f"{stem}.md"
+
+
+def _derive_case_name_from_path(input_path: Path) -> str:
+    stem = input_path.stem.strip().lower()
+    if stem.endswith("_situation"):
+        stem = stem[: -len("_situation")]
+    for separator in ("-", "_"):
+        if separator in stem:
+            head = stem.split(separator, 1)[0].strip()
+            if head:
+                return head
+    return stem or "case"
+
+
+def _derive_default_pack_id(input_path: Path, *, actor_ref: str | None) -> str:
+    case_name = _derive_case_name_from_path(input_path)
+    if actor_ref:
+        return f"strategic_actor_{case_name}_v1"
+    return f"{case_name}_v1"
+
+
+def _resolve_default_output_path(input_path: Path, pack_id: str) -> Path:
+    return Path("data/scenarios") / pack_id / f"{input_path.stem}_situation.json"
+
+
+def _resolve_splitter_default_output_path(situation_path: Path, pack_id: str) -> Path:
+    stem = situation_path.stem
+    if stem.endswith("_situation"):
+        stem = stem[: -len("_situation")]
+    return Path("data/scenarios") / pack_id / f"{stem}.json"
+
+
+def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
+    stem = situation_output_path.stem
+    if stem.endswith("_situation"):
+        stem = stem[: -len("_situation")]
+    return situation_output_path.with_name(f"{stem}_generation.json")
+
+
+def _resolve_generated_case_path(case_name: str) -> Path:
+    return Path("cases/situations") / f"{case_name}.md"
+
+
+def _derive_pack_id_from_situation_artifact(situation_artifact: dict[str, Any], situation_path: Path) -> str:
+    source_meta = situation_artifact.get("source_meta") or {}
+    actor_ref = source_meta.get("actor_ref")
+    source_path = source_meta.get("source_path")
+    base_path = Path(str(source_path)) if source_path else situation_path
+    return _derive_default_pack_id(base_path, actor_ref=str(actor_ref) if actor_ref else None)
+
+
+def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
+    situation = analyze_subparsers.add_parser(
+        "situation",
+        help="analyze company situation documents into scenario ontology artifacts",
+    )
+    situation.add_argument(
+        "--doc",
+        required=False,
+        help="Situation doc name or path. Bare names resolve to cases/situations/<doc>.md",
+    )
+    situation.add_argument(
+        "--input",
+        required=False,
+        help="Deprecated alias for --doc",
+    )
+    situation.add_argument(
+        "--url",
+        required=False,
+        help="One-step URL ingest: fetch source text, create cases/situations/<case>.md, then run analyze flow",
+    )
+    situation.add_argument(
+        "--actor",
+        required=False,
+        help="Optional actor reference path or identifier",
+    )
+    situation.add_argument(
+        "--output",
+        required=False,
+        help="Optional output path for generated situation JSON. Defaults to data/scenarios/<pack_id>/<doc_stem>_situation.json",
+    )
+    situation.add_argument(
+        "--pack-id",
+        required=False,
+        default=None,
+        help="Deterministic pack id for scenario slot policy",
+    )
+    situation.add_argument(
+        "--pack-version",
+        required=False,
+        default="1.0.0",
+        help="Deterministic pack version",
+    )
+    situation.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
+    )
+
+
+def register_scenario_command(subparsers: Any) -> None:
+    scenario = subparsers.add_parser(
+        "scenario",
+        help="split a situation document into fixed A/B/C scenarios",
+    )
+    scenario.add_argument(
+        "--situation",
+        required=True,
+        help="Path to situation artifact JSON generated by `omen analyze situation`",
+    )
+    scenario.add_argument(
+        "--output",
+        required=False,
+        help="Optional output JSON path. Defaults to data/scenarios/<pack_id>/<doc_stem>.json",
+    )
+    scenario.add_argument(
+        "--pack-id",
+        required=False,
+        default=None,
+        help="Deterministic pack id for scenario slot policy",
+    )
+    scenario.add_argument(
+        "--pack-version",
+        required=False,
+        default="1.0.0",
+        help="Deterministic pack version",
+    )
+    scenario.add_argument(
+        "--config",
+        required=False,
+        default="config/llm.toml",
+        help="Path to local LLM config TOML",
+    )
+
+
+def handle_situation_analyze_command(args: Any) -> int:
+    try:
+        if args.url and (args.doc or args.input):
+            print("Analyze situation failed: use either --doc or --url, not both")
+            return 2
+
+        raw_doc = args.doc or args.input
+        if args.url:
+            print("Using URL source for situation analysis...")
+            try:
+                source_text = fetch_url_text(str(args.url))
+                source_text_path = save_url_source_text(url=str(args.url), text=source_text)
+                print(f"URL fetch: SUCCESS ({source_text_path})")
+            except Exception as exc:
+                print(f"URL fetch: ERROR ({exc})")
+                print("Unable to fetch or extract readable text from the provided URL.")
+                return 2
+
+            try:
+                print("LLM case generation from URL text...")
+                case_name, case_markdown = generate_situation_case_document(
+                    source_text=source_text,
+                    source_ref=str(args.url),
+                    source_text_path=str(source_text_path),
+                    config_path=str(args.config),
+                )
+                generated_case_path = _resolve_generated_case_path(case_name)
+                generated_case_path.parent.mkdir(parents=True, exist_ok=True)
+                generated_case_path.write_text(case_markdown, encoding="utf-8")
+                print(f"Generated situation case: SUCCESS ({generated_case_path})")
+            except Exception as exc:
+                print(f"LLM case generation: ERROR ({exc})")
+                print("Unable to convert fetched URL text into a situation case document.")
+                return 2
+
+            raw_doc = str(generated_case_path)
+
+        if not raw_doc:
+            print("Analyze situation failed: missing required argument --doc or --url")
+            return 2
+
+        input_path = _resolve_situation_doc_path(str(raw_doc))
+        if not input_path.exists():
+            print(f"Analyze situation failed: input not found: {input_path}")
+            return 2
+
+        validate_situation_source_or_raise(input_path)
+        pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=args.actor)
+        output_path_arg = (
+            Path(args.output)
+            if args.output
+            else _resolve_default_output_path(input_path, pack_id)
+        )
+
+        if args.actor:
+            print("Building scenario pack with strategic actor context...")
+
+        situation_artifact = analyze_situation_document(
+            situation_file=input_path,
+            actor_ref=args.actor,
+            pack_id=pack_id,
+            pack_version=str(args.pack_version),
+            config_path=str(args.config),
+        )
+        output_path = save_situation_artifact(output_path_arg, situation_artifact)
+        markdown_path = output_path.with_suffix(".md")
+        save_situation_markdown(markdown_path, situation_artifact)
+        generation_trace_path = _resolve_generation_trace_output_path(output_path)
+        generation_trace_payload = build_situation_confidence_trace(
+            situation_artifact=situation_artifact,
+            situation_artifact_path=output_path,
+        )
+        save_auxiliary_json(generation_trace_path, generation_trace_payload)
+        print(f"Saved situation artifact to {output_path}")
+        print(f"Saved situation summary to {markdown_path}")
+        print(f"Saved situation generation trace to {generation_trace_path}")
+        return 0
+    except DeferredScopeFeatureError as exc:
+        print(f"Deferred scope: {exc}")
+        print(
+            "This release supports deterministic A/B/C packs only. "
+            "Dynamic scenario authoring and enterprise resistance extensions are deferred."
+        )
+        return 2
+    except Exception as exc:
+        print(f"Analyze situation failed: {exc}")
+        return 2
+
+
+def handle_scenario_command(args: Any) -> int:
+    try:
+        situation_path = Path(str(args.situation))
+        if not situation_path.exists():
+            print(f"Scenario split failed: situation artifact not found: {situation_path}")
+            return 2
+
+        situation_artifact = load_situation_artifact(situation_path)
+        pack_id = str(args.pack_id) if args.pack_id else _derive_pack_id_from_situation_artifact(
+            situation_artifact,
+            situation_path,
+        )
+        output_path_arg = (
+            Path(args.output)
+            if args.output
+            else _resolve_splitter_default_output_path(situation_path, pack_id)
+        )
+
+        decomposition = decompose_scenario_from_situation(
+            situation_artifact=situation_artifact,
+            pack_id=pack_id,
+            pack_version=str(args.pack_version),
+            config_path=str(args.config),
+        )
+        ontology = build_scenario_ontology_from_situation_artifact(
+            situation_artifact=situation_artifact,
+            llm_decomposition=decomposition,
+            pack_id=pack_id,
+            pack_version=str(args.pack_version),
+        )
+        output_path = save_scenario_ontology_slice(output_path_arg, ontology)
+        markdown_path = output_path.with_suffix(".md")
+        save_scenario_ontology_markdown(markdown_path, ontology)
+        print(f"Saved split scenario artifact to {output_path}")
+        print(f"Saved split scenario summary to {markdown_path}")
+        return 0
+    except DeferredScopeFeatureError as exc:
+        print(f"Deferred scope: {exc}")
+        print(
+            "This release supports deterministic A/B/C packs only. "
+            "Dynamic scenario authoring and enterprise resistance extensions are deferred."
+        )
+        return 2
+    except Exception as exc:
+        print(f"Scenario split failed: {exc}")
+        return 2

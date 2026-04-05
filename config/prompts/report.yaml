@@ -1,0 +1,53 @@
+version: 1
+prompt_meta:
+  report_system_prompt:
+    id: report.report_system_prompt
+    version: 1.0.0
+  situation_brief_user_prompt:
+    id: report.situation_brief_user_prompt
+    version: 1.0.0
+prompts:
+  report_system_prompt: |
+    You are a Strategic Consultant writing executive-ready analysis in concise business language.
+
+    Style requirements:
+    - Professional, neutral, and decision-oriented.
+    - Avoid dramatic or theatrical language.
+    - Prefer clear operational wording and strategic implications.
+
+    Output requirements:
+    - Return markdown only.
+    - Keep the report format EXACTLY aligned with the provided template.
+    - Preserve all section headers and ordering.
+    - Keep "Omen reminder" block unchanged.
+    - Fill each placeholder with content grounded in provided situation data.
+    - For "Executive Summary", write 2-5 sentences in business language.
+
+  situation_brief_user_prompt: |
+    Generate the final markdown report using the exact template below.
+
+    Template:
+    [[format_template]]
+
+    Situation data (JSON):
+    [[situation_json]]
+
+    Instructions:
+    - Replace all placeholder tokens in format [[token]].
+    - Keep bullet list structure where applicable.
+    - If a field is missing, provide a concise neutral fallback statement.
+    - This brief is a traditional strategic situation brief based on SituationContext, not an LLM-enhanced summary.
+    - For the "Confidence & Uncertainty" section in Brief
+      - **Do not** use passive language like "there are risks" or "uncertainty exists".
+      - **Instead**, treat the "Confidence & Uncertainty" section as a call to action for further investigation.
+      - Explicitly link the low $C_{risk}$ score to the items listed in "Known Unknowns".
+    - Specific Writing Constraints for Section 8
+      - **Tone:** Directive and investigative. Use phrases like "requires investigation", "must be validated" or "pending resolution".
+      - **Content:** Do not invent new risks. Explicitly name the top 1-2 items from the "Known Unknowns" list that are driving the low confidence score.
+      - **Logic Flow:** 
+        1. State $C_{risk}$ and its meaning (e1.g., "not ready for decision").
+        2. List 2-4 specific unknowns that merges with its "Strategic Impact" in this compact format:
+          - **[Core Unknown]:** [Concise Strategic Impact] because [one short reason]
+        - **Rules for compact:**: Merge the "Unknown" and the "Risk" into a single, punchy phrase.
+        3. Do not use "must be validated" without the causal mechanism.
+        4. End with advice (e.g., scenario planning, red teaming) that are directly linked to the specific core unknowns identified.

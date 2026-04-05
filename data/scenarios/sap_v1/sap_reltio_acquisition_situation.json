@@ -1,0 +1,171 @@
+{
+  "version": "0.1.0",
+  "id": "sap_reltio_acquisition",
+  "context": {
+    "title": "SAP's Acquisition of Reltio to Integrate External Data into AI Platform",
+    "core_question": "How can SAP successfully integrate external, non-SAP data into its AI platform and boost adoption of its Business Data Cloud (BDC)?",
+    "current_state": "SAP is acquiring master data management specialist Reltio. SAP's Business Data Cloud (BDC), launched in alliance with Databricks, has low customer awareness (83% of DSAG members are only slightly or not familiar with it) and faces migration difficulties where customers get stuck paying full fees for an unusable system. The initial BDC strategy focused on sharing SAP data externally; the Reltio acquisition aims to expand this to harmonizing non-SAP data for use within SAP.",
+    "core_dilemma": "SAP needs to make its AI platform effective by integrating fragmented external data, but its key vehicle for this—the Business Data Cloud—is struggling with low awareness and problematic customer implementations that damage its reputation.",
+    "key_decision_point": "The decision to acquire Reltio and pivot BDC's focus from solely sharing SAP data externally to also ingesting and harmonizing non-SAP data for AI consumption.",
+    "target_outcomes": [
+      "Boost adoption of SAP's Business Data Cloud (BDC)",
+      "Integrate data from outside SAP's application portfolio into its AI platform",
+      "Make BDC 'fully interoperable' with other enterprise data stores",
+      "Deliver the data context required for business AI by combining SAP and non-SAP data",
+      "Cleanse and harmonize data to support the development of AI agents"
+    ],
+    "hard_constraints": [
+      "Must integrate with SAP's existing ERP, HR, CRM, supply chain, and procurement systems",
+      "Must maintain/interoperate with existing BDC alliance partners (Databricks, Google BigQuery, Snowflake Data Cloud, Microsoft Fabric)",
+      "Must address the reputational damage from BDC's problematic mid-migration customer experiences"
+    ],
+    "known_unknowns": [
+      "Whether the Reltio acquisition will successfully boost adoption of SAP's Business Data Cloud",
+      "How customers will respond to the strategic shift from sharing SAP data externally to also harmonizing non-SAP data for SAP use",
+      "The full impact of the DSAG findings on future BDC sales and customer trust"
+    ]
+  },
+  "signals": [
+    {
+      "name": "SAP announces acquisition of master data management specialist Reltio."
+    },
+    {
+      "name": "Acquisition aims to integrate external, non-SAP data into SAP's AI platform."
+    },
+    {
+      "name": "Move positioned to boost adoption of SAP's struggling Business Data Cloud (BDC)."
+    },
+    {
+      "name": "BDC launched in Feb 2025 with Databricks alliance; 83% of DSAG members have low/no familiarity."
+    },
+    {
+      "name": "DSAG research finds BDC customers stuck mid-migration pay full fees for unusable system."
+    },
+    {
+      "name": "Reltio uses AI-based entity resolution to create 'golden records' from disparate data sources."
+    },
+    {
+      "name": "Strategic pivot: BDC initially focused on sharing SAP data externally; Reltio enables harmonizing non-SAP data for SAP use."
+    },
+    {
+      "name": "SAP exec states acquisition will improve position as 'leading business AI provider' by combining SAP/non-SAP data."
+    },
+    {
+      "name": "Analyst notes DSAG finding about mid-migration fees 'is going to haunt SAP's sales deck for a while.'"
+    }
+  ],
+  "tech_space_seed": [
+    {
+      "name": "Master Data Management (MDM)"
+    },
+    {
+      "name": "AI-based entity resolution"
+    },
+    {
+      "name": "Cloud-native data integration"
+    },
+    {
+      "name": "Data harmonization"
+    },
+    {
+      "name": "Golden record creation"
+    },
+    {
+      "name": "Business Data Cloud (BDC)"
+    },
+    {
+      "name": "Data lake interoperability"
+    },
+    {
+      "name": "AI platform data ingestion"
+    }
+  ],
+  "market_space_seed": [
+    {
+      "name": "Enterprise AI platforms"
+    },
+    {
+      "name": "Data integration market"
+    },
+    {
+      "name": "SAP ecosystem"
+    },
+    {
+      "name": "Cloud migration services"
+    },
+    {
+      "name": "Master data management solutions"
+    },
+    {
+      "name": "Business intelligence data fabrics"
+    },
+    {
+      "name": "ERP-adjacent data services"
+    }
+  ],
+  "uncertainty_space": {
+    "overall_confidence": 0.65,
+    "assumptions_explicit": [
+      {
+        "target_unknown": "Whether the Reltio acquisition will successfully boost adoption of SAP's Business Data Cloud",
+        "assumption_text": "Reltio's AI-based entity resolution technology will effectively integrate and harmonize non-SAP data, making BDC more valuable and thus driving adoption.",
+        "quality_score": 0.7,
+        "coverage_type": "partial"
+      },
+      {
+        "target_unknown": "How customers will respond to the strategic shift from sharing SAP data externally to also harmonizing non-SAP data for SAP use",
+        "assumption_text": "Customers have a strong need to integrate fragmented external data with their SAP systems for AI, and will view the expanded BDC capability as a solution.",
+        "quality_score": 0.6,
+        "coverage_type": "partial"
+      },
+      {
+        "target_unknown": "The full impact of the DSAG findings on future BDC sales and customer trust",
+        "assumption_text": "The reputational damage from the mid-migration fee issue can be mitigated by successful Reltio integration and improved implementation processes.",
+        "quality_score": 0.5,
+        "coverage_type": "partial"
+      },
+      {
+        "target_unknown": "",
+        "assumption_text": "Reltio's technology (cloud-native MDM, AI entity resolution, migration to Spanner) is mature and will integrate smoothly with SAP's existing tech stack and partner ecosystem.",
+        "quality_score": 0.75,
+        "coverage_type": "general"
+      },
+      {
+        "target_unknown": "",
+        "assumption_text": "The alliance partners (Databricks, Google BigQuery, Snowflake, Microsoft Fabric) will remain cooperative and interoperable with the enhanced BDC+Reltio offering.",
+        "quality_score": 0.8,
+        "coverage_type": "general"
+      }
+    ],
+    "high_leverage_unknowns": [
+      "Whether the Reltio acquisition will successfully boost adoption of SAP's Business Data Cloud",
+      "How customers will respond to the strategic shift from sharing SAP data externally to also harmonizing non-SAP data for SAP use",
+      "The full impact of the DSAG findings on future BDC sales and customer trust"
+    ],
+    "confidence_risk": 0.55,
+    "confidence_overall": 0.65,
+    "metrics": {
+      "known_unknowns_count": 3,
+      "assumptions_filled_count": 5,
+      "assumptions_quality_avg": 0.67,
+      "cognitive_coverage": 1.0,
+      "confidence_delta_cap": 0.5
+    },
+    "guardrail_applied": false
+  },
+  "source_trace": [
+    {
+      "source_path": "cases/situations/sap_reltio_acquisition.md",
+      "primary_source": "https://www.theregister.com/2026/03/30/sap_reltio/",
+      "capture_date": "2026-04-05",
+      "event_date": "2026-03-30"
+    }
+  ],
+  "source_meta": {
+    "source_path": "cases/situations/sap_reltio_acquisition.md",
+    "generated_at": "2026-04-05T18:52:46.879877",
+    "pack_id": "sap_v1",
+    "pack_version": "1.0.0",
+    "actor_ref": null
+  }
+}

@@ -7,9 +7,9 @@ import json
 import re
 from typing import Any
 
-from omen.ingest.llm_ontology.clients import create_chat_client
-from omen.ingest.llm_ontology.prompts import build_actor_ontology_prompt
-from omen.ingest.llm_ontology.schema.actor import (
+from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.prompts import build_actor_ontology_prompt
+from omen.ingest.synthesizer.schema.actor import (
     ACTOR_TYPE_ALIAS,
     ALLOWED_ACTOR_TYPES,
     BACKGROUND_FACT_FIELDS,

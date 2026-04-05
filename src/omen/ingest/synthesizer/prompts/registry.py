@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from omen.ingest.llm_ontology.prompts.loader import (
+from omen.ingest.synthesizer.prompts.loader import (
     get_prompt_file_path,
     load_tier_prompt_meta,
     load_tier_prompts,

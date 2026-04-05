@@ -255,8 +255,8 @@ def test_analyze_situation_doc_without_md_suffix(tmp_path: Path, monkeypatch) ->
 
 
 def test_analyze_situation_defaults_output_under_data_scenarios(monkeypatch) -> None:
-    default_json = Path("data/scenarios/strategic_actor_nokia_v1/nokia-elop-2010_situation.json")
-    default_md = Path("data/scenarios/strategic_actor_nokia_v1/nokia-elop-2010_situation.md")
+    default_json = Path("data/scenarios/nokia_v1/nokia-elop-2010_situation.json")
+    default_md = Path("data/scenarios/nokia_v1/nokia-elop-2010_situation.md")
     backup_json = default_json.read_text(encoding="utf-8") if default_json.exists() else None
     backup_md = default_md.read_text(encoding="utf-8") if default_md.exists() else None
 
@@ -292,9 +292,9 @@ def test_analyze_situation_defaults_output_under_data_scenarios(monkeypatch) -> 
 
 
 def test_scenario_command_defaults_output_under_data_scenario_pack(monkeypatch) -> None:
-    situation_default_json = Path("data/scenarios/strategic_actor_nokia_v1/nokia-elop-2010_situation.json")
-    default_json = Path("data/scenarios/strategic_actor_nokia_v1/nokia-elop-2010.json")
-    default_md = Path("data/scenarios/strategic_actor_nokia_v1/nokia-elop-2010.md")
+    situation_default_json = Path("data/scenarios/nokia_v1/nokia-elop-2010_situation.json")
+    default_json = Path("data/scenarios/nokia_v1/nokia-elop-2010.json")
+    default_md = Path("data/scenarios/nokia_v1/nokia-elop-2010.md")
     situation_backup_json = (
         situation_default_json.read_text(encoding="utf-8")
         if situation_default_json.exists()

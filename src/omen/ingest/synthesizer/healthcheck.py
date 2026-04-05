@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from omen.ingest.llm_ontology.clients import create_chat_client, embed_documents_with_voyage
-from omen.ingest.llm_ontology.config import load_llm_config
+from omen.ingest.synthesizer.clients import create_chat_client, embed_documents_with_voyage
+from omen.ingest.synthesizer.config import load_llm_config
 
 LogFn = Callable[[str, str, str], None]
 
@@ -68,7 +68,7 @@ def run_llm_healthcheck(
     emit("voyage_embed", "STARTED", "creating voyage embedding probe")
     try:
         # Check if voyageai is available and key is configured
-        from omen.ingest.llm_ontology.clients import create_voyage_client
+        from omen.ingest.synthesizer.clients import create_voyage_client
         create_voyage_client(config)
         
         texts = [sample_text, "omen strategic simulation connectivity check"]

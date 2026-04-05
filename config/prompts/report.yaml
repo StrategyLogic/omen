@@ -36,6 +36,18 @@ prompts:
     - Replace all placeholder tokens in format [[token]].
     - Keep bullet list structure where applicable.
     - If a field is missing, provide a concise neutral fallback statement.
-    - For the "Confidence & Uncertainty" section in Brief, use risk-confidence framing ($C_{risk}$) from `context.known_unknowns`.
-    - Do not describe risk confidence as overall confidence.
-    - Do not add extra sections, notes, or code fences.
+    - This brief is a traditional strategic situation brief based on SituationContext, not an LLM-enhanced summary.
+    - For the "Confidence & Uncertainty" section in Brief
+      - **Do not** use passive language like "there are risks" or "uncertainty exists".
+      - **Instead**, treat the "Confidence & Uncertainty" section as a call to action for further investigation.
+      - Explicitly link the low $C_{risk}$ score to the items listed in "Known Unknowns".
+    - Specific Writing Constraints for Section 8
+      - **Tone:** Directive and investigative. Use phrases like "requires investigation", "must be validated" or "pending resolution".
+      - **Content:** Do not invent new risks. Explicitly name the top 1-2 items from the "Known Unknowns" list that are driving the low confidence score.
+      - **Logic Flow:** 
+        1. State $C_{risk}$ and its meaning (e1.g., "not ready for decision").
+        2. List 2-4 specific unknowns that merges with its "Strategic Impact" in this compact format:
+          - **[Core Unknown]:** [Concise Strategic Impact] because [one short reason]
+        - **Rules for compact:**: Merge the "Unknown" and the "Risk" into a single, punchy phrase.
+        3. Do not use "must be validated" without the causal mechanism.
+        4. End with advice (e.g., scenario planning, red teaming) that are directly linked to the specific core unknowns identified.

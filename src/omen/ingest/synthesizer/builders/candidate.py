@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from omen.ingest.llm_ontology.builders.mapper import map_candidate_to_concept
-from omen.ingest.documents import clean_text, split_into_chunks
+from omen.ingest.synthesizer.builders.mapper import map_candidate_to_concept
+from omen.ingest.processor import clean_text, split_into_chunks
 
 
 def build_candidates_from_text(

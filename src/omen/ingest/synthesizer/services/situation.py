@@ -7,9 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.llm_ontology.clients import invoke_text_prompt, render_prompt_template
-from omen.ingest.llm_ontology.prompts import build_json_retry_prompt
-from omen.ingest.llm_ontology.prompts.registry import get_prompt_template
+from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
+from omen.ingest.synthesizer.prompts import build_json_retry_prompt
+from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 
 
 _RISK_CONFIDENCE_MIN = 0.2
@@ -97,6 +97,72 @@ def _normalize_source_trace(value: Any, *, source_path: str, situation_id: str) 
             "source_path": source_path,
         }
     ]
+
+
+def _slugify_case_name(value: str) -> str:
+    normalized = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(value).strip())
+    while "__" in normalized:
+        normalized = normalized.replace("__", "_")
+    return normalized.strip("_") or "situation_case"
+
+
+def _normalize_text_lines(value: Any) -> list[str]:
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if not isinstance(value, list):
+        return []
+
+    output: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            output.append(text)
+    return output
+
+
+def _normalize_direct_quotes(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+
+    output: list[dict[str, str]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        speaker = str(item.get("speaker_role") or "").strip()
+        quote = str(item.get("quote") or "").strip()
+        if speaker and quote:
+            output.append({"speaker_role": speaker, "quote": quote})
+    return output
+
+
+def _render_case_template(template_text: str, values: dict[str, str]) -> str:
+    rendered = template_text
+    for key, value in values.items():
+        rendered = rendered.replace(f"{{{{{key}}}}}", value)
+    return rendered
+
+
+def _as_bullet_block(items: list[str], *, fallback: str) -> str:
+    if not items:
+        return f"- {fallback}"
+    return "\n".join(f"- {item}" for item in items)
+
+
+def _as_quote_block(items: list[str], *, fallback: str) -> str:
+    if not items:
+        return f"> {fallback}"
+
+    paragraphs: list[str] = []
+    for item in items:
+        lines = [line.strip() for line in item.splitlines() if line.strip()]
+        if not lines:
+            continue
+        paragraphs.append("\n".join(f"> {line}" for line in lines))
+
+    if not paragraphs:
+        return f"> {fallback}"
+    return "\n\n".join(paragraphs)
 
 
 def _to_float(value: Any) -> float | None:
@@ -251,6 +317,83 @@ def build_situation_confidence_trace(
         "metrics": metrics,
         "assumptions_explicit": uncertainty.get("assumptions_explicit") or [],
     }
+
+
+def generate_situation_case_document(
+    *,
+    source_text: str,
+    source_ref: str,
+    source_text_path: str,
+    config_path: str = "config/llm.toml",
+) -> tuple[str, str]:
+    template_path = Path("config/templates/situation_case.md")
+    template_text = template_path.read_text(encoding="utf-8")
+
+    payload = _invoke_json(
+        _render_base_prompt(
+            "situation_source_to_case_prompt",
+            {
+                "source_ref": source_ref,
+                "source_text_path": source_text_path,
+                "source_text": source_text,
+            },
+        ),
+        config_path=config_path,
+    )
+
+    case_name = _slugify_case_name(str(payload.get("case_name") or "situation_case"))
+    event_title = str(payload.get("event_title") or case_name.replace("_", " ").title()).strip()
+    event_date = str(payload.get("event_date_or_announcement_date") or "announcement date").strip()
+    context = str(payload.get("context") or "No direct context statement extracted from source.").strip()
+    story = str(payload.get("story") or payload.get("narrative") or "No story fragment extracted from source.").strip()
+
+    direct_quotes = _normalize_direct_quotes(payload.get("direct_quotes"))
+    direct_quote_lines = [f'{item["speaker_role"]}: "{item["quote"]}"' for item in direct_quotes]
+
+    markdown = _render_case_template(
+        template_text,
+        {
+            "event_title": event_title,
+            "source_url": source_ref,
+            "capture_date": datetime.now().date().isoformat(),
+            "event_date_or_announcement_date": event_date,
+            "source_text_path": source_text_path,
+            "context": context,
+            "core_facts": _as_bullet_block(
+                _normalize_text_lines(payload.get("core_facts")),
+                fallback="No direct core fact extracted from source.",
+            ),
+            "data_findings": _as_bullet_block(
+                _normalize_text_lines(payload.get("data_findings")),
+                fallback="No explicit quantitative finding extracted from source.",
+            ),
+            "raw_context": _as_bullet_block(
+                _normalize_text_lines(payload.get("raw_context")),
+                fallback="No additional raw context extracted from source.",
+            ),
+            "story": story,
+            "direct_quotes": _as_bullet_block(
+                direct_quote_lines,
+                fallback="No direct quote extracted from source.",
+            ),
+            "difficulties_risks_controversies": _as_bullet_block(
+                _normalize_text_lines(
+                    payload.get("difficulties_risks_controversies")
+                    or payload.get("risks")
+                ),
+                fallback="No explicit difficulty, risk, or controversy extracted from source.",
+            ),
+            "unknowns": _as_bullet_block(
+                _normalize_text_lines(payload.get("unknowns")),
+                fallback="No explicit unknown extracted from source.",
+            ),
+            "representative_excerpt": _as_quote_block(
+                _normalize_text_lines(payload.get("representative_excerpt")),
+                fallback="No representative long-form excerpt extracted from source.",
+            ),
+        },
+    ).strip()
+    return case_name, markdown + "\n"
 
 
 def analyze_situation_document(

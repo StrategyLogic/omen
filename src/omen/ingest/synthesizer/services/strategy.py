@@ -6,9 +6,9 @@ from dataclasses import asdict
 from datetime import datetime
 from typing import Callable
 
-from omen.ingest.llm_ontology.config import load_llm_config
-from omen.ingest.documents import chunk_case_document, load_case_document
-from omen.ingest.llm_ontology.generator import generate_ontology_payload
+from omen.ingest.synthesizer.config import load_llm_config
+from omen.ingest.processor import chunk_case_document, load_case_document
+from omen.ingest.synthesizer.generator import generate_ontology_payload
 from omen.ingest.models import OntologyGenerationResult
 
 LogFn = Callable[[str, str, str], None]

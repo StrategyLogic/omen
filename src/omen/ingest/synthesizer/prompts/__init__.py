@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from omen.ingest.llm_ontology.prompts.registry import get_prompt_template
+from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 from omen.ingest.models import CaseDocument
 
 

@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.report.situation_brief import render_situation_brief
+from omen.ingest.reportor.situation_brief import render_situation_brief
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
 from omen.scenario.splitter import normalize_llm_scenarios_with_policy
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from omen.ingest.documents.pdf import extract_pdf_pages
-from omen.ingest.documents.text import clean_text, split_into_chunks
+from omen.ingest.processor.pdf import extract_pdf_pages
+from omen.ingest.processor.text import clean_text, split_into_chunks
 from omen.ingest.models import CaseDocument
 
 

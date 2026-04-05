@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.llm_ontology.builders.situation import (
+from omen.ingest.synthesizer.builders.situation import (
     scenario_ontology_to_markdown,
     situation_artifact_to_markdown,
 )

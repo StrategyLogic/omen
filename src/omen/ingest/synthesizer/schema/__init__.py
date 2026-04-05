@@ -1,6 +1,6 @@
 """Schema definitions for LLM ontology extraction."""
 
-from omen.ingest.llm_ontology.schema.actor import (
+from omen.ingest.synthesizer.schema.actor import (
     BACKGROUND_FACT_FIELDS,
     VERSION,
 )

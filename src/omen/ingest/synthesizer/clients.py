@@ -6,7 +6,7 @@ import importlib
 import json
 from typing import Any
 
-from omen.ingest.llm_ontology.config import load_llm_config
+from omen.ingest.synthesizer.config import load_llm_config
 from omen.ingest.models import LLMConfig
 
 

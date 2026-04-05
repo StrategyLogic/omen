@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from omen.ingest.llm_ontology.services.situation import (
+from omen.ingest.synthesizer.services.situation import (
     _compute_dual_confidence,
     build_situation_confidence_trace,
 )

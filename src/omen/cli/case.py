@@ -29,9 +29,9 @@ from omen.analysis.actor.strategy import (
 from omen.analysis.actor.query import build_events_snapshot
 from omen.scenario.loader import compile_and_validate_deterministic_pack
 from omen.types import DETERMINISTIC_PACK_REQUIRED_SLOTS
-from omen.ingest.llm_ontology.services.actor import generate_actor_and_events_from_document
-from omen.ingest.llm_ontology.prompts.registry import ensure_analyze_prompt_available
-from omen.ingest.llm_ontology.assembler import attach_founder_ref, attach_timeline_events
+from omen.ingest.synthesizer.services.actor import generate_actor_and_events_from_document
+from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+from omen.ingest.synthesizer.assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.ui.artifacts import ensure_case_output_dir
 from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
@@ -282,7 +282,7 @@ def _load_analysis_artifacts(case_id: str, output_dir: str) -> tuple[Path, dict[
 
 
 def handle_case_command(args: Any) -> int:
-    from omen.ingest.llm_ontology.services.strategy import generate_strategy_ontology_from_document
+    from omen.ingest.synthesizer.services.strategy import generate_strategy_ontology_from_document
 
     def emit(step: str, status: str, message: str) -> None:
         print(f"[CASE-BUILD][{step}][{status}] {message}", flush=True)

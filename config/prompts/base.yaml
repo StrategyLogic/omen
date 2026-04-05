@@ -27,6 +27,9 @@ prompt_meta:
   situation_decompose_prompt:
     id: base.situation_decompose_prompt
     version: 1.0.0
+  situation_source_to_case_prompt:
+    id: base.situation_source_to_case_prompt
+    version: 1.0.0
 prompts:
   system_prompt: |
     You are a strategic ontology engineer.
@@ -274,3 +277,39 @@ prompts:
     pack_id: [[pack_id]]
     pack_version: [[pack_version]]
     situation_artifact_json: [[situation_artifact_json]]
+
+  situation_source_to_case_prompt: |
+    You are an archival editor. Convert fetched source text into structured case fields.
+    Return ONLY valid JSON object with keys:
+    case_name, event_title, event_date_or_announcement_date, context,
+    core_facts, data_findings, raw_context, story, direct_quotes,
+    difficulties_risks_controversies, unknowns, representative_excerpt.
+
+    Rules:
+    - case_name must be a short snake_case identifier suitable for a filename.
+    - Prefer a simple company or case slug, not a long title.
+    - Output must be source-grounded archival content, not an analysis report.
+    - Do NOT summarize, conclude, recommend, infer strategy, or add "this means" style language.
+    - Keep high fact density from the source; prefer concrete statements over abstractions.
+    - Preserve original conflict framing and wording style where possible.
+    - Preserve uncertainty language and modality from source text, including words like may, might, unclear, uncertain, concern, skepticism.
+    - Keep original tone markers and hedging language when present; do not over-normalize voice.
+    - Keep explicit data points and survey outcomes with numbers exactly when available.
+    - Keep direct quotes with speaker/role labels when available; avoid paraphrasing quotes.
+    - If a statement is not supported by the source text, do not add it.
+    - For story: present original reporting narrative only, without rewriting, re-framing, or restating from another perspective.
+    - Do not introduce escalated labels (for example "strategic move") unless the source explicitly uses equivalent wording.
+    - For unknowns: list source-mentioned uncertainty items only; do not analyze, rank, amplify, or elevate impact level.
+    - difficulties_risks_controversies must include explicit source-grounded items across all three categories (difficulties, risks, controversies) when present.
+    - event_title and context and story must be strings.
+    - event_date_or_announcement_date must be a string (date or "announcement date" when unclear).
+    - core_facts, data_findings, raw_context, difficulties_risks_controversies, unknowns must be arrays of strings.
+    - direct_quotes must be an array of objects with keys: speaker_role, quote.
+    - representative_excerpt must be an array of longer source-grounded paragraphs for blockquote rendering.
+    - Keep concise but do not strip stylistic markers from original reporting tone.
+
+    source_ref: [[source_ref]]
+    source_text_path: [[source_text_path]]
+
+    source_text:
+    [[source_text]]

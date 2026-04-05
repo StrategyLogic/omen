@@ -6,10 +6,10 @@ import datetime
 import json
 from typing import Any
 
-from omen.ingest.llm_ontology.clients import create_chat_client
-from omen.ingest.llm_ontology.config import load_llm_config
-from omen.ingest.llm_ontology.prompts.registry import get_analyze_prompt_version_token
-from omen.ingest.llm_ontology.prompts import build_json_retry_prompt, build_persona_insight_prompt
+from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.config import load_llm_config
+from omen.ingest.synthesizer.prompts.registry import get_analyze_prompt_version_token
+from omen.ingest.synthesizer.prompts import build_json_retry_prompt, build_persona_insight_prompt
 
 
 def _normalize_output_language(value: str | None) -> str:

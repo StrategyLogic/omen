@@ -28,15 +28,15 @@ from omen.cli.situation import (
 )
 from omen.explain.precision_report import build_precision_report
 from omen.explain.report import build_explanation_report
-from omen.ingest.llm_ontology.builders.assertion import build_assertions_from_candidates
-from omen.ingest.llm_ontology.builders.candidate import build_candidates_from_text
-from omen.ingest.documents import build_source_inventory, extract_pdf_pages
+from omen.ingest.synthesizer.builders.assertion import build_assertions_from_candidates
+from omen.ingest.synthesizer.builders.candidate import build_candidates_from_text
+from omen.ingest.processor import build_source_inventory, extract_pdf_pages
 from omen.scenario.loader import (
     load_case_package_from_scenario,
     load_scenario_ontology_slice,
     load_scenario_with_ontology,
 )
-from omen.ingest.llm_ontology.builders.situation import scenario_ontology_to_deterministic_pack
+from omen.ingest.synthesizer.builders.situation import scenario_ontology_to_deterministic_pack
 from omen.scenario.ontology_loader import load_ontology_input
 from omen.scenario.ingest_validator import validate_extracted_entity_candidates_or_raise
 from omen.scenario.ingest_validator import validate_ontology_assertion_candidates_or_raise
@@ -736,7 +736,7 @@ def main() -> None:
         output_path = _write_output(rendered, args.output, "precision_gate_report.json", args.incremental)
         print(f"Saved precision gate report to {output_path}")
     elif args.command == "case-replay-generate":
-        from omen.ingest.llm_ontology.services.strategy import generate_strategy_ontology_from_document
+        from omen.ingest.synthesizer.services.strategy import generate_strategy_ontology_from_document
         from omen.scenario.case_replay_loader import save_strategy_ontology
         from omen.scenario.ontology_validator import validate_ontology_input_or_raise
         from omen.ui.artifacts import ensure_case_output_dir
@@ -832,7 +832,7 @@ def main() -> None:
         )
         print(f"Saved baseline summary to {output_path}")
     elif args.command == "case-replay-check-llm":
-        from omen.ingest.llm_ontology.healthcheck import run_llm_healthcheck
+        from omen.ingest.synthesizer.healthcheck import run_llm_healthcheck
         from omen.ui.artifacts import ensure_case_output_dir
 
         def _step_logger(step: str, status: str, message: str) -> None:
@@ -857,7 +857,7 @@ def main() -> None:
         if not report.get("ok", False):
             raise SystemExit(2)
     elif args.command == "check-llm":
-        from omen.ingest.llm_ontology.healthcheck import run_llm_healthcheck
+        from omen.ingest.synthesizer.healthcheck import run_llm_healthcheck
 
         def _step_logger(step: str, status: str, message: str) -> None:
             print(f"[LLM-CHECK][{step}][{status}] {message}", flush=True)

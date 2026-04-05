@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
-from omen.ingest.llm_ontology.schema import VERSION as ACTOR_SCHEMA_VERSION
+from omen.ingest.synthesizer.schema import VERSION as ACTOR_SCHEMA_VERSION
 from omen.scenario.ingest_validator import (
     DeferredScopeFeatureError,
     IncompleteDeterministicPackError,

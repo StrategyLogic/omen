@@ -37,7 +37,7 @@ The *Must Investigate* Risks.
 
 [[known_unknowns]]
 
-## 8. 📉 Confidence & Uncertainty
+## 8. 🛡️ Confidence & Uncertainty
 [[confidence_text]]
 [[uncertainty_text]]
 

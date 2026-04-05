@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from omen.ingest.llm_ontology.clients import create_chat_client
-from omen.ingest.llm_ontology.prompts import build_timeline_events_prompt
+from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.prompts import build_timeline_events_prompt
 from omen.ingest.models import CaseDocument, LLMConfig
 
 

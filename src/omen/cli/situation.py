@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.llm_ontology.builders.situation import (
+from omen.ingest.processor import fetch_url_text, save_url_source_text
+from omen.ingest.synthesizer.builders.situation import (
     build_scenario_ontology_from_situation_artifact,
     validate_situation_source_or_raise,
 )
@@ -17,10 +18,11 @@ from omen.scenario.loader import (
     save_situation_artifact,
     save_situation_markdown,
 )
-from omen.ingest.llm_ontology.services.situation import (
+from omen.ingest.synthesizer.services.situation import (
     analyze_situation_document,
     build_situation_confidence_trace,
     decompose_scenario_from_situation,
+    generate_situation_case_document,
 )
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
 
@@ -74,6 +76,10 @@ def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
     return situation_output_path.with_name(f"{stem}_generation.json")
 
 
+def _resolve_generated_case_path(case_name: str) -> Path:
+    return Path("cases/situations") / f"{case_name}.md"
+
+
 def _derive_pack_id_from_situation_artifact(situation_artifact: dict[str, Any], situation_path: Path) -> str:
     source_meta = situation_artifact.get("source_meta") or {}
     actor_ref = source_meta.get("actor_ref")
@@ -96,6 +102,11 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
         "--input",
         required=False,
         help="Deprecated alias for --doc",
+    )
+    situation.add_argument(
+        "--url",
+        required=False,
+        help="One-step URL ingest: fetch source text, create cases/situations/<case>.md, then run analyze flow",
     )
     situation.add_argument(
         "--actor",
@@ -164,9 +175,43 @@ def register_scenario_command(subparsers: Any) -> None:
 
 def handle_situation_analyze_command(args: Any) -> int:
     try:
+        if args.url and (args.doc or args.input):
+            print("Analyze situation failed: use either --doc or --url, not both")
+            return 2
+
         raw_doc = args.doc or args.input
+        if args.url:
+            print("Using URL source for situation analysis...")
+            try:
+                source_text = fetch_url_text(str(args.url))
+                source_text_path = save_url_source_text(url=str(args.url), text=source_text)
+                print(f"URL fetch: SUCCESS ({source_text_path})")
+            except Exception as exc:
+                print(f"URL fetch: ERROR ({exc})")
+                print("Unable to fetch or extract readable text from the provided URL.")
+                return 2
+
+            try:
+                print("LLM case generation from URL text...")
+                case_name, case_markdown = generate_situation_case_document(
+                    source_text=source_text,
+                    source_ref=str(args.url),
+                    source_text_path=str(source_text_path),
+                    config_path=str(args.config),
+                )
+                generated_case_path = _resolve_generated_case_path(case_name)
+                generated_case_path.parent.mkdir(parents=True, exist_ok=True)
+                generated_case_path.write_text(case_markdown, encoding="utf-8")
+                print(f"Generated situation case: SUCCESS ({generated_case_path})")
+            except Exception as exc:
+                print(f"LLM case generation: ERROR ({exc})")
+                print("Unable to convert fetched URL text into a situation case document.")
+                return 2
+
+            raw_doc = str(generated_case_path)
+
         if not raw_doc:
-            print("Analyze situation failed: missing required argument --doc")
+            print("Analyze situation failed: missing required argument --doc or --url")
             return 2
 
         input_path = _resolve_situation_doc_path(str(raw_doc))

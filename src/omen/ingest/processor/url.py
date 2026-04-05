@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
+from omen import __version__
 from omen.ingest.processor.text import clean_text
 
 
@@ -83,7 +84,7 @@ def fetch_url_text(url: str, *, timeout: int = 20) -> str:
     request = Request(
         str(url).strip(),
         headers={
-            "User-Agent": "Mozilla/5.0 (compatible; Omen/0.2.0; +https://github.com/)"
+            "User-Agent": f"Mozilla/5.0 (compatible; Omen/{__version__}; +https://github.com/)"
         },
     )
     with urlopen(request, timeout=timeout) as response:

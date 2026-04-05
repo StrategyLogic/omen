@@ -73,12 +73,15 @@ def _normalize_label(value: Any) -> str:
 
 def _infer_slot_from_text(title: str, description: str) -> str | None:
     merged = f"{title} {description}".lower()
+    # Check for specific A tokens
     if any(token in merged for token in ("meego", "symbian", "内部", "正面")):
         return "A"
-    if any(token in merged for token in ("android", "开放", "联盟")):
-        return "B"
+    # Priority: Check for specific C tokens (e.g. microsoft/微软) before general B tokens (e.g. 联盟)
     if any(token in merged for token in ("microsoft", "微软", "平台")):
         return "C"
+    # General B tokens
+    if any(token in merged for token in ("android", "开放", "联盟")):
+        return "B"
     return None
 
 

@@ -239,7 +239,7 @@ def handle_situation_analyze_command(args: Any) -> int:
         )
         output_path = save_situation_artifact(output_path_arg, situation_artifact)
         markdown_path = output_path.with_suffix(".md")
-        save_situation_markdown(markdown_path, situation_artifact)
+        save_situation_markdown(markdown_path, situation_artifact, config_path=str(args.config))
         generation_trace_path = _resolve_generation_trace_output_path(output_path)
         generation_trace_payload = build_situation_confidence_trace(
             situation_artifact=situation_artifact,

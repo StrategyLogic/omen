@@ -77,8 +77,8 @@ def build_scenario_ontology_from_situation_artifact(
     }
 
 
-def situation_artifact_to_markdown(situation: dict[str, Any]) -> str:
-    return render_situation_brief(situation)
+def situation_artifact_to_markdown(situation: dict[str, Any], config_path: str = "config/llm.toml") -> str:
+    return render_situation_brief(situation, config_path=config_path)
 
 
 def scenario_ontology_to_deterministic_pack(ontology: dict) -> dict:

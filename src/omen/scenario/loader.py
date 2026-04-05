@@ -126,11 +126,11 @@ def save_situation_artifact(path: str | Path, payload: dict[str, Any]) -> Path:
     return output_path
 
 
-def save_situation_markdown(path: str | Path, payload: dict[str, Any]) -> Path:
+def save_situation_markdown(path: str | Path, payload: dict[str, Any], config_path: str = "config/llm.toml") -> Path:
     output_path = Path(path)
     validated = validate_situation_artifact_or_raise(payload)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    markdown = situation_artifact_to_markdown(validated.model_dump())
+    markdown = situation_artifact_to_markdown(validated.model_dump(), config_path=config_path)
     output_path.write_text(markdown, encoding="utf-8")
     return output_path
 

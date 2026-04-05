@@ -52,5 +52,6 @@ htmlcov/
 .env*
 config/llm.toml
 .local.md
+data/ingest/source/
 output/
 *legacy*

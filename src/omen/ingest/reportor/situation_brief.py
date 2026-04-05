@@ -68,7 +68,7 @@ def _build_brief_prompt_payload(situation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_situation_brief(situation: dict[str, object]) -> str:
+def render_situation_brief(situation: dict[str, object], config_path: str = "config/llm.toml") -> str:
     template = _load_template()
     system_prompt, user_prompt_template = _load_report_prompts()
     prompt_payload = _build_brief_prompt_payload(dict(situation))
@@ -81,7 +81,7 @@ def render_situation_brief(situation: dict[str, object]) -> str:
         },
     )
     generated = invoke_text_prompt(
-        config_path="config/llm.toml",
+        config_path=config_path,
         system_prompt=system_prompt,
         user_prompt=user_prompt,
     )

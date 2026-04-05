@@ -13,6 +13,7 @@ from omen.scenario.ingest_validator import (
 )
 from omen.scenario.ontology_models import DeterministicScenarioPackModel
 from omen.scenario.ontology_models import ScenarioOntologySliceModel
+from omen.scenario.ontology_models import SituationArtifactModel
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 
@@ -270,9 +271,21 @@ def validate_scenario_ontology_slice_or_raise(
         )
 
     for scenario in ontology.scenarios:
+        if not scenario.goal.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing goal"
+            )
+        if not scenario.target.strip():
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing target"
+            )
         if not scenario.objective.strip():
             raise IncompleteDeterministicPackError(
                 f"scenario {scenario.scenario_key} missing objective"
+            )
+        if not scenario.variables:
+            raise IncompleteDeterministicPackError(
+                f"scenario {scenario.scenario_key} missing variables"
             )
         if not any(item.strip() for item in scenario.constraints):
             raise IncompleteDeterministicPackError(
@@ -283,3 +296,14 @@ def validate_scenario_ontology_slice_or_raise(
                 f"scenario {scenario.scenario_key} tradeoff_pressure is empty after normalization"
             )
     return ontology
+
+
+def validate_situation_artifact_or_raise(payload: dict) -> SituationArtifactModel:
+    artifact = SituationArtifactModel.model_validate(payload)
+    if artifact.version != "0.1.0":
+        raise IncompleteDeterministicPackError(
+            f"situation artifact version must be 0.1.0, got {artifact.version!r}"
+        )
+    if not artifact.signals:
+        raise IncompleteDeterministicPackError("situation artifact missing signals")
+    return artifact

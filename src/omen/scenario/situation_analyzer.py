@@ -1,30 +1,14 @@
-"""Build scenario ontology artifacts from situation source documents."""
+"""Build and render situation/scenario artifacts for deterministic simulation."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
+from omen.scenario.splitter import normalize_llm_scenarios_with_policy
 
-
-_DEFAULT_OBJECTIVES = {
-    "A": "Stabilize core platform control while restoring execution momentum.",
-    "B": "Improve survival probability through open-ecosystem scale leverage.",
-    "C": "Maximize short-term strategic stability via external platform alliance.",
-}
-
-_DEFAULT_TRADEOFFS = {
-    "A": ["Execution speed vs platform completeness", "Short-term revenue vs long-term control"],
-    "B": ["Scale expansion vs differentiation", "Platform dependence vs bargaining power"],
-    "C": ["Short-term stability vs long-term autonomy", "Transaction efficiency vs strategic freedom"],
-}
-
-_DEFAULT_RESISTANCE = {
-    "A": (0.8, 0.7, 0.6, 0.7),
-    "B": (0.5, 0.5, 0.5, 0.4),
-    "C": (0.4, 0.4, 0.5, 0.3),
-}
 
 _DEFERRED_DYNAMIC_MARKERS = {
     "dynamic_authoring",
@@ -40,33 +24,6 @@ _DEFERRED_ENTERPRISE_MARKERS = {
     "custom_resistance_dimensions",
     "enterprise_resistance_profile",
 }
-
-
-def _extract_lines(text: str) -> list[str]:
-    lines: list[str] = []
-    for raw in text.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        if line.startswith("#"):
-            continue
-        if line.startswith("-"):
-            line = line[1:].strip()
-        lines.append(line)
-    return lines
-
-
-def _build_constraints(base_lines: list[str], scenario_key: str) -> list[str]:
-    top = base_lines[:2]
-    if scenario_key == "A":
-        hint = "Prioritize internal platform continuity under execution pressure"
-    elif scenario_key == "B":
-        hint = "Prioritize ecosystem access while controlling commoditization risk"
-    else:
-        hint = "Prioritize alliance efficiency with explicit autonomy safeguards"
-
-    constraints = top + [hint]
-    return constraints if constraints else ["Constraint context is missing in source document"]
 
 
 def _validate_source_scope_or_raise(text: str) -> None:
@@ -85,60 +42,75 @@ def _validate_source_scope_or_raise(text: str) -> None:
             )
 
 
-def build_scenario_ontology_from_situation(
+def validate_situation_source_or_raise(situation_file: str | Path) -> None:
+    text = Path(situation_file).read_text(encoding="utf-8")
+    _validate_source_scope_or_raise(text)
+
+
+def build_scenario_ontology_from_situation_artifact(
     *,
-    situation_file: str | Path,
-    actor_ref: str | None,
+    situation_artifact: dict[str, Any],
+    llm_decomposition: dict[str, Any],
     pack_id: str,
     pack_version: str,
-) -> dict:
-    path = Path(situation_file)
-    text = path.read_text(encoding="utf-8")
-    _validate_source_scope_or_raise(text)
-    lines = _extract_lines(text)
-    excerpt = " ".join(lines[:3])[:200]
-    situation_id = path.stem
-
-    scenarios: list[dict] = []
-    for key in ("A", "B", "C"):
-        v = _DEFAULT_RESISTANCE[key]
-        aggregate = round(sum(v) / 4.0, 3)
-        rationale = [f"Derived from situation source: {path}"]
-        if actor_ref:
-            rationale.append(f"Actor reference: {actor_ref}")
-        scenarios.append(
-            {
-                "scenario_key": key,
-                "title": f"Scenario {key}",
-                "objective": _DEFAULT_OBJECTIVES[key],
-                "constraints": _build_constraints(lines, key),
-                "tradeoff_pressure": _DEFAULT_TRADEOFFS[key],
-                "resistance_assumptions": {
-                    "structural_conflict": v[0],
-                    "resource_reallocation_drag": v[1],
-                    "cultural_misalignment": v[2],
-                    "veto_node_intensity": v[3],
-                    "aggregate_resistance": aggregate,
-                    "assumption_rationale": rationale,
-                },
-                "modeling_notes": [
-                    f"Situation excerpt: {excerpt}" if excerpt else "No source excerpt extracted",
-                    "Scenario generated with deterministic slot policy A/B/C",
-                ],
-            }
-        )
+) -> dict[str, Any]:
+    scenarios = normalize_llm_scenarios_with_policy(
+        list(llm_decomposition.get("scenarios") or []),
+        source_hint=f"Derived from situation artifact: {situation_artifact.get('id', 'unknown')}",
+    )
+    source_meta = dict(llm_decomposition.get("source_meta") or {})
+    source_meta.setdefault(
+        "source_path",
+        str((situation_artifact.get("source_meta") or {}).get("source_path") or ""),
+    )
+    source_meta.setdefault("generated_at", datetime.now().isoformat())
+    source_meta["generated_from"] = "situation_artifact"
 
     return {
         "pack_id": pack_id,
         "pack_version": pack_version,
-        "derived_from_situation_id": situation_id,
-        "ontology_version": "scenario_ontology_v1",
+        "derived_from_situation_id": str(situation_artifact.get("id") or "unknown"),
+        "ontology_version": str(llm_decomposition.get("ontology_version") or "scenario_ontology_v1"),
         "scenarios": scenarios,
-        "source_meta": {
-            "source_path": str(path),
-            "generated_at": datetime.now().isoformat(),
-        },
+        "source_meta": source_meta,
     }
+
+
+def situation_artifact_to_markdown(situation: dict[str, Any]) -> str:
+    lines: list[str] = []
+    lines.append(f"# Situation Artifact: {situation.get('id', 'unknown')}")
+    lines.append("")
+    lines.append(f"- version: {situation.get('version', '')}")
+    source_meta = situation.get("source_meta") or {}
+    if source_meta.get("source_path"):
+        lines.append(f"- source_path: {source_meta.get('source_path')}")
+    if source_meta.get("generated_at"):
+        lines.append(f"- generated_at: {source_meta.get('generated_at')}")
+
+    context = situation.get("context") or {}
+    if context:
+        lines.append("")
+        lines.append("## SituationContext")
+        for key in (
+            "title",
+            "core_question",
+            "current_state",
+            "core_dilemma",
+            "key_decision_point",
+        ):
+            if context.get(key):
+                lines.append(f"- {key}: {context.get(key)}")
+
+    signals = situation.get("signals") or []
+    lines.append("")
+    lines.append(f"## Signals ({len(signals)})")
+    for signal in signals[:10]:
+        sid = signal.get("id", "unknown")
+        name = signal.get("name", "")
+        lines.append(f"- {sid}: {name}")
+
+    lines.append("")
+    return "\n".join(lines)
 
 
 def scenario_ontology_to_deterministic_pack(ontology: dict) -> dict:
@@ -190,7 +162,16 @@ def scenario_ontology_to_markdown(ontology: dict) -> str:
         lines.append("")
         lines.append(f"## Scenario {key}: {title}")
         lines.append("")
+        lines.append(f"- goal: {scenario.get('goal', '')}")
+        lines.append(f"- target: {scenario.get('target', '')}")
         lines.append(f"- objective: {scenario.get('objective', '')}")
+
+        variables = scenario.get("variables") or []
+        lines.append("- variables:")
+        for item in variables:
+            name = str(item.get("name") or "unknown")
+            vtype = str(item.get("type") or "unknown")
+            lines.append(f"  - {name} ({vtype})")
 
         constraints = scenario.get("constraints") or []
         lines.append("- constraints:")

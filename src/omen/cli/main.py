@@ -21,7 +21,11 @@ from omen.cli.actor import (
     register_analyze_commands,
     register_validate_commands,
 )
-from omen.cli.situation import handle_situation_analyze_command
+from omen.cli.situation import (
+    handle_scenario_command,
+    handle_situation_analyze_command,
+    register_scenario_command,
+)
 from omen.explain.precision_report import build_precision_report
 from omen.explain.report import build_explanation_report
 from omen.ingest.llm_ontology.builders.assertion import build_assertions_from_candidates
@@ -396,6 +400,7 @@ def main() -> None:
     register_analyze_commands(sub)
     register_validate_commands(sub)
     register_case_commands(sub)
+    register_scenario_command(sub)
 
     args = parser.parse_args()
 
@@ -888,6 +893,8 @@ def main() -> None:
         if getattr(args, "analyze_object", None) == "situation":
             raise SystemExit(handle_situation_analyze_command(args))
         raise SystemExit(handle_analyze_command(args))
+    elif args.command == "scenario":
+        raise SystemExit(handle_scenario_command(args))
     elif args.command == "validate":
         raise SystemExit(handle_validate_command(args))
 

@@ -12,7 +12,9 @@ SITUATION_INPUT = ROOT / "cases" / "situations" / "nokia-elop-2010.md"
 
 
 def _prepare_scenario_artifact(tmp_path: Path, monkeypatch) -> Path:
+    situation_output = tmp_path / "situation.json"
     scenario_output = tmp_path / "scenario.json"
+
     monkeypatch.setattr(
         sys,
         "argv",
@@ -25,12 +27,29 @@ def _prepare_scenario_artifact(tmp_path: Path, monkeypatch) -> Path:
             "--actor",
             "actors/steve-jobs.md",
             "--output",
+            str(situation_output),
+        ],
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 0
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "scenario",
+            "--situation",
+            str(situation_output),
+            "--output",
             str(scenario_output),
         ],
     )
     with pytest.raises(SystemExit) as exc_info:
         main()
     assert exc_info.value.code == 0
+
     return scenario_output
 
 

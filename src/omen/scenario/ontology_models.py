@@ -122,10 +122,49 @@ class SituationSourceDocument(BaseModel):
 
 class SituationAnalysisRequest(BaseModel):
     situation_id: str = Field(min_length=1)
-    actor_ref: str = Field(min_length=1)
+    doc: str = Field(min_length=1)
+    actor_ref: str | None = None
     target_pack_id: str = Field(min_length=1)
     target_pack_version: str = Field(min_length=1)
-    output_path: str = Field(min_length=1)
+    output_path: str | None = None
+
+
+class SituationContextModel(BaseModel):
+    title: str = Field(min_length=1)
+    core_question: str = Field(min_length=1)
+    current_state: str = Field(min_length=1)
+    core_dilemma: str = Field(min_length=1)
+    key_decision_point: str = Field(min_length=1)
+    target_outcomes: list[str] = Field(min_length=1)
+    hard_constraints: list[str] = Field(min_length=1)
+    known_unknowns: list[str] = Field(default_factory=list)
+
+
+class SituationEnhanceRequestModel(BaseModel):
+    situation_id: str = Field(min_length=1)
+    source_doc_ref: str = Field(min_length=1)
+    context: SituationContextModel
+    target_pack_id: str = Field(min_length=1)
+    target_pack_version: str = Field(min_length=1)
+
+
+class SituationArtifactModel(BaseModel):
+    version: str = Field(min_length=1)
+    id: str = Field(min_length=1)
+    context: SituationContextModel
+    signals: list[dict[str, Any]] = Field(min_length=1)
+    tech_space_seed: list[dict[str, Any]] = Field(default_factory=list)
+    market_space_seed: list[dict[str, Any]] = Field(default_factory=list)
+    uncertainty_space: dict[str, Any] = Field(default_factory=dict)
+    source_trace: list[dict[str, Any]] = Field(default_factory=list)
+    source_meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class ScenarioSplitRequestModel(BaseModel):
+    situation_artifact_path: str = Field(min_length=1)
+    target_pack_id: str = Field(min_length=1)
+    target_pack_version: str = Field(min_length=1)
+    output_path: str | None = None
 
 
 class ResistanceAssumptionsModel(BaseModel):
@@ -140,7 +179,10 @@ class ResistanceAssumptionsModel(BaseModel):
 class ScenarioOntologyNodeModel(BaseModel):
     scenario_key: Literal["A", "B", "C"]
     title: str = Field(min_length=1)
+    goal: str = Field(min_length=1)
+    target: str = Field(min_length=1)
     objective: str = Field(min_length=1)
+    variables: list[dict[str, Any]] = Field(min_length=1)
     constraints: list[str] = Field(min_length=1)
     tradeoff_pressure: list[str] = Field(min_length=1)
     resistance_assumptions: ResistanceAssumptionsModel

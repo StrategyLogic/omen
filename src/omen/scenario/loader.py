@@ -133,3 +133,13 @@ def save_situation_markdown(path: str | Path, payload: dict[str, Any]) -> Path:
     markdown = situation_artifact_to_markdown(validated.model_dump())
     output_path.write_text(markdown, encoding="utf-8")
     return output_path
+
+
+def save_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return output_path

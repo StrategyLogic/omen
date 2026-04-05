@@ -248,6 +248,10 @@ prompts:
     - id must equal provided situation_id
     - context must preserve all provided context fields
     - signals must be non-empty
+    - uncertainty_space.overall_confidence must be in [0,1]
+    - uncertainty_space.assumptions_explicit should include assumption objects with:
+      target_unknown, assumption_text, quality_score (0..1), coverage_type
+    - assumptions_explicit should map to known_unknowns when possible
 
     situation_id: [[situation_id]]
     source_path: [[source_path]]

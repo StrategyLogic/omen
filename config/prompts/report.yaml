@@ -36,8 +36,8 @@ prompts:
     - Replace all placeholder tokens in format [[token]].
     - Keep bullet list structure where applicable.
     - If a field is missing, provide a concise neutral fallback statement.
-    - For the "Confidence & Uncertainty" section, use `uncertainty_space` as the authoritative source.
-    - Do not infer confidence from `context.known_unknowns` when `uncertainty_space` is present.
-    - If `uncertainty_space.overall_confidence` exists, preserve its numeric intent in the rendered wording.
-    - Use `uncertainty_space.high_leverage_unknowns` and `uncertainty_space.assumptions_explicit` before falling back to contextual narrative.
+    - For the "Confidence & Uncertainty" section in Brief, use risk-confidence framing (C_risk) from `context.known_unknowns`.
+    - If `uncertainty_space.confidence_risk` exists, prioritize it for Brief wording.
+    - Do not replace Brief risk confidence with `uncertainty_space.overall_confidence`.
+    - You may reference `uncertainty_space` assumptions to explain uncertainty, but confidence phrasing should remain risk-oriented.
     - Do not add extra sections, notes, or code fences.

@@ -11,6 +11,7 @@ from omen.ingest.llm_ontology.builders.situation import (
 )
 from omen.scenario.loader import (
     load_situation_artifact,
+    save_auxiliary_json,
     save_scenario_ontology_markdown,
     save_scenario_ontology_slice,
     save_situation_artifact,
@@ -18,6 +19,7 @@ from omen.scenario.loader import (
 )
 from omen.ingest.llm_ontology.services.situation import (
     analyze_situation_document,
+    build_situation_confidence_trace,
     decompose_scenario_from_situation,
 )
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
@@ -63,6 +65,13 @@ def _resolve_splitter_default_output_path(situation_path: Path, pack_id: str) ->
     if stem.endswith("_situation"):
         stem = stem[: -len("_situation")]
     return Path("data/scenarios") / pack_id / f"{stem}.json"
+
+
+def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
+    stem = situation_output_path.stem
+    if stem.endswith("_situation"):
+        stem = stem[: -len("_situation")]
+    return situation_output_path.with_name(f"{stem}_generation.json")
 
 
 def _derive_pack_id_from_situation_artifact(situation_artifact: dict[str, Any], situation_path: Path) -> str:
@@ -186,8 +195,15 @@ def handle_situation_analyze_command(args: Any) -> int:
         output_path = save_situation_artifact(output_path_arg, situation_artifact)
         markdown_path = output_path.with_suffix(".md")
         save_situation_markdown(markdown_path, situation_artifact)
+        generation_trace_path = _resolve_generation_trace_output_path(output_path)
+        generation_trace_payload = build_situation_confidence_trace(
+            situation_artifact=situation_artifact,
+            situation_artifact_path=output_path,
+        )
+        save_auxiliary_json(generation_trace_path, generation_trace_payload)
         print(f"Saved situation artifact to {output_path}")
         print(f"Saved situation summary to {markdown_path}")
+        print(f"Saved situation generation trace to {generation_trace_path}")
         return 0
     except DeferredScopeFeatureError as exc:
         print(f"Deferred scope: {exc}")

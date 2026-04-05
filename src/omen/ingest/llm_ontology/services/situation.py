@@ -12,6 +12,11 @@ from omen.ingest.llm_ontology.prompts import build_json_retry_prompt
 from omen.ingest.llm_ontology.prompts.registry import get_prompt_template
 
 
+_RISK_CONFIDENCE_MIN = 0.2
+_RISK_DECAY_LAMBDA = 0.15
+_CONFIDENCE_DELTA_MAX = 0.5
+
+
 def _extract_json_object(text: str) -> dict[str, Any]:
     decoder = json.JSONDecoder()
     start = text.find("{")
@@ -94,6 +99,160 @@ def _normalize_source_trace(value: Any, *, source_path: str, situation_id: str) 
     ]
 
 
+def _to_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clamp_01(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def _normalize_assumptions_explicit(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    output: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            target_unknown = str(item.get("target_unknown") or "").strip()
+            assumption_text = str(item.get("assumption_text") or item.get("text") or "").strip()
+            quality_score = _to_float(item.get("quality_score"))
+            if quality_score is None:
+                quality_score = 0.7 if assumption_text else 0.0
+            output.append(
+                {
+                    "target_unknown": target_unknown,
+                    "assumption_text": assumption_text,
+                    "quality_score": _clamp_01(quality_score),
+                    "coverage_type": str(item.get("coverage_type") or "direct").strip() or "direct",
+                }
+            )
+            continue
+
+        text = str(item).strip()
+        if text:
+            output.append(
+                {
+                    "target_unknown": "",
+                    "assumption_text": text,
+                    "quality_score": 0.7,
+                    "coverage_type": "direct",
+                }
+            )
+    return output
+
+
+def _compute_dual_confidence(
+    *,
+    context: dict[str, Any],
+    uncertainty_space: dict[str, Any],
+) -> dict[str, Any]:
+    known_unknowns = [str(item).strip() for item in (context.get("known_unknowns") or []) if str(item).strip()]
+    unknown_count = len(known_unknowns)
+
+    confidence_risk = max(_RISK_CONFIDENCE_MIN, 1.0 - (_RISK_DECAY_LAMBDA * unknown_count))
+
+    assumptions = _normalize_assumptions_explicit(uncertainty_space.get("assumptions_explicit"))
+    assumption_count = len(assumptions)
+    quality_sum = sum(float(item.get("quality_score") or 0.0) for item in assumptions)
+    quality_avg = (quality_sum / assumption_count) if assumption_count else 0.0
+
+    if unknown_count == 0:
+        coverage_ratio = 1.0
+    elif assumption_count == 0:
+        coverage_ratio = 0.0
+    else:
+        coverage_ratio = min(1.0, quality_sum / float(unknown_count))
+
+    computed_overall = confidence_risk + (1.0 - confidence_risk) * coverage_ratio
+    llm_overall = _to_float(uncertainty_space.get("overall_confidence"))
+    if llm_overall is None:
+        confidence_overall = _clamp_01(computed_overall)
+    else:
+        confidence_overall = _clamp_01(llm_overall)
+
+    guardrail_applied = False
+    if confidence_overall - confidence_risk > _CONFIDENCE_DELTA_MAX:
+        confidence_overall = confidence_risk + _CONFIDENCE_DELTA_MAX
+        guardrail_applied = True
+
+    return {
+        "confidence_risk": round(_clamp_01(confidence_risk), 4),
+        "confidence_overall": round(_clamp_01(confidence_overall), 4),
+        "coverage_ratio": round(_clamp_01(coverage_ratio), 4),
+        "guardrail_applied": guardrail_applied,
+        "assumptions_explicit": assumptions,
+        "metrics": {
+            "known_unknowns_count": unknown_count,
+            "assumptions_filled_count": assumption_count,
+            "assumptions_quality_avg": round(_clamp_01(quality_avg), 4),
+            "cognitive_coverage": round(_clamp_01(coverage_ratio), 4),
+            "confidence_delta_cap": _CONFIDENCE_DELTA_MAX,
+        },
+    }
+
+
+def _apply_dual_confidence_enhancement(enhanced: dict[str, Any], context: dict[str, Any]) -> None:
+    uncertainty = _normalize_uncertainty_space(enhanced.get("uncertainty_space"))
+    confidence = _compute_dual_confidence(context=context, uncertainty_space=uncertainty)
+
+    uncertainty["assumptions_explicit"] = confidence["assumptions_explicit"]
+    uncertainty["overall_confidence"] = confidence["confidence_overall"]
+    uncertainty["confidence_risk"] = confidence["confidence_risk"]
+    uncertainty["confidence_overall"] = confidence["confidence_overall"]
+    uncertainty["metrics"] = confidence["metrics"]
+    uncertainty["guardrail_applied"] = confidence["guardrail_applied"]
+
+    high_leverage_unknowns = _as_dict_list(uncertainty.get("high_leverage_unknowns"), key_name="name")
+    uncertainty["high_leverage_unknowns"] = [item.get("name") for item in high_leverage_unknowns if item.get("name")]
+    if not uncertainty["high_leverage_unknowns"]:
+        uncertainty["high_leverage_unknowns"] = [
+            str(item).strip()
+            for item in (context.get("known_unknowns") or [])
+            if str(item).strip()
+        ][:3]
+
+    assumptions_explicit = uncertainty.get("assumptions_explicit")
+    if not isinstance(assumptions_explicit, list):
+        uncertainty["assumptions_explicit"] = []
+
+    enhanced["uncertainty_space"] = uncertainty
+
+
+def build_situation_confidence_trace(
+    *,
+    situation_artifact: dict[str, Any],
+    situation_artifact_path: str | Path,
+) -> dict[str, Any]:
+    source_meta = situation_artifact.get("source_meta") or {}
+    uncertainty = situation_artifact.get("uncertainty_space") or {}
+    metrics = uncertainty.get("metrics") or {}
+
+    return {
+        "artifact_type": "situation_generation_trace",
+        "situation_id": str(situation_artifact.get("id") or "unknown"),
+        "situation_artifact_path": str(situation_artifact_path),
+        "source_path": str(source_meta.get("source_path") or ""),
+        "pack_id": str(source_meta.get("pack_id") or ""),
+        "pack_version": str(source_meta.get("pack_version") or ""),
+        "generated_at": str(source_meta.get("generated_at") or datetime.now().isoformat()),
+        "validation_passed": True,
+        "validation_issues": [],
+        "confidence": {
+            "confidence_risk": uncertainty.get("confidence_risk"),
+            "confidence_overall": uncertainty.get("confidence_overall"),
+            "overall_confidence": uncertainty.get("overall_confidence"),
+            "coverage_ratio": metrics.get("cognitive_coverage"),
+            "guardrail_applied": bool(uncertainty.get("guardrail_applied", False)),
+        },
+        "metrics": metrics,
+        "assumptions_explicit": uncertainty.get("assumptions_explicit") or [],
+    }
+
+
 def analyze_situation_document(
     *,
     situation_file: str | Path,
@@ -139,7 +298,7 @@ def analyze_situation_document(
         enhanced["signals"] = [{"name": "Signal extracted from source document"}]
     enhanced["tech_space_seed"] = _as_dict_list(enhanced.get("tech_space_seed"), key_name="name")
     enhanced["market_space_seed"] = _as_dict_list(enhanced.get("market_space_seed"), key_name="name")
-    enhanced["uncertainty_space"] = _normalize_uncertainty_space(enhanced.get("uncertainty_space"))
+    _apply_dual_confidence_enhancement(enhanced, context)
     enhanced["source_trace"] = _normalize_source_trace(
         enhanced.get("source_trace"),
         source_path=str(path),

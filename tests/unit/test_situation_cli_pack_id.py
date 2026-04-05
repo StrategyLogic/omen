@@ -5,6 +5,7 @@ from omen.cli.situation import (
     _derive_default_pack_id,
     _derive_pack_id_from_situation_artifact,
     _resolve_default_output_path,
+    _resolve_generation_trace_output_path,
     _resolve_splitter_default_output_path,
 )
 
@@ -46,3 +47,10 @@ def test_default_output_paths_follow_pack_id() -> None:
 
     assert analyze_output == Path("data/scenarios/nokia_v1/nokia-elop-2010_situation.json")
     assert scenario_output == Path("data/scenarios/nokia_v1/nokia-elop-2010.json")
+
+
+def test_generation_trace_path_uses_generation_suffix() -> None:
+    trace_output = _resolve_generation_trace_output_path(
+        Path("data/scenarios/nokia_v1/nokia-elop-2010_situation.json")
+    )
+    assert trace_output == Path("data/scenarios/nokia_v1/nokia-elop-2010_generation.json")

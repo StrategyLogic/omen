@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from omen.ingest.llm_ontology.config import load_llm_config
+from omen.ingest.synthesizer.config import load_llm_config
 
 
 def test_load_llm_config_falls_back_to_env_without_file(monkeypatch):

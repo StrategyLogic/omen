@@ -6,10 +6,10 @@ import datetime
 import json
 from typing import Any
 
-from omen.ingest.llm_ontology.clients import create_chat_client
-from omen.ingest.llm_ontology.config import load_llm_config
-from omen.ingest.llm_ontology.prompts.registry import get_analyze_prompt_version_token
-from omen.ingest.llm_ontology.prompts import build_json_retry_prompt, build_persona_insight_prompt
+from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.config import load_llm_config
+from omen.ingest.synthesizer.prompts.registry import get_analyze_prompt_version_token
+from omen.ingest.synthesizer.prompts import build_json_retry_prompt, build_persona_insight_prompt
 
 
 def _normalize_output_language(value: str | None) -> str:
@@ -190,3 +190,85 @@ def generate_persona_insight(
             "consistency_score": consistency_score,
         },
     }
+
+
+def map_major_conclusions_to_evidence(
+    conclusions: list[dict[str, Any]],
+    evidence_records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    by_id = {
+        str(item.get("evidence_id") or item.get("id") or "").strip(): item
+        for item in evidence_records
+        if isinstance(item, dict)
+    }
+    mapped: list[dict[str, Any]] = []
+    for conclusion in conclusions:
+        if not isinstance(conclusion, dict):
+            continue
+        refs = [str(ref).strip() for ref in (conclusion.get("evidence_refs") or []) if str(ref).strip()]
+        mapped.append(
+            {
+                "conclusion": str(conclusion.get("text") or conclusion.get("summary") or "").strip(),
+                "evidence_refs": refs,
+                "evidence_items": [by_id[ref] for ref in refs if ref in by_id],
+            }
+        )
+    return mapped
+
+
+def apply_contradiction_confidence_flag(
+    evidence_records: list[dict[str, Any]],
+) -> str:
+    groups: dict[str, int] = {}
+    for record in evidence_records:
+        if not isinstance(record, dict):
+            continue
+        group = str(record.get("contradiction_group") or "").strip()
+        if not group:
+            continue
+        groups[group] = groups.get(group, 0) + 1
+    has_conflict = any(count > 1 for count in groups.values())
+    return "reduced-confidence" if has_conflict else "full-confidence"
+
+
+def build_recommendation_from_condition_sets(
+    scenario_results: list[dict[str, Any]],
+) -> str:
+    if not scenario_results:
+        return "No deterministic scenario result available."
+
+    ranked = sorted(
+        scenario_results,
+        key=lambda item: float((item.get("strategic_freedom") or {}).get("score", 0.0)),
+        reverse=True,
+    )
+    best = ranked[0]
+    best_key = str(best.get("scenario_key") or "unknown")
+    conditions = best.get("strategic_freedom") or {}
+    blocking = list(conditions.get("blocking") or [])
+    required = list(conditions.get("required") or [])
+
+    if blocking:
+        return (
+            f"Scenario {best_key} has highest strategic potential but is currently blocked: "
+            f"{'; '.join(blocking[:2])}."
+        )
+
+    required_hint = required[0] if required else "需补齐关键执行前提"
+    return (
+        f"Recommend scenario {best_key} as primary path. "
+        f"First required condition: {required_hint}."
+    )
+
+
+def apply_partial_evidence_confidence_policy(
+    *,
+    evidence_refs: list[str],
+) -> tuple[str, list[str]]:
+    refs = [str(item).strip() for item in evidence_refs if str(item).strip()]
+    if refs:
+        return "full-confidence", []
+    return (
+        "reduced-confidence",
+        ["No evidence refs linked for this scenario in current iteration"],
+    )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from omen.ingest.llm_ontology.builders.event import extract_timeline_events
+from omen.ingest.synthesizer.builders.event import extract_timeline_events
 from omen.ingest.models import CaseDocument, LLMConfig
 
 
@@ -40,7 +40,7 @@ def test_timeline_extraction_falls_back_to_chunk_grounded_events(monkeypatch, tm
             return _BrokenResponse()
 
     monkeypatch.setattr(
-        "omen.ingest.llm_ontology.builders.event.create_chat_client",
+        "omen.ingest.synthesizer.builders.event.create_chat_client",
         lambda _cfg: _BrokenChatClient(),
     )
 

@@ -2,18 +2,176 @@
 
 from __future__ import annotations
 
+import datetime
 import json
+import uuid
 from pathlib import Path
 from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
+from omen.analysis.actor.insight import build_recommendation_from_condition_sets
+from omen.analysis.actor.insight import apply_partial_evidence_confidence_policy
+from omen.analysis.actor.comparability import build_comparability_metadata
+from omen.analysis.actor.formation import (
+    assemble_capability_dilemma_fit,
+    project_scenario_selected_dimensions,
+)
+from omen.analysis.actor.report_writer import (
+    attach_strategic_freedom_summary,
+    build_fixed_order_scenario_comparison,
+    write_deterministic_run_artifact,
+)
+from omen.analysis.actor.strategy import (
+    build_condition_derivation_trace,
+    calculate_strategic_freedom_factor,
+    generate_condition_sets,
+)
 from omen.analysis.actor.query import build_events_snapshot
-from omen.ingest.llm_ontology.services.actor import generate_actor_and_events_from_document
-from omen.ingest.llm_ontology.prompts.registry import ensure_analyze_prompt_available
-from omen.ingest.llm_ontology.assembler import attach_founder_ref, attach_timeline_events
+from omen.scenario.loader import compile_and_validate_deterministic_pack
+from omen.types import DETERMINISTIC_PACK_REQUIRED_SLOTS
+from omen.ingest.synthesizer.services.actor import generate_actor_and_events_from_document
+from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+from omen.ingest.synthesizer.assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.ui.artifacts import ensure_case_output_dir
 from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
+
+
+def _load_json_file(path: str | Path) -> dict[str, Any]:
+    file_path = Path(path)
+    return json.loads(file_path.read_text(encoding="utf-8"))
+
+
+def run_deterministic_simulate_from_nl(
+    *,
+    nl_payload: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
+    pack = compile_and_validate_deterministic_pack(nl_payload)
+    return run_deterministic_simulate_from_pack(
+        pack=pack,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
+    )
+
+
+def run_deterministic_simulate_from_pack(
+    *,
+    pack: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
+
+    capability_templates = {
+        "A": {"ecosystem_control": 0.75, "execution_velocity": 0.58},
+        "B": {"ecosystem_control": 0.5, "execution_velocity": 0.72},
+        "C": {"ecosystem_control": 0.4, "execution_velocity": 0.65},
+    }
+
+    scenario_results = []
+    for scenario in pack["scenarios"]:
+        scenario_key = scenario["scenario_key"]
+        capability_fit = assemble_capability_dilemma_fit(
+            scenario_key=scenario_key,
+            capability_scores=capability_templates.get(scenario_key, {}),
+        )
+        strategic_score = calculate_strategic_freedom_factor(
+            capability_fit=capability_fit["fit"],
+            resistance_baseline=scenario["resistance_baseline"],
+        )
+        strategic_conditions = generate_condition_sets(
+            scenario_key=scenario_key,
+            strategic_freedom_score=strategic_score,
+            resistance_baseline=scenario["resistance_baseline"],
+        )
+        selected_dimensions = project_scenario_selected_dimensions(
+            scenario_key=scenario_key,
+            capability_scores=capability_templates.get(scenario_key, {}),
+        )
+        derivation_trace = build_condition_derivation_trace(
+            scenario_key=scenario_key,
+            scenario_ontology={
+                "objective": scenario.get("target_outcome", ""),
+                "constraints": scenario.get("constraints", []),
+                "tradeoff_pressure": scenario.get("dilemma_tradeoffs", []),
+                "resistance_assumptions": scenario.get("resistance_baseline", {}),
+            },
+            selected_dimensions=selected_dimensions,
+            strategic_conditions=strategic_conditions,
+        )
+        confidence_level, missing_reasons = apply_partial_evidence_confidence_policy(
+            evidence_refs=[],
+        )
+        derivation_trace["missing_evidence_reasons"] = missing_reasons
+
+        scenario_results.append(
+            {
+                "scenario_key": scenario_key,
+                "capability_dilemma_fit": capability_fit,
+                "selected_dimensions": selected_dimensions,
+                "resistance": scenario["resistance_baseline"],
+                "strategic_freedom": strategic_conditions,
+                "derivation_trace": derivation_trace,
+                "evidence_refs": [],
+                "confidence_level": confidence_level,
+            }
+        )
+
+    comparability = build_comparability_metadata(
+        actor_profile_version=actor_profile_ref,
+        scenario_pack_version=pack["pack_version"],
+        calculation_policy_version=calculation_policy_version,
+    )
+    artifact = {
+        "run_id": f"det-{uuid.uuid4().hex[:12]}",
+        "run_timestamp": datetime.datetime.now().isoformat(),
+        "actor_profile_ref": actor_profile_ref,
+        "scenario_pack_ref": pack["pack_id"],
+        "scenario_results": scenario_results,
+        "scenario_comparison": build_fixed_order_scenario_comparison(
+            scenario_results,
+            order=DETERMINISTIC_PACK_REQUIRED_SLOTS,
+        ),
+        "recommendation_summary": build_recommendation_from_condition_sets(scenario_results),
+        "comparability": comparability,
+        "export_status": "success",
+    }
+    return attach_strategic_freedom_summary(artifact)
+
+
+def run_deterministic_compare_from_nl(
+    *,
+    nl_payload: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
+    pack = compile_and_validate_deterministic_pack(nl_payload)
+    return run_deterministic_compare_from_pack(
+        pack=pack,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
+    )
+
+
+def run_deterministic_compare_from_pack(
+    *,
+    pack: dict[str, Any],
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+) -> dict[str, Any]:
+    payload = run_deterministic_simulate_from_pack(
+        pack=pack,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
+    )
+    payload["comparison_type"] = "deterministic_pack"
+    payload["recommendation_summary"] = "Deterministic compare completed."
+    return payload
+
+
+def save_deterministic_payload(output_path: str | Path, payload: dict[str, Any]) -> Path:
+    return write_deterministic_run_artifact(output_path, payload)
 
 
 def register_case_commands(subparsers: Any) -> None:
@@ -124,7 +282,7 @@ def _load_analysis_artifacts(case_id: str, output_dir: str) -> tuple[Path, dict[
 
 
 def handle_case_command(args: Any) -> int:
-    from omen.ingest.llm_ontology.services.strategy import generate_strategy_ontology_from_document
+    from omen.ingest.synthesizer.services.strategy import generate_strategy_ontology_from_document
 
     def emit(step: str, status: str, message: str) -> None:
         print(f"[CASE-BUILD][{step}][{status}] {message}", flush=True)

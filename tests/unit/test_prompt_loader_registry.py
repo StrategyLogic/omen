@@ -1,5 +1,5 @@
-from omen.ingest.llm_ontology.prompts.loader import load_tier_prompts
-from omen.ingest.llm_ontology.prompts.registry import (
+from omen.ingest.synthesizer.prompts.loader import load_tier_prompts
+from omen.ingest.synthesizer.prompts.registry import (
     ensure_analyze_prompt_available,
     get_analyze_prompt_version_token,
     resolve_analyze_prompt_binding,

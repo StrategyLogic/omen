@@ -2,6 +2,8 @@
 
 > **Simulate the Signs. Reveal the Chaos.**
 
+![](https://img.shields.io/pypi/l/omenai?timestamp=20260406) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai?label=%20)![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
+
 [**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source **Phenomenon Simulator** and strategic reasoning engine. Leveraging **multi-agent game theory**, **capability space modeling**, and **counterfactual analysis**, it calculates how technological evolution reconstructs market landscapes.
 
 [中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)

@@ -2,7 +2,7 @@
   "pack_id": "sap_v1",
   "pack_version": "1.0.0",
   "derived_from_situation_id": "sap_reltio_acquisition",
-  "ontology_version": "1.0.0",
+  "ontology_version": "1.0",
   "planning_query_ref": "data/scenarios/sap_v1/traces/planning_query.json",
   "prior_snapshot_ref": "data/scenarios/sap_v1/traces/prior_snapshot.json",
   "scenarios": [

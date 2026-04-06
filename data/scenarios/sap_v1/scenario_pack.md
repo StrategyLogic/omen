@@ -2,7 +2,7 @@
 
 - pack_id: sap_v1
 - pack_version: 1.0.0
-- ontology_version: 1.0.0
+- ontology_version: 1.0
 
 ## Scenario A: Scenario A
 

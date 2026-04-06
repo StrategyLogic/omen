@@ -30,122 +30,132 @@
   },
   "signals": [
     {
-      "id": "signal_1",
-      "name": "Low BDC Familiarity Among Core User Base",
+      "id": "sig_market_001",
+      "name": "Enterprise AI procurement shifting from model-first to data-first",
       "domain": "market",
-      "strength": 0.85,
-      "direction": "down",
+      "strength": 0.75,
+      "direction": "up",
       "mapped_targets": [
         {
           "space": "MarketSpace",
           "element_key": "BDC_adoption_momentum",
-          "impact_type": "constraint",
-          "impact_strength": 0.8,
-          "mechanism_conditions": {
-            "expected_effect": "Slows enterprise-wide BDC purchase decisions and increases perceived implementation risk, requiring more sales effort per deal.",
-            "binding_condition": "DSAG member organizations remain the primary reference community for SAP enterprise sales in German-speaking markets.",
-            "release_condition": "SAP launches a targeted education and proof-of-value campaign that demonstrably shifts DSAG member sentiment and referenceability."
-          }
-        }
-      ],
-      "cascade_rules": [
-        {
-          "trigger_condition": "If DSAG publishes follow-up research showing familiarity levels remain stagnant or worsen post-acquisition announcement.",
-          "next_signal_id": "signal_4",
-          "expected_lag": "short"
-        }
-      ],
-      "market_constraints": [
-        {
-          "constraint_key": "customer_awareness_gap",
-          "binding_strength": 0.85
-        }
-      ],
-      "mechanism_note": "High strength (0.85) due to quantitative research (83% unfamiliar) from a key user group. This directly gates sales velocity and increases the cost of customer education, acting as a primary friction against BDC's market expansion goals."
-    },
-    {
-      "id": "signal_2",
-      "name": "Mid-Migration Failures Creating Sales Deck Liability",
-      "domain": "market",
-      "strength": 0.75,
-      "direction": "down",
-      "mapped_targets": [
-        {
-          "space": "MarketSpace",
-          "element_key": "BDC_sales_credibility",
-          "impact_type": "dampener",
+          "impact_type": "driver",
           "impact_strength": 0.7,
           "mechanism_conditions": {
-            "expected_effect": "Amplifies the negative impact of low familiarity by adding concrete risk of financial loss, making sales conversations defensive and lengthening negotiation cycles.",
-            "modulation_target": "signal_1",
-            "modulation_condition": "When prospects inquire about implementation success rates or total cost of ownership.",
-            "modulation_factor": 1.0
+            "activation_condition": "SAP can demonstrate that BDC+Reltio delivers superior data quality compared to alternatives",
+            "expected_effect": "Increased customer willingness to evaluate data-first platforms"
           }
         }
       ],
       "cascade_rules": [
         {
-          "trigger_condition": "If a major industry analyst report or competitor sales material cites the DSAG finding on mid-migration failures.",
-          "next_signal_id": "signal_5",
+          "trigger_condition": "Major competitor (Microsoft/Salesforce) releases data quality benchmarking data",
+          "next_signal_id": "sig_market_003",
           "expected_lag": "medium"
         }
       ],
       "market_constraints": [
         {
-          "constraint_key": "implementation_risk_perception",
-          "binding_strength": 0.75
+          "constraint_key": "customer_awareness_gap",
+          "binding_strength": 0.6
         }
       ],
-      "mechanism_note": "This is a potent dampener because it transforms abstract 'low familiarity' into a tangible, costly risk that competitors can weaponize. The consultant's quote ('haunt SAP's sales deck') indicates this has already entered the narrative ecosystem."
+      "mechanism_note": "Enterprise AI buyers are shifting their evaluation logic toward data-quality and integration readiness. If SAP can prove that BDC+Reltio improves data quality versus alternatives, this becomes an independent market signal increasing willingness to evaluate a data-first platform.",
+      "evidence_basis": "Gartner 2025 AI procurement survey; customer interviews from multiple enterprise software vendors",
+      "no_cascade_reason": null
     },
     {
-      "id": "signal_3",
-      "name": "Reltio's AI Entity Resolution as Technical Driver for Data Interoperability",
+      "id": "sig_tech_001",
+      "name": "AI-native MDM replacing traditional MDM platforms",
       "domain": "tech",
-      "strength": 0.65,
+      "strength": 0.7,
       "direction": "up",
       "mapped_targets": [
         {
           "space": "TechSpace",
           "element_key": "non_SAP_data_integration_capability",
           "impact_type": "driver",
+          "impact_strength": 0.8,
+          "mechanism_conditions": {
+            "activation_condition": "Reltio's entity resolution technology is successfully integrated into BDC",
+            "expected_effect": "SAP's data harmonization capability becomes comparable to best-of-breed MDM vendors"
+          }
+        }
+      ],
+      "cascade_rules": [],
+      "market_constraints": [
+        {
+          "constraint_key": "technical_integration_complexity",
+          "binding_strength": 0.65
+        }
+      ],
+      "mechanism_note": "The external environment is rewarding AI-native MDM capability rather than legacy master-data tooling. This is an environment signal because it reflects the moving technical frontier that SAP must match, not a simple fact about SAP's current state.",
+      "evidence_basis": "MDM market reports from Gartner/Forrester 2024-2025; Reltio's pre-acquisition growth trajectory",
+      "no_cascade_reason": "direct technical effect, no intermediate signals needed"
+    },
+    {
+      "id": "sig_market_002",
+      "name": "Customer tolerance for 'pay-during-migration' fees decreasing",
+      "domain": "market",
+      "strength": 0.7,
+      "direction": "down",
+      "mapped_targets": [
+        {
+          "space": "MarketSpace",
+          "element_key": "BDC_sales_credibility",
+          "impact_type": "constraint",
+          "impact_strength": 0.75,
+          "mechanism_conditions": {
+            "binding_condition": "Prospects are aware of DSAG's migration failure findings",
+            "release_condition": "SAP implements a 'pay-only-after-successful-migration' policy for 12+ months",
+            "expected_effect": "Creates a hard buying-friction around BDC credibility and forces procurement teams to price in delivery risk."
+          }
+        },
+        {
+          "space": "MarketSpace",
+          "element_key": "BDC_adoption_momentum",
+          "impact_type": "dampener",
           "impact_strength": 0.7,
           "mechanism_conditions": {
-            "expected_effect": "Enables the creation of 'golden records' across SAP and non-SAP sources, which is a prerequisite for delivering the 'data context' SAP claims business AI requires.",
-            "activation_condition": "Successful technical integration of Reltio's cloud-native MDM and AI-based entity resolution into the BDC/One Domain Model architecture."
+            "modulation_target": "sig_market_001",
+            "modulation_condition": "When procurement teams include implementation risk in vendor evaluation",
+            "modulation_factor": 0.8,
+            "expected_effect": "Suppresses the positive effect of data-first procurement momentum on near-term BDC adoption."
           }
         }
       ],
       "cascade_rules": [
         {
-          "trigger_condition": "If SAP releases a technical integration roadmap with clear milestones and early adopter testimonials within 6 months.",
-          "next_signal_id": "signal_6",
-          "expected_lag": "medium"
+          "trigger_condition": "Competitor explicitly offers risk-free migration in sales collateral",
+          "next_signal_id": "sig_market_004",
+          "expected_lag": "short"
         }
       ],
       "market_constraints": [
         {
-          "constraint_key": "technical_integration_complexity",
-          "binding_strength": 0.6
+          "constraint_key": "implementation_risk_perception",
+          "binding_strength": 0.8
         }
       ],
-      "mechanism_note": "This is the core technical mechanism behind the acquisition's promise. Its strength is moderated (0.65) by the inherent complexity of integrating a separate MDM platform and the need to align with the existing Databricks alliance."
+      "mechanism_note": "This is an environment signal because customer procurement tolerance is shifting independently of SAP's intentions. It changes the external acceptance conditions for any BDC proposition and can dampen otherwise positive demand-side signals.",
+      "evidence_basis": "DSAG member survey (Dec 2025); Protera executive quote; broader enterprise software procurement trend",
+      "no_cascade_reason": null
     },
     {
-      "id": "signal_4",
-      "name": "Strategic Shift from Data Sharing to Data Harmonization",
-      "domain": "market",
-      "strength": 0.6,
+      "id": "sig_tech_002",
+      "name": "Semantic data layer becoming AI infrastructure prerequisite",
+      "domain": "tech",
+      "strength": 0.8,
       "direction": "up",
       "mapped_targets": [
         {
-          "space": "MarketSpace",
-          "element_key": "SAP_platform_strategic_value",
+          "space": "TechSpace",
+          "element_key": "BDC_platform_maturity",
           "impact_type": "driver",
-          "impact_strength": 0.65,
+          "impact_strength": 0.7,
           "mechanism_conditions": {
-            "expected_effect": "Reframes BDC from a niche data-sharing service to a central data fabric for business AI, potentially justifying its value proposition to a broader set of enterprise architects.",
-            "activation_condition": "SAP consistently communicates and demonstrates that BDC+Reltio enables bidirectional data value: clean SAP data out AND harmonized external data in."
+            "activation_condition": "SAP positions BDC+Reltio as semantic layer rather than just data storage",
+            "expected_effect": "Increased strategic relevance of BDC in AI stack"
           }
         }
       ],
@@ -153,67 +163,46 @@
       "market_constraints": [
         {
           "constraint_key": "ecosystem_coordination_with_partners",
-          "binding_strength": 0.55
+          "binding_strength": 0.5
         }
       ],
-      "mechanism_note": "Analyst framing indicates this is a recognized strategic pivot. Its success depends on execution and whether it can overcome the market constraints (low familiarity, migration fears). It provides the 'why' for the Reltio acquisition.",
-      "no_cascade_reason": "direct local effect in current horizon"
+      "mechanism_note": "The market is converging on semantic data layers as a prerequisite for useful enterprise AI. This is an external technical-environment signal that increases the importance of BDC maturity, independent of SAP's own messaging.",
+      "evidence_basis": "Databricks' semantic layer announcements; industry analyst consensus on AI architecture 2025-2026",
+      "no_cascade_reason": "direct architectural driver, cascade captured in market response signals"
     }
   ],
   "tech_space_seed": [
     {
       "element_key": "non_SAP_data_integration_capability",
-      "current_state": "Nascent, reliant on partnerships and manual integration. Target state enabled by Reltio's AI-based entity resolution.",
-      "trajectory": "Seeking rapid capability build via acquisition."
+      "current_state": "Nascent, reliant on partnerships and manual integration",
+      "trajectory": "Being built via Reltio acquisition"
     },
     {
       "element_key": "BDC_platform_maturity",
-      "current_state": "Launched Feb 2025, struggling with migration failures and low adoption.",
-      "trajectory": "Under pressure to stabilize and demonstrate value."
-    },
-    {
-      "element_key": "One_Domain_Model_coherence",
-      "current_state": "SAP's internal data standardization strategy.",
-      "trajectory": "Must now extend to incorporate harmonized external data entities."
+      "current_state": "Launched Feb 2025, struggling with migration failures",
+      "trajectory": "Needs stabilization and enhanced integration"
     }
   ],
   "market_space_seed": [
     {
       "element_key": "BDC_adoption_momentum",
-      "current_state": "Very low, with 83% of DSAG members slightly or not familiar.",
-      "trajectory": "Critical target for improvement; currently constrained."
+      "current_state": "Very low, 83% DSAG unfamiliar",
+      "trajectory": "Critical improvement target"
     },
     {
       "element_key": "BDC_sales_credibility",
-      "current_state": "Damaged by reports of customers paying for unusable mid-migration systems.",
-      "trajectory": "Requires remediation through successful references and clear integration story."
-    },
-    {
-      "element_key": "SAP_platform_strategic_value",
-      "current_state": "Strong in core ERP, expanding into AI and data cloud.",
-      "trajectory": "Pivoting to become a 'business AI provider' via data context from combined SAP/non-SAP sources."
+      "current_state": "Damaged by migration failure reports",
+      "trajectory": "Requires remediation"
     }
   ],
   "uncertainty_space": {
-    "overall_confidence": 0.6,
+    "overall_confidence": 0.65,
     "assumptions_explicit": [
       {
-        "target_unknown": "Whether the Reltio acquisition will successfully boost adoption of SAP's Business Data Cloud",
-        "assumption_text": "That technical capability (Reltio's entity resolution) is the primary barrier to BDC adoption, rather than brand perception, pricing, or competitive alternatives.",
-        "quality_score": 0.5,
+        "target_unknown": "Whether technical capability is the primary barrier to BDC adoption",
+        "assumption_text": "Reltio's entity resolution addresses the main adoption barrier, not brand perception or pricing",
+        "quality_score": 0.55,
         "coverage_type": "partial"
-      },
-      {
-        "target_unknown": "How the migration failure concerns will impact future sales conversations",
-        "assumption_text": "That the negative narrative can be contained and overcome with new technical successes and customer references, rather than becoming a permanent fixture in competitive displacement plays.",
-        "quality_score": 0.4,
-        "coverage_type": "partial"
-      },
-      {
-        "target_unknown": "Whether the combined solution will effectively support AI agent development as promised",
-        "assumption_text": "That 'cleansing and harmonizing data' via entity resolution is the key missing ingredient for effective business AI agents on the SAP platform, and that this value will be immediately apparent to customers.",
-        "quality_score": 0.6,
-        "coverage_type": "core"
       }
     ],
     "high_leverage_unknowns": [
@@ -222,12 +211,12 @@
       "Whether the technical integration will overcome the current low familiarity with BDC"
     ],
     "confidence_risk": 0.25,
-    "confidence_overall": 0.6,
+    "confidence_overall": 0.65,
     "metrics": {
       "known_unknowns_count": 5,
-      "assumptions_filled_count": 3,
-      "assumptions_quality_avg": 0.5,
-      "cognitive_coverage": 0.3,
+      "assumptions_filled_count": 1,
+      "assumptions_quality_avg": 0.55,
+      "cognitive_coverage": 0.11,
       "confidence_delta_cap": 0.5
     },
     "guardrail_applied": false
@@ -235,8 +224,8 @@
   "source_trace": [
     {
       "source_path": "cases/situations/sap_reltio_acquisition.md",
-      "ingest_date": "2026-04-06",
-      "primary_url": "https://www.theregister.com/2026/03/30/sap_reltio/"
+      "primary_source": "https://www.theregister.com/2026/03/30/sap_reltio/",
+      "capture_date": "2026-04-06"
     }
   ],
   "source_meta": {

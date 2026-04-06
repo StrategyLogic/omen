@@ -250,25 +250,61 @@ prompts:
     - version must be '0.1.0'
     - id must equal provided situation_id
     - context must preserve all provided context fields
-    - signals must be non-empty
-    - signals_template_json is a schema contract input, not a prompt to summarize
-    - every signal must follow signals_template_json exactly
-    - every signal must encode a mechanism-bearing factor, not a restatement of the situation brief
-    - each signal domain must be one of: tech, market, capital, standard, policy
-    - each signal strength must be numeric in [0,1]
-    - each signal direction must be one of: up, down, mixed
-    - each mapped target must include: space (TechSpace|MarketSpace), element_key, impact_type, impact_strength, mechanism_conditions
-    - mapped_targets impact_type must be one of: driver, constraint, amplifier, dampener
-    - mechanism_conditions must satisfy impact_type-required fields (driver/constraint/amplifier/dampener)
-    - each signal must include cascade_rules (trigger_condition, next_signal_id, expected_lag) or explicitly provide no_cascade_reason
-    - each signal must include market_constraints with constraint_key and binding_strength in [0,1]
-    - market_constraints must capture explicit external frictions, gating conditions, or adoption barriers
-    - avoid duplicate signals that merely paraphrase the same source sentence
-    - prefer 3 to 7 high-information signals over many weak summary bullets
-    - uncertainty_space.overall_confidence must be in [0,1]
-    - uncertainty_space.assumptions_explicit should include assumption objects with:
-      target_unknown, assumption_text, quality_score (0..1), coverage_type
-    - assumptions_explicit should map to known_unknowns when possible
+
+    === SIGNAL EXTRACTION RULES (CRITICAL) ===
+    
+    A "signal" is an independent environmental factor, NOT a restatement of the subject's actions or status.
+    
+    Independence Test (must pass for every signal):
+    - If the subject (e.g., SAP) disappeared tomorrow, would this factor still exist?
+    - If YES → it's a signal. If NO → it's context or event, not a signal.
+    
+    Examples of what signals ARE:
+    - "Enterprise AI procurement shifting from model-first to data-first" (market trend)
+    - "AI-native MDM replacing traditional MDM" (tech evolution)
+    - "Customer tolerance for 'pay-during-migration' fees decreasing" (market sentiment shift)
+    
+    Examples of what signals ARE NOT:
+    - "SAP's BDC has low customer awareness" (subject's product status → put in context)
+    - "SAP acquired Reltio" (subject's action → put in events)
+    - "Analyst said X about SAP" (commentary on subject → not independent)
+    
+    signals_template_json is a schema contract, not a prompt to summarize.
+    
+    Each signal must include:
+    - id: unique identifier (e.g., sig_tech_001, sig_market_002)
+    - name: concise, factor-focused (not subject-focused)
+    - domain: one of [tech, market, capital, standard, policy]
+    - strength: numeric in [0,1] (confidence that this signal is real and impactful)
+    - direction: one of [up, down, mixed] (direction of the signal's trend)
+    - mapped_targets: array of objects, each with:
+        - space: [TechSpace, MarketSpace]
+        - element_key: string (what this signal affects)
+        - impact_type: [driver, constraint, amplifier, dampener]
+        - impact_strength: numeric in [0,1]
+        - mechanism_conditions: object with impact_type-required fields:
+            - driver: activation_condition, expected_effect
+            - constraint: binding_condition, release_condition
+            - amplifier/dampener: modulation_target, modulation_condition, modulation_factor
+    - cascade_rules: array of {trigger_condition, next_signal_id, expected_lag} OR provide no_cascade_reason
+    - market_constraints: array of {constraint_key, binding_strength in [0,1]}
+    - evidence_basis: brief note on what evidence supports this signal (not the subject's response to it)
+    
+    Signal Quantity: Prefer 3 to 7 high-quality, independent signals over many weak summary bullets.
+    Signal Independence: Two signals that describe the same underlying factor from different angles should be merged.
+    
+    === CONTEXT PRESERVATION ===
+    - context.current_state: describe subject's situation, NOT signals
+    - context.known_unknowns: what subject doesn't know about the signals
+    - signals: what is happening in the environment, independent of subject
+    
+    === UNCERTAINTY SPACE ===
+    - overall_confidence: numeric in [0,1] (confidence in the situation assessment)
+    - assumptions_explicit: array of {target_unknown, assumption_text, quality_score, coverage_type}
+    - assumptions should map to known_unknowns when possible
+    
+    === OUTPUT ===
+    Return ONLY valid JSON object matching the structure defined in signals_template_json.
 
     situation_id: [[situation_id]]
     source_path: [[source_path]]

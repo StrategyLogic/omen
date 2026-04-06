@@ -3,21 +3,37 @@
   "actor_ref": "unknown_actor",
   "space_inputs": [
     {
-      "name": "fallback_signal",
+      "name": "Enterprise AI procurement shifting from model-first to data-first",
+      "kind": "signal"
+    },
+    {
+      "name": "AI-native MDM replacing traditional MDM platforms",
+      "kind": "signal"
+    },
+    {
+      "name": "Customer tolerance for 'pay-during-migration' fees decreasing",
+      "kind": "signal"
+    },
+    {
+      "name": "Semantic data layer becoming AI infrastructure prerequisite",
       "kind": "signal"
     }
   ],
   "constraint_signals": [
     {
-      "name": "Must integrate Reltio's AI-based entity resolution system with SAP's existing application portfolio (ERP, HR, CRM, etc.)",
+      "name": "Must work with existing SAP Business Data Cloud architecture and alliance with Databricks",
       "kind": "constraint"
     },
     {
-      "name": "Must address the existing BDC customer base experiencing migration problems",
+      "name": "Must integrate Reltio's AI-based entity resolution system with SAP's platform",
       "kind": "constraint"
     },
     {
-      "name": "Must work within the technical architecture of Reltio's system, which migrated to Spanner on Google Cloud in 2024",
+      "name": "Must address customer concerns about migration failures and unusable systems",
+      "kind": "constraint"
+    },
+    {
+      "name": "Must maintain compatibility with SAP's 'One Domain Model' strategy",
       "kind": "constraint"
     }
   ],
@@ -40,7 +56,7 @@
   ],
   "query_version": "planning_query_v1",
   "graph_stats": {
-    "nodes": 2,
-    "edges": 1
+    "nodes": 6,
+    "edges": 5
   }
 }

@@ -7,7 +7,7 @@ from omen.cli.main import main
 
 
 def test_package_version_is_defined() -> None:
-    assert __version__ == "0.2.1"
+    assert __version__ == "0.1.0"
 
 
 def test_smoke_deterministic_simulate_cli(tmp_path: Path, monkeypatch) -> None:

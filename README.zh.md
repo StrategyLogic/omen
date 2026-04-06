@@ -116,8 +116,8 @@ graph TD
 ```bash
 git clone https://github.com/StrategyLogic/omen.git
 cd omen
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -e ".[dev]"
+pip install --upgrade pip setuptools wheel
+pip install -e .
 ```
 
 ### 运行示例

@@ -60,11 +60,11 @@ def suggest_document_path(case_id: str) -> str:
     return str(Path("cases") / f"{normalize_case_id(case_id)}.md")
 
 
-def suggest_strategy(case_id: str) -> str:
+def suggest_strategy(_case_id: str) -> str:
     return "new_tech_market_entry"
 
 
-def suggest_known_outcome(case_id: str) -> str:
+def suggest_known_outcome(_case_id: str) -> str:
     return "unknown"
 
 

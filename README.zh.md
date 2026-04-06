@@ -1,8 +1,12 @@
 # Omen 爻
 
+**开源战略推演引擎。**
+
+[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml)
+
 > 模拟征兆，揭示混沌。
 
-**Omen（中文：爻）**是一个开源的**现象模拟器 (Phenomenon Simulator)**与战略推演引擎。它利用**多智能体博弈论**、**能力空间建模**与**反事实分析**，演算技术演化如何重构市场格局。
+[**Omen**](https://github.com/StrategyLogic/omen) （中文：爻）是一个通过现象模拟进行战略推演的开源引擎。它利用**多智能体博弈论**、**能力空间建模**与**反事实分析**，演算技术演化如何重构市场格局。
 
 [English version](README.md) | [官方仓库](https://github.com/StrategyLogic/omen) | [核心概念](docs/concepts.md) | [快速开始](docs/quick-start.md) | [案例模板](docs/case-template.md) | [项目路线图](docs/roadmap.md)
 

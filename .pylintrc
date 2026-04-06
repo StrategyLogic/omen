@@ -1,0 +1,41 @@
+[MASTER]
+ignore-paths=^build/.*,^data/ingest/.*
+
+[MESSAGES CONTROL]
+disable=
+    C0114,
+    C0115,
+    C0116,
+    C0301,
+    C0303,
+    C0304,
+    C0305,
+    C0415,
+    R0801,
+    R0902,
+    R0903,
+    R0911,
+    R0912,
+    R0913,
+    R0914,
+    R0915,
+    R0917,
+    W0311,
+    W0621,
+    W0718
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+max-args=10
+max-locals=40
+max-returns=8
+max-branches=16
+max-statements=80
+
+[SIMILARITIES]
+min-similarity-lines=8
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=yes

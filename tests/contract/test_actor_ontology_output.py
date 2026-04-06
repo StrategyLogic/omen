@@ -51,4 +51,4 @@ def test_actor_ontology_schema_allows_extra_fields() -> None:
     }
 
     issues = validate_actor_ontology_payload(payload)
-    assert issues == []
+    assert not issues

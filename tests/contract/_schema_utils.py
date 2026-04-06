@@ -19,7 +19,7 @@ def load_schema(filename: str) -> tuple[dict[str, Any], Path]:
 
 
 def validate_with_contract(instance: dict[str, Any], filename: str) -> None:
-    schema, schema_path = load_schema(filename)
+    schema, _schema_path = load_schema(filename)
     resources: list[tuple[str, Resource[Any]]] = []
     for child_path in contracts_dir().glob("*.schema.json"):
         child_schema = json.loads(child_path.read_text(encoding="utf-8"))

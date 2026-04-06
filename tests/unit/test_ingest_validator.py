@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from omen.scenario.contract_loader import load_spec4_contract_schema
 from omen.scenario.ingest_validator import (
     validate_extracted_entity_candidate_or_raise,

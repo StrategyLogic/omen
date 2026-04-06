@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -246,6 +247,16 @@ def _build_raw_priors(
     return sorted(output, key=lambda item: item["scenario_key"])
 
 
+def _write_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return output_path
+
+
 def plan_scenarios_from_situation(
     *,
     situation_artifact: dict[str, Any],
@@ -255,9 +266,6 @@ def plan_scenarios_from_situation(
     config_path: str,
     traces_dir: str | Path,
 ) -> dict[str, Any]:
-    # Delay importing loader helpers to avoid planner<->loader module cycle during static analysis.
-    from omen.scenario.loader import save_auxiliary_json
-
     template = load_planning_template()
     planning_query = build_planning_query(
         situation_artifact=situation_artifact,
@@ -278,7 +286,7 @@ def plan_scenarios_from_situation(
     traces_path.mkdir(parents=True, exist_ok=True)
 
     planning_query_path = traces_path / "planning_query.json"
-    save_auxiliary_json(planning_query_path, planning_query)
+    _write_auxiliary_json(planning_query_path, planning_query)
 
     raw_priors = _build_raw_priors(decomposition=decomposition, fallback_query=planning_query)
     prior_snapshot = build_prior_snapshot(
@@ -290,7 +298,7 @@ def plan_scenarios_from_situation(
         planning_query_ref=str(planning_query_path),
     )
     prior_snapshot_path = traces_path / "prior_snapshot.json"
-    save_auxiliary_json(prior_snapshot_path, prior_snapshot)
+    _write_auxiliary_json(prior_snapshot_path, prior_snapshot)
 
     ontology = _build_scenario_ontology_from_situation_artifact(
         situation_artifact=situation_artifact,

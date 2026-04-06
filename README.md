@@ -115,6 +115,12 @@ More scenarios are under development (contributions welcome):
 Environment requirements: Python 3.12+ with `pip` package manager.
 
 ```bash
+pip install omenai
+```
+
+From source:
+
+```bash
 git clone https://github.com/StrategyLogic/omen.git
 cd omen
 pip install --upgrade pip setuptools wheel

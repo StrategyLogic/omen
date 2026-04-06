@@ -115,6 +115,12 @@ graph TD
 运行环境要求：Python 3.12+ `pip` 包管理器。
 
 ```bash
+pip install omenai
+```
+
+从源码安装：
+
+```bash
 git clone https://github.com/StrategyLogic/omen.git
 cd omen
 pip install --upgrade pip setuptools wheel

@@ -3,13 +3,14 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "omen"
-version = "0.2.1"
+name = "omenai"
+version = "0.1.0"
 description = "The open-source strategic reasoning engine for technological evolution."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 authors = [{ name = "StrategyLogic" }]
-license = { text = "AGPL-3.0-or-later" }
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE.md"]
 dependencies = [
   "pydantic>=2.8.0",
   "jsonschema>=4.23.0",
@@ -28,6 +29,11 @@ dependencies = [
 [project.scripts]
 omen = "omen.cli.main:main"
 
+[project.urls]
+Homepage = "https://github.com/StrategyLogic/omen"
+Repository = "https://github.com/StrategyLogic/omen"
+Issues = "https://github.com/StrategyLogic/omen/issues"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.2",
@@ -35,6 +41,7 @@ dev = [
   "mypy>=1.10",
   "pylint>=3.2.0",
   "build>=1.2.2",
+  "twine>=6.1.0",
 ]
 
 [tool.setuptools]

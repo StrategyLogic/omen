@@ -1,4 +1,6 @@
-name: Pylint
+# Runs linting.
+
+name: "🧹 Linting"
 
 on: [push]
 

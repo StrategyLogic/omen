@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omen"
-version = "0.2.0"
-description = "Open-source strategic reasoning engine for technology-market evolution"
+version = "0.2.1"
+description = "The open-source strategic reasoning engine for technological evolution."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 authors = [{ name = "StrategyLogic" }]
@@ -34,6 +34,7 @@ dev = [
   "ruff>=0.6.0",
   "mypy>=1.10",
   "pylint>=3.2.0",
+  "build>=1.2.2",
 ]
 
 [tool.setuptools]

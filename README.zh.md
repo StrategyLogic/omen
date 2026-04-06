@@ -3,6 +3,7 @@
 **开源战略推演引擎。**
 
 [![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml)
+[![Package](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml)
 
 > 模拟征兆，揭示混沌。
 

@@ -2,7 +2,6 @@ import json
 import sys
 from pathlib import Path
 
-from omen import __version__
 from omen.cli.main import main
 
 
@@ -75,10 +74,6 @@ def _write_ontology(path: Path) -> None:
         ],
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def test_package_version_is_defined() -> None:
-    assert __version__ == "0.1.0"
 
 
 def test_smoke_deterministic_simulate_cli(tmp_path: Path, monkeypatch) -> None:

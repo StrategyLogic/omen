@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omen/specs/004/contracts/precision-evaluation.schema.json",
+  "title": "PrecisionEvaluationProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "case_id",
+    "repeatability_threshold",
+    "directional_correctness_threshold",
+    "trace_completeness_threshold",
+    "status"
+  ],
+  "properties": {
+    "profile_id": { "type": "string", "minLength": 1 },
+    "case_id": { "type": "string", "minLength": 1 },
+    "repeatability_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "directional_correctness_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "trace_completeness_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "retired"]
+    }
+  }
+}

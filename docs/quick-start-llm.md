@@ -15,8 +15,8 @@ cd omen
 在仓库根目录下执行以下命令，安装项目依赖：
 
 ```bash
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -e .
+pip install --upgrade pip setuptools wheel
+pip install -e .
 ```
 
 ### 配置 LLM

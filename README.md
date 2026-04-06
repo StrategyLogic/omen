@@ -1,8 +1,12 @@
 # Omen
 
+**The Strategic Reasoning Engine.**
+
+[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml) [![Package](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml)
+
 > **Simulate the Signs. Reveal the Chaos.**
 
-[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source **Phenomenon Simulator** and strategic reasoning engine. Leveraging **multi-agent game theory**, **capability space modeling**, and **counterfactual analysis**, it calculates how technological evolution reconstructs market landscapes.
+[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source engine built for strategic reasoning in technological evolution. Leveraging **multi-agent game theory**, **capability space modeling**, and **counterfactual analysis**, it calculates how technological evolution reconstructs market landscapes.
 
 [中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 
@@ -110,10 +114,16 @@ More scenarios are under development (contributions welcome):
 Environment requirements: Python 3.12+ with `pip` package manager.
 
 ```bash
+pip install omenai
+```
+
+From source:
+
+```bash
 git clone https://github.com/StrategyLogic/omen.git
 cd omen
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -e ".[dev]"
+pip install --upgrade pip setuptools wheel
+pip install -e .
 ```
 
 ### Run Example

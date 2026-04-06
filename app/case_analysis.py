@@ -352,8 +352,8 @@ with st.sidebar:
     )
 
 active_ontology_payload = _active_ontology_payload()
-active_strategy = _extract_strategy_name(active_ontology_payload, strategy)
-strategy_profile = _strategy_profile(active_strategy)
+ACTIVE_STRATEGY = _extract_strategy_name(active_ontology_payload, strategy)
+strategy_profile = _strategy_profile(ACTIVE_STRATEGY)
 title = case_display_title(case_id)
 
 st.title(f"Omen · {title}")

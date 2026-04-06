@@ -26,4 +26,4 @@ def test_extract_reality_gaps_returns_empty_without_signals() -> None:
 
     gaps = extract_reality_gaps(result)
 
-    assert gaps == []
+    assert not gaps

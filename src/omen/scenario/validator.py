@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from omen.ingest.synthesizer.schema import VERSION as ACTOR_SCHEMA_VERSION
 from omen.scenario.ingest_validator import (
@@ -71,10 +71,7 @@ def validate_scenario(payload: dict) -> ScenarioConfig:
 
 
 def validate_scenario_or_raise(payload: dict) -> ScenarioConfig:
-    try:
-        return validate_scenario(payload)
-    except ValidationError:
-        raise
+    return validate_scenario(payload)
 
 
 class ResultArtifactContract(BaseModel):

@@ -41,14 +41,14 @@ flowchart LR
 下载 Omen 源代码后，在仓库根目录下执行以下命令，安装项目依赖：
 
 ```bash
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -e ".[dev]"
+pip install --upgrade pip setuptools wheel
+pip install -e .
 ```
 
-💡 **提示**：如果你仅需运行示例而不需要测试工具，可以使用精简安装：
+💡 **提示**：如果你需要进行开发或测试，请安装开发依赖：
 
 ```bash
-python -m pip install -e .
+pip install -e ".[dev]"
 ```
 
 ## ⚔️ 运行推演工作流

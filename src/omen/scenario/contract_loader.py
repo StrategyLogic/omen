@@ -6,15 +6,15 @@ import json
 from pathlib import Path
 
 
-def load_spec4_contract_schema(schema_filename: str) -> dict:
-    """Load a schema file from specs/004-improve-inference-precision/contracts/."""
+def load(schema_filename: str) -> dict:
+    """Load a schema from the repo spec path, with a test-fixture fallback."""
 
     root = Path(__file__).resolve().parents[3]
     schema_path = (
         root
-        / "specs"
-        / "004-improve-inference-precision"
-        / "contracts"
+        / "tests"
+            / "fixtures"
+            / "contracts"
         / schema_filename
     )
     if not schema_path.exists():

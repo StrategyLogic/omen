@@ -607,10 +607,8 @@ def _normalize_founder_payload(payload: dict[str, Any], case_doc: CaseDocument) 
     for influence in influence_items:
         source = str(influence.get("source") or "").strip()
         target = str(influence.get("target") or "").strip()
-        if source in product_id_alias:
-            source = product_id_alias[source]
-        if target in product_id_alias:
-            target = product_id_alias[target]
+        source = product_id_alias.get(source, source)
+        target = product_id_alias.get(target, target)
         remapped = dict(influence)
         if source:
             remapped["source"] = source

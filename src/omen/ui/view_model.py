@@ -53,7 +53,7 @@ def _build_graph_nodes(result: dict[str, Any]) -> list[dict[str, Any]]:
             leader_user_edges = int((leader_payload or {}).get("user_edge_count") or 0)
 
         event = "Stable progression"
-        if previous_max_overlap <= 0.0 and max_overlap > 0.0:
+        if previous_max_overlap <= 0.0 < max_overlap:
             event = "User overlap emerges"
         elif competition_edge_count > 0 and previous_competition_edges == 0:
             event = "Competition activated"
@@ -108,7 +108,7 @@ def _build_graph_edges(result: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _step_index(node_id: str) -> int:
     try:
-        return int(str(node_id).split("-")[-1])
+        return int(str(node_id).rsplit("-", maxsplit=1)[-1])
     except ValueError:
         return 0
 

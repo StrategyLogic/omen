@@ -9,11 +9,10 @@ from typing import Any
 from pydantic import ValidationError
 
 from omen.scenario.ontology_loader import bind_ontology_to_scenario
-from omen.scenario.validator import validate_scenario_or_raise
 from omen.scenario.ontology_validator import (
-    validate_ontology_input_or_raise,
     validate_ontology_input_with_warnings,
 )
+from omen.scenario.validator import validate_scenario_or_raise
 
 
 _DEFAULT_ACTIONS = [
@@ -82,7 +81,6 @@ def _normalize_capability_dimensions(capabilities: Any) -> list[dict[str, Any]]:
     if not valid_rows:
         return [{"name": "semantic", "weight": 1.0}]
 
-    explicit_weights = [float(item["weight"]) for item in valid_rows if "weight" in item]
     default_weight = 1.0 / max(1, len(valid_rows))
     for item in valid_rows:
         name = str(item.get("name") or item.get("capability_id") or "").strip()

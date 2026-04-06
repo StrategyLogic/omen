@@ -59,7 +59,7 @@ def _derive_default_pack_id(input_path: Path, *, actor_ref: str | None) -> str:
 
 
 def _resolve_default_output_path(input_path: Path, pack_id: str) -> Path:
-    return Path("data/scenarios") / pack_id / f"{input_path.stem}_situation.json"
+    return Path("data/scenarios") / pack_id / "generation" / "situation.json"
 
 
 def _resolve_splitter_default_output_path(situation_path: Path, pack_id: str) -> Path:
@@ -67,10 +67,7 @@ def _resolve_splitter_default_output_path(situation_path: Path, pack_id: str) ->
 
 
 def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
-    stem = situation_output_path.stem
-    if stem.endswith("_situation"):
-        stem = stem[: -len("_situation")]
-    return situation_output_path.with_name(f"{stem}_generation.json")
+    return situation_output_path.with_name("generation.json")
 
 
 def _resolve_generated_case_path(case_name: str) -> Path:
@@ -113,7 +110,7 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--output",
         required=False,
-        help="Optional output path for generated situation JSON. Defaults to data/scenarios/<pack_id>/<doc_stem>_situation.json",
+        help="Optional output path for generated situation JSON. Defaults to data/scenarios/<pack_id>/generation/situation.json",
     )
     situation.add_argument(
         "--pack-id",

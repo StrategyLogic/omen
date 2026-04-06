@@ -146,7 +146,7 @@ def resolve_situation_artifact_ref(ref: str | Path) -> Path:
     if candidate.exists():
         return candidate
 
-    return Path("data/scenarios") / raw / "situation.json"
+    return Path("data/scenarios") / raw / "generation" / "situation.json"
 
 
 def resolve_scenario_artifact_ref(ref: str | Path) -> Path:

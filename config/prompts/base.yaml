@@ -251,6 +251,20 @@ prompts:
     - id must equal provided situation_id
     - context must preserve all provided context fields
     - signals must be non-empty
+    - signals_template_json is a schema contract input, not a prompt to summarize
+    - every signal must follow signals_template_json exactly
+    - every signal must encode a mechanism-bearing factor, not a restatement of the situation brief
+    - each signal domain must be one of: tech, market, capital, standard, policy
+    - each signal strength must be numeric in [0,1]
+    - each signal direction must be one of: up, down, mixed
+    - each mapped target must include: space (TechSpace|MarketSpace), element_key, impact_type, impact_strength, mechanism_conditions
+    - mapped_targets impact_type must be one of: driver, constraint, amplifier, dampener
+    - mechanism_conditions must satisfy impact_type-required fields (driver/constraint/amplifier/dampener)
+    - each signal must include cascade_rules (trigger_condition, next_signal_id, expected_lag) or explicitly provide no_cascade_reason
+    - each signal must include market_constraints with constraint_key and binding_strength in [0,1]
+    - market_constraints must capture explicit external frictions, gating conditions, or adoption barriers
+    - avoid duplicate signals that merely paraphrase the same source sentence
+    - prefer 3 to 7 high-information signals over many weak summary bullets
     - uncertainty_space.overall_confidence must be in [0,1]
     - uncertainty_space.assumptions_explicit should include assumption objects with:
       target_unknown, assumption_text, quality_score (0..1), coverage_type
@@ -259,6 +273,7 @@ prompts:
     situation_id: [[situation_id]]
     source_path: [[source_path]]
     context_json: [[context_json]]
+    signals_template_json: [[signals_template_json]]
 
     source_document:
     [[source_text]]

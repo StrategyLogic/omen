@@ -59,8 +59,8 @@ def test_analyze_situation_document_injects_signal_template_and_normalizes_schem
     ]
   )
 
-  def _fake_invoke(*, config_path: str, user_prompt: str, system_prompt: str | None = None) -> str:
-    prompts.append(user_prompt)
+  def _fake_invoke(**kwargs: object) -> str:
+    prompts.append(str(kwargs["user_prompt"]))
     return next(responses)
 
   monkeypatch.setattr("omen.ingest.synthesizer.services.situation.invoke_text_prompt", _fake_invoke)

@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.synthesizer.services.situation import decompose_scenario_from_situation
-from omen.scenario.loader import save_auxiliary_json
 from omen.scenario.prior import build_prior_snapshot
 from omen.scenario.space import build_planning_query
 from omen.scenario.template_loader import load_planning_template
@@ -256,6 +255,9 @@ def plan_scenarios_from_situation(
     config_path: str,
     traces_dir: str | Path,
 ) -> dict[str, Any]:
+    # Delay importing loader helpers to avoid planner<->loader module cycle during static analysis.
+    from omen.scenario.loader import save_auxiliary_json
+
     template = load_planning_template()
     planning_query = build_planning_query(
         situation_artifact=situation_artifact,

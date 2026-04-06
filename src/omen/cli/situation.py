@@ -58,11 +58,11 @@ def _derive_default_pack_id(input_path: Path, *, actor_ref: str | None) -> str:
     return f"{case_name}_v1"
 
 
-def _resolve_default_output_path(input_path: Path, pack_id: str) -> Path:
+def _resolve_default_output_path(_input_path: Path, pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "generation" / "situation.json"
 
 
-def _resolve_splitter_default_output_path(situation_path: Path, pack_id: str) -> Path:
+def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "scenario_pack.json"
 
 

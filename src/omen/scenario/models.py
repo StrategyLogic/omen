@@ -51,8 +51,12 @@ class ScenarioPriorProbabilitySnapshotModel(BaseModel):
     @model_validator(mode="after")
     def validate_abcs(self) -> "ScenarioPriorProbabilitySnapshotModel":
         for field_name in ("raw_prior_scores", "normalized_priors"):
-            values = getattr(self, field_name)
-            keys = sorted(str(item.get("scenario_key") or "") for item in values)
+            if field_name == "raw_prior_scores":
+                score_items = self.raw_prior_scores
+            else:
+                score_items = self.normalized_priors
+
+            keys = sorted(str(item.get("scenario_key") or "") for item in score_items)
             if keys != ["A", "B", "C"]:
                 raise ValueError(f"{field_name} must include A/B/C exactly once")
         return self

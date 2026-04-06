@@ -18,6 +18,7 @@ def build_actor_derivation_trace(
     constraints = [str(item).strip() for item in (scenario_ontology.get("constraints") or []) if str(item).strip()]
     selected = [str(item).strip() for item in (selected_dimensions.get("selected_dimension_keys") or []) if str(item).strip()]
     required = [str(item).strip() for item in (strategic_conditions.get("required") or []) if str(item).strip()]
+    derivation_keys = sorted(str(key) for key in actor_derivation.keys()) if isinstance(actor_derivation, dict) else []
 
     return {
         "scenario_key": scenario_key,
@@ -33,6 +34,7 @@ def build_actor_derivation_trace(
             f"Scene objective aligned: {objective or 'unknown objective'}",
             f"Scene constraints interpreted: {', '.join(constraints[:2]) if constraints else 'none'}",
             f"Actor derivation selected dimensions: {', '.join(selected) if selected else 'none'}",
+            f"Actor derivation fields observed: {', '.join(derivation_keys[:3]) if derivation_keys else 'none'}",
             f"Strategic condition projection: {', '.join(required[:2]) if required else 'none'}",
         ],
         "missing_evidence_reasons": list(missing_evidence_reasons),

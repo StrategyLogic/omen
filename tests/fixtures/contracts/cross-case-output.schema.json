@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omen/specs/003/contracts/cross-case-output.schema.json",
+  "title": "CrossCaseOutputContract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["result_artifact", "explanation_artifact", "comparison_artifact"],
+  "properties": {
+    "result_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario_id", "outcome_class", "timeline"],
+      "properties": {
+        "scenario_id": { "type": "string", "minLength": 1 },
+        "outcome_class": { "type": "string", "minLength": 1 },
+        "winner": { "type": ["object", "null"] },
+        "timeline": { "type": "array" },
+        "ontology_setup": { "type": ["object", "null"] },
+        "explanation": { "type": ["object", "null"] }
+      }
+    },
+    "explanation_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch_points", "causal_chain"],
+      "properties": {
+        "branch_points": { "type": "array" },
+        "causal_chain": { "type": "array" },
+        "narrative_summary": { "type": ["string", "null"] },
+        "applied_axioms": { "type": ["object", "null"] },
+        "rule_trace_references": { "type": ["array", "null"] }
+      }
+    },
+    "comparison_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline_outcome_class", "variation_outcome_class", "conditions", "deltas"],
+      "properties": {
+        "baseline_outcome_class": { "type": "string", "minLength": 1 },
+        "variation_outcome_class": { "type": "string", "minLength": 1 },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["description"],
+            "properties": {
+              "type": { "type": "string" },
+              "description": { "type": "string", "minLength": 1 },
+              "semantic_type": { "type": "string" },
+              "category": { "type": "string" }
+            }
+          }
+        },
+        "deltas": { "type": "array" }
+      }
+    }
+  }
+}

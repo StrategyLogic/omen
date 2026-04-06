@@ -12,6 +12,7 @@ from omen.scenario.validator import (
 
 ROOT = Path(__file__).resolve().parents[2]
 ONTOLOGY_SCENARIO = ROOT / "data" / "scenarios" / "ontology.json"
+FIXTURE_CONTRACT_DIR = ROOT / "tests" / "fixtures" / "contracts"
 
 
 def test_validate_runtime_support_rejects_disabled_capabilities() -> None:
@@ -29,6 +30,10 @@ def test_validate_runtime_support_rejects_disabled_capabilities() -> None:
 
 def test_validate_case_package_from_scenario_payload() -> None:
     payload = json.loads(ONTOLOGY_SCENARIO.read_text(encoding="utf-8"))
+    payload["case_package"]["required_artifacts"] = [
+        str((FIXTURE_CONTRACT_DIR / "case-package.schema.json").relative_to(ROOT)),
+        str((FIXTURE_CONTRACT_DIR / "cross-case-output.schema.json").relative_to(ROOT)),
+    ]
     case_package = validate_case_package_or_raise(payload["case_package"], base_dir=ROOT)
 
     assert case_package.manifest.case_id == "ontology"

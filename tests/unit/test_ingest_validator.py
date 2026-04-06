@@ -1,4 +1,4 @@
-from omen.scenario.contract_loader import load_spec4_contract_schema
+from omen.scenario.contract_loader import load
 from omen.scenario.ingest_validator import (
     validate_extracted_entity_candidate_or_raise,
     validate_ontology_assertion_candidates_or_raise,
@@ -72,5 +72,5 @@ def test_validate_ontology_assertion_candidates_or_raise() -> None:
 
 
 def test_load_spec4_contract_schema() -> None:
-    schema = load_spec4_contract_schema("precision-evaluation.schema.json")
+    schema = load("precision-evaluation.schema.json")
     assert schema["title"] == "PrecisionEvaluationProfile"

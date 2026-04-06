@@ -2,8 +2,7 @@
 
 **The Strategic Reasoning Engine.**
 
-[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml)
-[![Package](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml)
+[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml) [![Package](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml)
 
 > **Simulate the Signs. Reveal the Chaos.**
 

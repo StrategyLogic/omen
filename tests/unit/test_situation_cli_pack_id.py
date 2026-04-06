@@ -46,7 +46,7 @@ def test_default_output_paths_follow_pack_id() -> None:
     )
 
     assert analyze_output == Path("data/scenarios/nokia_v1/nokia-elop-2010_situation.json")
-    assert scenario_output == Path("data/scenarios/nokia_v1/nokia-elop-2010.json")
+    assert scenario_output == Path("data/scenarios/nokia_v1/scenario_pack.json")
 
 
 def test_generation_trace_path_uses_generation_suffix() -> None:

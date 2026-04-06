@@ -463,6 +463,8 @@ def decompose_scenario_from_situation(
     pack_id: str,
     pack_version: str,
     config_path: str = "config/llm.toml",
+    planning_template: dict[str, Any] | None = None,
+    planning_query: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = _invoke_json(
         _render_base_prompt(
@@ -471,6 +473,8 @@ def decompose_scenario_from_situation(
                 "pack_id": pack_id,
                 "pack_version": pack_version,
                 "situation_artifact_json": json.dumps(situation_artifact, ensure_ascii=False),
+                "planning_template_json": json.dumps(planning_template or {}, ensure_ascii=False),
+                "planning_query_json": json.dumps(planning_query or {}, ensure_ascii=False),
             },
         ),
         config_path=config_path,

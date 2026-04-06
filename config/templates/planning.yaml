@@ -1,0 +1,33 @@
+template_id: scenario_planning_template
+template_version: 0.1.0
+required_query_fields:
+  - situation_id
+  - actor_ref
+  - space_inputs
+  - constraint_signals
+  - similarity_scores
+slot_policy:
+  - scenario_key: A
+    label: Offense
+    intent: Breakthrough action, proactive rule-changing and asymmetric advantage capture
+    default_prior: 0.4
+  - scenario_key: B
+    label: Defense
+    intent: Protective action, survival and compliance under hard external constraints
+    default_prior: 0.35
+  - scenario_key: C
+    label: Confrontation
+    intent: Confrontation action, direct rivalry under rule-bounded resource competition
+    default_prior: 0.25
+prompt_contract:
+  objective: Keep deterministic A/B/C planning with stable priors
+  notes:
+    - This file is a planning rule template, not an LLM prompt.
+    - Use it to constrain planning slots and prior defaults.
+  output_keys:
+    - pack_id
+    - pack_version
+    - derived_from_situation_id
+    - ontology_version
+    - scenarios
+    - raw_prior_scores

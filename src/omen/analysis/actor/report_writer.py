@@ -58,3 +58,11 @@ def write_deterministic_run_artifact(output_path: str | Path, artifact: dict[str
     with path.open("w", encoding="utf-8") as handle:
         json.dump(artifact, handle, ensure_ascii=False, indent=2)
     return path
+
+
+def write_actor_derivation_artifact(output_path: str | Path, artifact: dict[str, Any]) -> Path:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(artifact, handle, ensure_ascii=False, indent=2)
+    return path

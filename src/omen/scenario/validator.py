@@ -270,6 +270,12 @@ def validate_scenario_ontology_slice_or_raise(
             f"scenario ontology missing required slots: {missing}"
         )
 
+    ordered = [item.scenario_key for item in ontology.scenarios]
+    if ordered != list(required_slots):
+        raise IncompleteDeterministicPackError(
+            f"scenario ontology must keep deterministic slot order {required_slots}, got {ordered}"
+        )
+
     for scenario in ontology.scenarios:
         if not scenario.goal.strip():
             raise IncompleteDeterministicPackError(

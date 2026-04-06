@@ -11,9 +11,7 @@ from typing import Any
 from omen.cli.case import handle_case_command, register_case_commands
 from omen.cli.case import (
     run_deterministic_compare_from_pack,
-    run_deterministic_compare_from_nl,
     run_deterministic_simulate_from_pack,
-    run_deterministic_simulate_from_nl,
 )
 from omen.cli.actor import (
     handle_analyze_command,
@@ -110,11 +108,6 @@ def main() -> None:
     )
     simulate.add_argument("--output", required=False, help="Optional output JSON path")
     simulate.add_argument(
-        "--deterministic-nl-json",
-        required=False,
-        help="Optional NL scenario JSON for deterministic compilation and simulation",
-    )
-    simulate.add_argument(
         "--actor-profile-ref",
         required=False,
         default="actor_profile_v1",
@@ -168,11 +161,6 @@ def main() -> None:
         help="Budget delta applied to --budget-actor in variation run",
     )
     compare.add_argument("--output", required=False, help="Optional comparison JSON path")
-    compare.add_argument(
-        "--deterministic-nl-json",
-        required=False,
-        help="Optional NL scenario JSON for deterministic compilation and compare",
-    )
     compare.add_argument(
         "--actor-profile-ref",
         required=False,
@@ -424,34 +412,22 @@ def main() -> None:
         )
 
     if args.command == "simulate":
-        if args.deterministic_nl_json:
-            try:
-                nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
-                payload = run_deterministic_simulate_from_nl(
-                    nl_payload=nl_payload,
-                    actor_profile_ref=args.actor_profile_ref,
-                    calculation_policy_version=args.calc_policy_version,
-                )
-                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
-                output_path = _write_output(
-                    rendered,
-                    args.output,
-                    "deterministic_result.json",
-                    args.incremental,
-                )
-                print(f"Saved deterministic simulation result to {output_path}")
-                return
-            except DeferredScopeFeatureError as exc:
-                _print_deferred_scope_message(exc)
-                raise SystemExit(2) from exc
         if _is_scenario_ontology_input(args.scenario):
             try:
                 scenario_ontology = load_scenario_ontology_slice(args.scenario)
                 pack_payload = scenario_ontology_to_deterministic_pack(scenario_ontology)
+                planned_scenarios = {
+                    str(item.get("scenario_key") or ""): item
+                    for item in list(scenario_ontology.get("scenarios") or [])
+                    if isinstance(item, dict)
+                }
+                actor_derivation_output_path = Path(args.scenario).parent / "traces" / "actor_derivation.json"
                 payload = run_deterministic_simulate_from_pack(
                     pack=pack_payload,
                     actor_profile_ref=args.actor_profile_ref,
                     calculation_policy_version=args.calc_policy_version,
+                    planned_scenarios=planned_scenarios,
+                    actor_derivation_output_path=actor_derivation_output_path,
                 )
                 rendered = json.dumps(payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(
@@ -485,34 +461,22 @@ def main() -> None:
         output_path = _write_output(rendered, args.output, "explanation.json", args.incremental)
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
-        if args.deterministic_nl_json:
-            try:
-                nl_payload = json.loads(Path(args.deterministic_nl_json).read_text(encoding="utf-8"))
-                payload = run_deterministic_compare_from_nl(
-                    nl_payload=nl_payload,
-                    actor_profile_ref=args.actor_profile_ref,
-                    calculation_policy_version=args.calc_policy_version,
-                )
-                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
-                output_path = _write_output(
-                    rendered,
-                    args.output,
-                    "deterministic_comparison.json",
-                    args.incremental,
-                )
-                print(f"Saved deterministic comparison to {output_path}")
-                return
-            except DeferredScopeFeatureError as exc:
-                _print_deferred_scope_message(exc)
-                raise SystemExit(2) from exc
         if _is_scenario_ontology_input(args.scenario):
             try:
                 scenario_ontology = load_scenario_ontology_slice(args.scenario)
                 pack_payload = scenario_ontology_to_deterministic_pack(scenario_ontology)
+                planned_scenarios = {
+                    str(item.get("scenario_key") or ""): item
+                    for item in list(scenario_ontology.get("scenarios") or [])
+                    if isinstance(item, dict)
+                }
+                actor_derivation_output_path = Path(args.scenario).parent / "traces" / "actor_derivation.json"
                 payload = run_deterministic_compare_from_pack(
                     pack=pack_payload,
                     actor_profile_ref=args.actor_profile_ref,
                     calculation_policy_version=args.calc_policy_version,
+                    planned_scenarios=planned_scenarios,
+                    actor_derivation_output_path=actor_derivation_output_path,
                 )
                 rendered = json.dumps(payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(

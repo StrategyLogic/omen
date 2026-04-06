@@ -264,11 +264,13 @@ def build_recommendation_from_condition_sets(
 def apply_partial_evidence_confidence_policy(
     *,
     evidence_refs: list[str],
+    scenario_key: str | None = None,
 ) -> tuple[str, list[str]]:
     refs = [str(item).strip() for item in evidence_refs if str(item).strip()]
     if refs:
         return "full-confidence", []
+    key = str(scenario_key or "unknown")
     return (
         "reduced-confidence",
-        ["No evidence refs linked for this scenario in current iteration"],
+        [f"Scenario {key}: no evidence refs linked in current iteration"],
     )

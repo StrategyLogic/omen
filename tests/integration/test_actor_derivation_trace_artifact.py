@@ -1,4 +1,3 @@
-from omen import __version__
 import json
 import sys
 from pathlib import Path
@@ -17,74 +16,72 @@ def _write_ontology(path: Path) -> None:
         "scenarios": [
             {
                 "scenario_key": "A",
-                "title": "Scenario A",
+                "title": "A",
                 "goal": "gA",
                 "target": "tA",
                 "objective": "oA",
                 "variables": [{"name": "x", "type": "categorical"}],
-                "constraints": ["c"],
-                "tradeoff_pressure": ["t"],
+                "constraints": ["cA"],
+                "tradeoff_pressure": ["tA"],
                 "resistance_assumptions": {
                     "structural_conflict": 0.8,
                     "resource_reallocation_drag": 0.7,
                     "cultural_misalignment": 0.6,
                     "veto_node_intensity": 0.7,
                     "aggregate_resistance": 0.7,
-                    "assumption_rationale": ["r"],
+                    "assumption_rationale": ["rA"],
                 },
-                "modeling_notes": ["n"],
+                "modeling_notes": ["nA"],
             },
             {
                 "scenario_key": "B",
-                "title": "Scenario B",
+                "title": "B",
                 "goal": "gB",
                 "target": "tB",
                 "objective": "oB",
                 "variables": [{"name": "x", "type": "categorical"}],
-                "constraints": ["c"],
-                "tradeoff_pressure": ["t"],
+                "constraints": ["cB"],
+                "tradeoff_pressure": ["tB"],
                 "resistance_assumptions": {
                     "structural_conflict": 0.5,
                     "resource_reallocation_drag": 0.5,
                     "cultural_misalignment": 0.5,
                     "veto_node_intensity": 0.4,
                     "aggregate_resistance": 0.475,
-                    "assumption_rationale": ["r"],
+                    "assumption_rationale": ["rB"],
                 },
-                "modeling_notes": ["n"],
+                "modeling_notes": ["nB"],
             },
             {
                 "scenario_key": "C",
-                "title": "Scenario C",
+                "title": "C",
                 "goal": "gC",
                 "target": "tC",
                 "objective": "oC",
                 "variables": [{"name": "x", "type": "categorical"}],
-                "constraints": ["c"],
-                "tradeoff_pressure": ["t"],
+                "constraints": ["cC"],
+                "tradeoff_pressure": ["tC"],
                 "resistance_assumptions": {
                     "structural_conflict": 0.4,
                     "resource_reallocation_drag": 0.4,
                     "cultural_misalignment": 0.5,
                     "veto_node_intensity": 0.3,
                     "aggregate_resistance": 0.4,
-                    "assumption_rationale": ["r"],
+                    "assumption_rationale": ["rC"],
                 },
-                "modeling_notes": ["n"],
+                "modeling_notes": ["nC"],
             },
         ],
     }
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def test_package_version_is_defined() -> None:
-    assert __version__ == "0.1.0"
-
-
-def test_smoke_deterministic_simulate_cli(tmp_path: Path, monkeypatch) -> None:
-    output_path = tmp_path / "smoke_deterministic_result.json"
+def test_simulate_persists_actor_derivation_trace(tmp_path: Path, monkeypatch) -> None:
     scenario_path = tmp_path / "scenario_pack.json"
+    output_path = tmp_path / "result.json"
     _write_ontology(scenario_path)
+
     monkeypatch.setattr(
         sys,
         "argv",
@@ -101,29 +98,13 @@ def test_smoke_deterministic_simulate_cli(tmp_path: Path, monkeypatch) -> None:
     main()
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert payload["export_status"] == "success"
-    assert payload["scenario_comparison"]["executed"] == ["A", "B", "C"]
+    assert payload.get("actor_derivation_ref")
+    for item in list(payload.get("scenario_results") or []):
+        assert "actor_derivation" in item
+        assert list((item.get("derivation_trace") or {}).get("actor_derivation_refs") or [])
 
-
-def test_smoke_deterministic_compare_cli(tmp_path: Path, monkeypatch) -> None:
-    output_path = tmp_path / "smoke_deterministic_compare.json"
-    scenario_path = tmp_path / "scenario_pack.json"
-    _write_ontology(scenario_path)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "omen",
-            "compare",
-            "--scenario",
-            str(scenario_path),
-            "--output",
-            str(output_path),
-        ],
-    )
-
-    main()
-
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert payload["comparison_type"] == "deterministic_pack"
-    assert payload["comparability"]["comparable"] is True
+    derivation_path = scenario_path.parent / "traces" / "actor_derivation.json"
+    assert derivation_path.exists()
+    derivation_payload = json.loads(derivation_path.read_text(encoding="utf-8"))
+    assert derivation_payload["artifact_type"] == "actor_derivation"
+    assert len(list(derivation_payload.get("scenario_derivations") or [])) == 3

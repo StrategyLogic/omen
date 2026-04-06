@@ -1,0 +1,46 @@
+{
+  "situation_id": "sap_reltio_acquisition",
+  "actor_ref": "unknown_actor",
+  "space_inputs": [
+    {
+      "name": "fallback_signal",
+      "kind": "signal"
+    }
+  ],
+  "constraint_signals": [
+    {
+      "name": "Must integrate Reltio's AI-based entity resolution system with SAP's existing application portfolio (ERP, HR, CRM, etc.)",
+      "kind": "constraint"
+    },
+    {
+      "name": "Must address the existing BDC customer base experiencing migration problems",
+      "kind": "constraint"
+    },
+    {
+      "name": "Must work within the technical architecture of Reltio's system, which migrated to Spanner on Google Cloud in 2024",
+      "kind": "constraint"
+    }
+  ],
+  "similarity_scores": [
+    {
+      "scenario_key": "A",
+      "score": 0.4,
+      "source": "planning_template_default"
+    },
+    {
+      "scenario_key": "B",
+      "score": 0.35,
+      "source": "planning_template_default"
+    },
+    {
+      "scenario_key": "C",
+      "score": 0.25,
+      "source": "planning_template_default"
+    }
+  ],
+  "query_version": "planning_query_v1",
+  "graph_stats": {
+    "nodes": 2,
+    "edges": 1
+  }
+}

@@ -293,8 +293,10 @@ def test_analyze_situation_defaults_output_under_data_scenarios(monkeypatch) -> 
 
 def test_scenario_command_defaults_output_under_data_scenario_pack(monkeypatch) -> None:
     situation_default_json = Path("data/scenarios/nokia_v1/nokia-elop-2010_situation.json")
-    default_json = Path("data/scenarios/nokia_v1/nokia-elop-2010.json")
-    default_md = Path("data/scenarios/nokia_v1/nokia-elop-2010.md")
+    default_json = Path("data/scenarios/nokia_v1/scenario_pack.json")
+    default_md = Path("data/scenarios/nokia_v1/scenario_pack.md")
+    default_planning_query = Path("data/scenarios/nokia_v1/traces/planning_query.json")
+    default_prior_snapshot = Path("data/scenarios/nokia_v1/traces/prior_snapshot.json")
     situation_backup_json = (
         situation_default_json.read_text(encoding="utf-8")
         if situation_default_json.exists()
@@ -339,6 +341,8 @@ def test_scenario_command_defaults_output_under_data_scenario_pack(monkeypatch) 
         assert exc_info.value.code == 0
         assert default_json.exists()
         assert default_md.exists()
+        assert default_planning_query.exists()
+        assert default_prior_snapshot.exists()
         payload = json.loads(default_json.read_text(encoding="utf-8"))
         keys = [item["scenario_key"] for item in payload["scenarios"]]
         assert keys == ["A", "B", "C"]
@@ -357,3 +361,8 @@ def test_scenario_command_defaults_output_under_data_scenario_pack(monkeypatch) 
             default_md.unlink()
         elif backup_md is not None:
             default_md.write_text(backup_md, encoding="utf-8")
+
+        if default_planning_query.exists():
+            default_planning_query.unlink()
+        if default_prior_snapshot.exists():
+            default_prior_snapshot.unlink()

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 NL_INPUT_PATH = ROOT / "tests" / "fixtures" / "scenario_compilation" / "nokia_nl_scenarios.json"
 
 
-def test_analyze_actor_compile_pack_success(tmp_path: Path, monkeypatch) -> None:
+def test_analyze_actor_compile_pack_removed(tmp_path: Path, monkeypatch) -> None:
     output_path = tmp_path / "compiled_pack.json"
     monkeypatch.setattr(
         sys,
@@ -28,16 +28,11 @@ def test_analyze_actor_compile_pack_success(tmp_path: Path, monkeypatch) -> None
         ],
     )
 
-    raise_code = 0
-    try:
+    with pytest.raises(SystemExit) as exc_info:
         main()
-    except SystemExit as exc:  # pragma: no cover
-        raise_code = int(exc.code) if isinstance(exc.code, int) else 1
 
-    assert raise_code == 0
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert payload["pack_id"] == "strategic_actor_nokia_v1"
-    assert [item["scenario_key"] for item in payload["scenarios"]] == ["A", "B", "C"]
+    assert exc_info.value.code == 2
+    assert not output_path.exists()
 
 
 def test_analyze_actor_compile_pack_ambiguous_failure(tmp_path: Path, monkeypatch) -> None:

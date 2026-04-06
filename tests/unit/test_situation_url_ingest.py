@@ -59,7 +59,11 @@ def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, 
         },
     )
     monkeypatch.setattr(situation_cli, "save_situation_artifact", lambda path, payload: situation_output_path)
-    monkeypatch.setattr(situation_cli, "save_situation_markdown", lambda path, payload: path)
+    monkeypatch.setattr(
+        situation_cli,
+        "save_situation_markdown",
+        lambda path, payload, config_path=None: path,
+    )
     monkeypatch.setattr(situation_cli, "build_situation_confidence_trace", lambda **kwargs: {"artifact_type": "situation_generation_trace"})
     monkeypatch.setattr(situation_cli, "save_auxiliary_json", lambda path, payload: path)
 

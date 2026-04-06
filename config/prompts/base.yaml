@@ -269,13 +269,18 @@ prompts:
 
     Scenario requirements:
     - Must include exactly A, B, C each once
-    - A intent: Aggressive/Alternative challenger, optimistic positive-signal assumptions
-    - B intent: Baseline/Conservative maintainer, linear extrapolation from current state
-    - C intent: Collapse/Contingency extreme-risk, negative-signal breakout
+    - A intent: Offense (Breakthrough action), proactive rule-changing and asymmetric advantage capture
+    - B intent: Defense (Protective action), survival and compliance under hard external constraints
+    - C intent: Confrontation action, direct rivalry under rule-bounded resource competition
     - each scenario must include goal, target, objective, variables, constraints, tradeoff_pressure, resistance_assumptions, modeling_notes
+    - constraints and tradeoff_pressure must reflect constraint-network and rival-network pressure when present
+    - planning_template_json is a rule template input; do not treat it as a prompt
+    - raw_prior_scores should be provided as array with A/B/C scenario_key and score values when available
 
     pack_id: [[pack_id]]
     pack_version: [[pack_version]]
+    planning_template_json: [[planning_template_json]]
+    planning_query_json: [[planning_query_json]]
     situation_artifact_json: [[situation_artifact_json]]
 
   situation_source_to_case_prompt: |

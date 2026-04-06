@@ -77,7 +77,7 @@ def test_schema_validator_ignores_extra_fields_like_origin() -> None:
         "influences": [{"source": "a", "target": "b", "type": "influences", "origin": "system_generated"}],
     }
     issues = validate_actor_ontology_payload(payload)
-    assert issues == []
+    assert not issues
 
 
 def test_schema_validator_requires_canonical_background_facts() -> None:
@@ -141,4 +141,4 @@ def test_schema_validator_allows_role_actor_without_profile() -> None:
         "events": [],
     }
     issues = validate_actor_ontology_payload(payload)
-    assert issues == []
+    assert not issues

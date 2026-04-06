@@ -1,8 +1,8 @@
-from omen import __version__
 import json
 import sys
 from pathlib import Path
 
+from omen import __version__
 from omen.cli.main import main
 
 

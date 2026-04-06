@@ -1,5 +1,7 @@
 """Validation entrypoints for ontology input packages."""
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -687,7 +689,6 @@ def _normalize_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], list[st
             first["profile"] = {"mental_patterns": {}, "strategic_style": {}}
         abox["actors"][0] = first
     elif len(strategic_indexes) > 1:
-        first_idx = strategic_indexes[0]
         for idx in strategic_indexes[1:]:
             actor = dict(abox["actors"][idx])
             actor["actor_type"] = "Actor"

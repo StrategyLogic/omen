@@ -49,7 +49,7 @@ def build_causal_gap_links(
         target_node_id = _choose_target_node_id(gap, branch_points, node_list, index - 1)
         trace_type = "branch_point"
         if target_node_id.startswith("step-"):
-            step_value = target_node_id.split("step-")[-1]
+            step_value = target_node_id.rsplit("step-", maxsplit=1)[-1]
             for point in branch_points:
                 if str(point.get("step")) == step_value:
                     trace_type = str(point.get("type") or "branch_point")

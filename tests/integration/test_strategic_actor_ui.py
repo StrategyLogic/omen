@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# pylint: disable=protected-access
+
 import importlib.util
 from pathlib import Path
 import sys

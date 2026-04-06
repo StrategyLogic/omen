@@ -7,7 +7,7 @@ from omen.scenario.validator import format_validation_report
 def test_actor_validator_report_pass() -> None:
     report = format_validation_report(target_artifact="output/actors/xd", errors=[])
     assert report["status"] == "pass"
-    assert report["errors"] == []
+    assert not report["errors"]
 
 
 def test_actor_validator_report_fail() -> None:
@@ -45,7 +45,7 @@ def test_actor_profile_passes_when_redacted_shape_is_valid() -> None:
         "events": [],
         "influences": {"redacted": True},
     }
-    assert validate_actor_ontology_payload(payload) == []
+    assert not validate_actor_ontology_payload(payload)
 
 
 def test_actor_profile_rejects_non_schema_extra_fields() -> None:

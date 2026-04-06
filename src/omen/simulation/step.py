@@ -100,9 +100,8 @@ def update_competition_edges(
     selected_actions: dict[str, str],
 ) -> None:
     ids = list(state.actors)
-    for i in range(len(ids)):
-        for j in range(i + 1, len(ids)):
-            aid, bid = ids[i], ids[j]
+    for i, aid in enumerate(ids):
+        for bid in ids[i + 1 :]:
             a = state.actors[aid]
             b = state.actors[bid]
             overlap = estimate_user_overlap(a, b)

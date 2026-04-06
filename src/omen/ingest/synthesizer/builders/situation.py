@@ -8,7 +8,6 @@ from typing import Any
 
 from omen.ingest.reportor.situation_brief import render_situation_brief
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
-from omen.scenario.splitter import normalize_llm_scenarios_with_policy
 
 
 _DEFERRED_DYNAMIC_MARKERS = {
@@ -55,6 +54,8 @@ def build_scenario_ontology_from_situation_artifact(
     pack_id: str,
     pack_version: str,
 ) -> dict[str, Any]:
+    from omen.scenario.planner import normalize_llm_scenarios_with_policy
+
     scenarios = normalize_llm_scenarios_with_policy(
         list(llm_decomposition.get("scenarios") or []),
         source_hint=f"Derived from situation artifact: {situation_artifact.get('id', 'unknown')}",
@@ -72,6 +73,8 @@ def build_scenario_ontology_from_situation_artifact(
         "pack_version": pack_version,
         "derived_from_situation_id": str(situation_artifact.get("id") or "unknown"),
         "ontology_version": str(llm_decomposition.get("ontology_version") or "scenario_ontology_v1"),
+        "planning_query_ref": str(llm_decomposition.get("planning_query_ref") or "traces/planning_query.json"),
+        "prior_snapshot_ref": str(llm_decomposition.get("prior_snapshot_ref") or "traces/prior_snapshot.json"),
         "scenarios": scenarios,
         "source_meta": source_meta,
     }

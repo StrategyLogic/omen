@@ -1,9 +1,17 @@
-"""Normalize LLM-generated scenarios into fixed deterministic A/B/C slot intents."""
+"""Scenario planning orchestrator for deterministic A/B/C artifacts."""
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Any
+
+from omen.ingest.synthesizer.services.situation import decompose_scenario_from_situation
+from omen.scenario.prior import build_prior_snapshot
+from omen.scenario.space import build_planning_query
+from omen.scenario.template_loader import load_planning_template
 
 
 @dataclass(frozen=True)
@@ -19,14 +27,13 @@ class ScenarioSlotPolicy:
 
 
 def fixed_slot_policies() -> tuple[ScenarioSlotPolicy, ...]:
-    """Return canonical A/B/C generation policies for deterministic scenario splitting."""
     return (
         ScenarioSlotPolicy(
             key="A",
-            label="Aggressive/Alternative",
-            intent="Challenger strategy",
-            signal_basis="Optimistic assumptions from positive signal chain",
-            objective="Seize strategic initiative via accelerated challenger moves.",
+            label="Offense",
+            intent="Breakthrough action under advantage assumptions",
+            signal_basis="Proactive rule-shaping and upside-capture assumptions",
+            objective="Create asymmetric advantage through proactive strategic offense.",
             tradeoffs=(
                 "Execution speed vs operating stability",
                 "Aggressive investment vs short-term margin protection",
@@ -36,10 +43,10 @@ def fixed_slot_policies() -> tuple[ScenarioSlotPolicy, ...]:
         ),
         ScenarioSlotPolicy(
             key="B",
-            label="Baseline/Conservative",
-            intent="Maintainer strategy",
-            signal_basis="Linear extrapolation from current state",
-            objective="Preserve continuity while improving baseline efficiency.",
+            label="Defense",
+            intent="Bottom-line defense under external constraints",
+            signal_basis="Constraint-led survival and compliance assumptions",
+            objective="Protect core assets and survivability under pressure.",
             tradeoffs=(
                 "Predictability vs innovation velocity",
                 "Cost control vs option creation",
@@ -49,10 +56,10 @@ def fixed_slot_policies() -> tuple[ScenarioSlotPolicy, ...]:
         ),
         ScenarioSlotPolicy(
             key="C",
-            label="Collapse/Contingency",
-            intent="Extreme-risk strategy",
-            signal_basis="Negative signal breakout and downside cascade",
-            objective="Protect survivability under downside shock conditions.",
+            label="Confrontation",
+            intent="Direct rivalry action under competitive escalation",
+            signal_basis="Rival activation and strategic confrontation assumptions",
+            objective="Compete in direct strategic confrontation under fixed rules.",
             tradeoffs=(
                 "Emergency containment vs long-term autonomy",
                 "Fast de-risking vs strategic upside preservation",
@@ -68,7 +75,6 @@ def normalize_llm_scenarios_with_policy(
     *,
     source_hint: str,
 ) -> list[dict[str, Any]]:
-    """Normalize LLM output to strict A/B/C semantics without local hard splitting."""
     policies = fixed_slot_policies()
     by_key: dict[str, dict[str, Any]] = {}
     slot_order = [slot.key for slot in policies]
@@ -172,3 +178,139 @@ def normalize_llm_scenarios_with_policy(
             }
         )
     return normalized
+
+
+def _build_scenario_ontology_from_situation_artifact(
+    *,
+    situation_artifact: dict[str, Any],
+    llm_decomposition: dict[str, Any],
+    pack_id: str,
+    pack_version: str,
+) -> dict[str, Any]:
+    scenarios = normalize_llm_scenarios_with_policy(
+        list(llm_decomposition.get("scenarios") or []),
+        source_hint=f"Derived from situation artifact: {situation_artifact.get('id', 'unknown')}",
+    )
+    source_meta = dict(llm_decomposition.get("source_meta") or {})
+    source_meta.setdefault(
+        "source_path",
+        str((situation_artifact.get("source_meta") or {}).get("source_path") or ""),
+    )
+    source_meta.setdefault("generated_at", datetime.now().isoformat())
+    source_meta["generated_from"] = "situation_artifact"
+
+    return {
+        "pack_id": pack_id,
+        "pack_version": pack_version,
+        "derived_from_situation_id": str(situation_artifact.get("id") or "unknown"),
+        "ontology_version": str(llm_decomposition.get("ontology_version") or "scenario_ontology_v1"),
+        "planning_query_ref": str(llm_decomposition.get("planning_query_ref") or "traces/planning_query.json"),
+        "prior_snapshot_ref": str(llm_decomposition.get("prior_snapshot_ref") or "traces/prior_snapshot.json"),
+        "scenarios": scenarios,
+        "source_meta": source_meta,
+    }
+
+
+def _build_raw_priors(
+    *,
+    decomposition: dict[str, Any],
+    fallback_query: dict[str, Any],
+) -> list[dict[str, Any]]:
+    llm_priors = decomposition.get("raw_prior_scores")
+    if isinstance(llm_priors, list):
+        normalized: list[dict[str, Any]] = []
+        for item in llm_priors:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("scenario_key") or "").strip().upper()
+            if key not in {"A", "B", "C"}:
+                continue
+            normalized.append({"scenario_key": key, "score": float(item.get("score") or 0.0)})
+        if len(normalized) == 3:
+            return sorted(normalized, key=lambda item: item["scenario_key"])
+
+    fallback = fallback_query.get("similarity_scores") or []
+    output = [
+        {
+            "scenario_key": str(item.get("scenario_key") or "").strip().upper(),
+            "score": float(item.get("score") or 0.0),
+        }
+        for item in fallback
+        if str(item.get("scenario_key") or "").strip().upper() in {"A", "B", "C"}
+    ]
+    if len(output) != 3:
+        output = [
+            {"scenario_key": "A", "score": 0.4},
+            {"scenario_key": "B", "score": 0.35},
+            {"scenario_key": "C", "score": 0.25},
+        ]
+    return sorted(output, key=lambda item: item["scenario_key"])
+
+
+def _write_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return output_path
+
+
+def plan_scenarios_from_situation(
+    *,
+    situation_artifact: dict[str, Any],
+    pack_id: str,
+    pack_version: str,
+    actor_ref: str,
+    config_path: str,
+    traces_dir: str | Path,
+) -> dict[str, Any]:
+    template = load_planning_template()
+    planning_query = build_planning_query(
+        situation_artifact=situation_artifact,
+        actor_ref=actor_ref,
+        template=template,
+    )
+
+    decomposition = decompose_scenario_from_situation(
+        situation_artifact=situation_artifact,
+        pack_id=pack_id,
+        pack_version=pack_version,
+        config_path=config_path,
+        planning_template=template.model_dump(),
+        planning_query=planning_query,
+    )
+
+    traces_path = Path(traces_dir)
+    traces_path.mkdir(parents=True, exist_ok=True)
+
+    planning_query_path = traces_path / "planning_query.json"
+    _write_auxiliary_json(planning_query_path, planning_query)
+
+    raw_priors = _build_raw_priors(decomposition=decomposition, fallback_query=planning_query)
+    prior_snapshot = build_prior_snapshot(
+        pack_id=pack_id,
+        pack_version=pack_version,
+        situation_id=str(situation_artifact.get("id") or "unknown"),
+        actor_ref=actor_ref,
+        raw_prior_scores=raw_priors,
+        planning_query_ref=str(planning_query_path),
+    )
+    prior_snapshot_path = traces_path / "prior_snapshot.json"
+    _write_auxiliary_json(prior_snapshot_path, prior_snapshot)
+
+    ontology = _build_scenario_ontology_from_situation_artifact(
+        situation_artifact=situation_artifact,
+        llm_decomposition=decomposition,
+        pack_id=pack_id,
+        pack_version=pack_version,
+    )
+    ontology["planning_query_ref"] = str(planning_query_path)
+    ontology["prior_snapshot_ref"] = str(prior_snapshot_path)
+    ontology["source_meta"] = {
+        **(ontology.get("source_meta") or {}),
+        "generated_at": datetime.now().isoformat(),
+        "planner": "planner_v1",
+    }
+    return ontology

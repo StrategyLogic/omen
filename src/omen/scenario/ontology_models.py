@@ -176,7 +176,7 @@ class ResistanceAssumptionsModel(BaseModel):
     assumption_rationale: list[str] = Field(min_length=1)
 
 
-class ScenarioOntologyNodeModel(BaseModel):
+class SceneModel(BaseModel):
     scenario_key: Literal["A", "B", "C"]
     title: str = Field(min_length=1)
     goal: str = Field(min_length=1)
@@ -194,7 +194,9 @@ class ScenarioOntologySliceModel(BaseModel):
     pack_version: str = Field(min_length=1)
     derived_from_situation_id: str = Field(min_length=1)
     ontology_version: str = Field(min_length=1)
-    scenarios: list[ScenarioOntologyNodeModel] = Field(min_length=1)
+    planning_query_ref: str = Field(default="traces/planning_query.json", min_length=1)
+    prior_snapshot_ref: str = Field(default="traces/prior_snapshot.json", min_length=1)
+    scenarios: list[SceneModel] = Field(min_length=1)
 
     @model_validator(mode="after")
     def unique_scenario_keys(self) -> "ScenarioOntologySliceModel":

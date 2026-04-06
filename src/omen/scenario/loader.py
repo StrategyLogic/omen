@@ -11,12 +11,10 @@ from omen.ingest.synthesizer.builders.situation import (
     situation_artifact_to_markdown,
 )
 from omen.scenario.ontology_loader import bind_ontology_to_scenario, load_ontology_input
-from omen.scenario.pack_compiler import compile_nl_scenarios_to_pack
 from omen.scenario.ontology_validator import validate_ontology_input_or_raise
 from omen.scenario.validator import (
     ScenarioConfig,
     validate_case_package_or_raise,
-    validate_deterministic_scenario_pack_or_raise,
     validate_situation_artifact_or_raise,
     validate_scenario_ontology_slice_or_raise,
     validate_scenario_or_raise,
@@ -71,12 +69,6 @@ def load_scenario_with_ontology(
 
     ontology_metadata = bind_ontology_to_scenario(ontology, scenario)
     return scenario, ontology_metadata
-
-
-def compile_and_validate_deterministic_pack(payload: dict[str, Any]) -> dict[str, Any]:
-    compiled = compile_nl_scenarios_to_pack(payload)
-    validate_deterministic_scenario_pack_or_raise(compiled)
-    return compiled
 
 
 def load_scenario_ontology_slice(path: str | Path) -> dict[str, Any]:
@@ -143,3 +135,27 @@ def save_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
         encoding="utf-8",
     )
     return output_path
+
+
+def resolve_situation_artifact_ref(ref: str | Path) -> Path:
+    raw = str(ref).strip()
+    if not raw:
+        raise ValueError("empty situation reference")
+
+    candidate = Path(raw)
+    if candidate.exists():
+        return candidate
+
+    return Path("data/scenarios") / raw / "generation" / "situation.json"
+
+
+def resolve_scenario_artifact_ref(ref: str | Path) -> Path:
+    raw = str(ref).strip()
+    if not raw:
+        raise ValueError("empty scenario reference")
+
+    candidate = Path(raw)
+    if candidate.exists():
+        return candidate
+
+    return Path("data/scenarios") / raw / "scenario_pack.json"

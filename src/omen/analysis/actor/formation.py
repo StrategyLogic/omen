@@ -27,25 +27,34 @@ def project_scenario_selected_dimensions(
     *,
     scenario_key: str,
     capability_scores: dict[str, float],
+    scenario_ontology: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ranked = sorted(capability_scores.items(), key=lambda item: item[1], reverse=True)
     selected = [key for key, _ in ranked[:2]] if ranked else []
 
+    scene = scenario_ontology or {}
+    objective = str(scene.get("objective") or "").strip()
+    constraints = [str(item).strip() for item in (scene.get("constraints") or []) if str(item).strip()]
+    tradeoff_pressure = [str(item).strip() for item in (scene.get("tradeoff_pressure") or []) if str(item).strip()]
+
     if scenario_key == "A":
         rationale = [
-            "Prioritize internal platform continuity dimensions for high-control path",
-            "Select strongest capability dimensions to reduce execution stall risk",
+            "Prioritize offense dimensions from planned scene objective and constraints",
+            f"Objective alignment: {objective or 'offense objective from scene'}",
         ]
     elif scenario_key == "B":
         rationale = [
-            "Prioritize ecosystem-adaptation dimensions for open-alliance path",
-            "Select dimensions balancing scale gain and differentiation preservation",
+            "Prioritize defense dimensions under planned hard-constraint pressure",
+            f"Constraint focus: {', '.join(constraints[:2]) if constraints else 'defense constraints'}",
         ]
     else:
         rationale = [
-            "Prioritize alliance-efficiency dimensions for external-platform path",
-            "Select dimensions supporting short-term stability under dependency risk",
+            "Prioritize confrontation dimensions under direct rivalry tradeoff pressure",
+            f"Tradeoff focus: {', '.join(tradeoff_pressure[:2]) if tradeoff_pressure else 'confrontation tradeoff'}",
         ]
+
+    if selected:
+        rationale.append(f"Selected highest-capability dimensions: {', '.join(selected)}")
 
     return {
         "scenario_key": scenario_key,

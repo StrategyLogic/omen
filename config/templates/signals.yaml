@@ -1,0 +1,103 @@
+template_id: situation_signals_v0_1_0
+template_version: 0.1.0
+description: Minimal mechanism-bearing signal schema for Situation_v0_1_0 artifacts.
+domain_values:
+  - tech
+  - market
+  - capital
+  - standard
+  - policy
+direction_values:
+  - up
+  - down
+  - mixed
+impact_types:
+  - driver
+  - constraint
+  - amplifier
+  - dampener
+expected_lag_values:
+  - short
+  - medium
+  - long
+space_values:
+  - TechSpace
+  - MarketSpace
+signal_schema:
+  required_fields:
+    - id
+    - name
+    - domain
+    - strength
+    - direction
+    - mapped_targets
+    - cascade_rules
+    - market_constraints
+    - mechanism_note
+  defaults:
+    domain: market
+    strength: 0.5
+    impact_strength: 0.5
+    direction_by_impact_type:
+      driver: up
+      constraint: down
+      amplifier: up
+      dampener: down
+    market_binding_strength: 0.6
+    expected_lag: medium
+    mapped_target_space: MarketSpace
+    no_cascade_reason: direct local effect in current horizon
+  mapped_target_shape:
+    required_fields:
+      - space
+      - element_key
+      - impact_type
+      - impact_strength
+      - mechanism_conditions
+    mechanism_conditions_shape:
+      required_by_impact_type:
+        driver:
+          - activation_condition
+          - expected_effect
+        constraint:
+          - binding_condition
+          - release_condition
+          - expected_effect
+        amplifier:
+          - modulation_target
+          - modulation_condition
+          - modulation_factor
+          - expected_effect
+        dampener:
+          - modulation_target
+          - modulation_condition
+          - modulation_factor
+          - expected_effect
+  cascade_rule_shape:
+    required_fields:
+      - trigger_condition
+      - next_signal_id
+      - expected_lag
+  market_constraint_shape:
+    required_fields:
+      - constraint_key
+      - binding_strength
+authoring_rules:
+  - Every signal must encode a mechanism, not a summary headline.
+  - strength and impact_strength must be numeric values in [0,1].
+  - direction must be one of up, down, mixed.
+  - mapped_targets must use space plus element_key and classify impact_type as driver, constraint, amplifier, or dampener.
+  - mapped_targets.mechanism_conditions must satisfy required fields by impact_type.
+  - cascade_rules must include trigger_condition, next_signal_id, and expected_lag unless no_cascade_reason is provided.
+  - constraints impact_type must link at least one market_constraints.constraint_key.
+  - market_constraints must capture explicit external frictions or gating conditions and binding_strength in [0,1].
+  - mechanism_note should explain why the signal matters to scenario planning.
+fallbacks:
+  activation_condition: Active under the current situation context and source-grounded constraints.
+  binding_condition: Constraint binds when external pressure dominates internal optionality.
+  release_condition: Constraint relaxes when ecosystem leverage or policy pressure shifts.
+  modulation_condition: Modulation appears when adjacent adoption and coordination signals move together.
+  expected_effect: Moves the mapped target trajectory in the declared direction.
+  modulation_target: primary_driver
+  cascade_trigger: If the signal intensifies in the next planning window.
+  market_constraint: Current market adoption and coordination frictions remain binding.

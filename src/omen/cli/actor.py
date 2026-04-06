@@ -8,7 +8,6 @@ from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
-from omen.scenario.loader import compile_and_validate_deterministic_pack
 from omen.ingest.synthesizer.services.actor import generate_actor_and_events_from_document
 from omen.ingest.synthesizer.services.strategy import generate_strategy_ontology_from_document
 from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
@@ -70,21 +69,6 @@ def register_analyze_commands(subparsers: Any) -> None:
   actor_sub = actor.add_subparsers(dest="actor_command", required=False)
   persona = actor_sub.add_parser("persona", help="output persona only")
   _add_actor_common_args(persona)
-
-  compile_pack = actor_sub.add_parser(
-    "compile-pack",
-    help="compile natural-language scenarios into deterministic pack JSON",
-  )
-  compile_pack.add_argument(
-    "--nl-json",
-    required=True,
-    help="Path to natural-language scenario compilation JSON",
-  )
-  compile_pack.add_argument(
-    "--output",
-    required=False,
-    help="Optional output path for compiled deterministic pack JSON",
-  )
 
   strategy = actor_sub.add_parser("strategy", help="cloud-only in OSS baseline")
   _add_actor_common_args(strategy)
@@ -255,20 +239,6 @@ def handle_analyze_command(args: Any) -> int:
     return 3
 
   actor_command = getattr(args, "actor_command", None)
-
-  if actor_command == "compile-pack":
-    try:
-      nl_payload = json.loads(Path(args.nl_json).read_text(encoding="utf-8"))
-      compiled = compile_and_validate_deterministic_pack(nl_payload)
-      output_path = Path(args.output) if args.output else Path("output") / "deterministic_compiled_pack.json"
-      output_path.parent.mkdir(parents=True, exist_ok=True)
-      output_path.write_text(json.dumps(compiled, ensure_ascii=False, indent=2), encoding="utf-8")
-      print(f"Saved compiled deterministic pack to {output_path}")
-      print("Deterministic compile result: SUCCESS")
-      return 0
-    except Exception as exc:
-      print(f"Deterministic compile result: FAILURE ({exc})")
-      return 2
 
   if not getattr(args, "doc", None):
     print("Analyze actor requires --doc <name_or_path>")

@@ -1,31 +1,31 @@
 # Situation Case: SAP looking to pull more external data into its AI platform with Reltio acquisition
 - Source URL: https://www.theregister.com/2026/03/30/sap_reltio/
-- Capture Date: 2026-04-05
+- Capture Date: 2026-04-06
 - Event Date: Mon 30 Mar 2026
 
 **Context:** SAP is acquiring master data management and data integration specialist Reltio to help integrate data from outside SAP's application portfolio into its AI platform. The move is positioned to boost adoption of SAP's Business Data Cloud (BDC), a service launched in February 2025 in alliance with Databricks.
 
 ## The Story
-SAP announces its acquisition of Reltio, a master data management specialist, positioning it as a way to integrate external data into SAP's AI platform and boost its Business Data Cloud. The article details Reltio's technology and customer base, then contrasts the acquisition with SAP's prior BDC strategy, which faced low awareness and customer difficulties. Analysts frame the Reltio move as an expansion of SAP's data integration focus from sharing SAP data externally to also harmonizing non-SAP data for use within SAP.
+SAP announces its acquisition of Reltio, a master data management firm, positioning it as a way to integrate non-SAP data into its AI platform and boost its Business Data Cloud service. The article notes SAP's previous struggles with BDC adoption, citing user group research showing low familiarity. Analysts frame the acquisition as an extension of SAP's earlier strategy shift with BDC, moving from sharing SAP data externally to also harmonizing external data for use within SAP. A consultant highlights a critical finding from user research about customers stuck in mid-migration paying for unusable systems, noting this line 'is going to haunt SAP's sales deck for a while.'
 
 ### 1. Core Facts (The Facts)
 - SAP is to acquire master data management and data integration specialist Reltio.
-- The acquisition aims to help integrate data from outside SAP's application portfolio into its AI platform.
+- The acquisition aims to help integrate data from outside SAP's broad application portfolio into its AI platform.
 - The move may be aimed at boosting adoption of SAP's Business Data Cloud (BDC).
 - BDC was launched in February 2025 in an alliance with data lake and AI platform vendor Databricks.
-- Reltio was founded in 2011 and aimed to create a 'cloud-native' approach to data integration and MDM.
-- In 2024, Reltio migrated its underlying database from a self-managed instance of Cassandra to Spanner on Google Cloud.
+- Reltio uses an AI-based entity resolution system to find and merge related records into a 'golden record'.
+- SAP expects to use Reltio's system to integrate data across SAP and non-SAP applications.
 - Reltio customers include Pfizer, Radisson, and Warner Bros.
-- SAP expects to use Reltio's AI-based entity resolution system to integrate data across SAP and non-SAP applications.
+- Reltio migrated its underlying database from Cassandra to Spanner on Google Cloud in 2024.
 
 ### 2. Existing Data and Research Findings (Non-opinion)
-- Research from DSAG in December found that 83 percent of its members were only slightly familiar with BDC or not familiar with it at all.
+- In December, research from DSAG found that 83 percent of its members were only slightly familiar with BDC or not familiar with it at all.
 - DSAG found that BDC customers stuck mid-migration end up paying full cloud fees for a system they cannot use.
 
 ### 3. Raw Context
 - SAP argues the move will help make BDC 'fully interoperable' with other stores of enterprise data to support the development of AI agents by cleansing and harmonizing data.
-- Reltio uses an AI-based entity resolution system to find and merge related records from different formats and applications into a 'golden record' of data about customers, products, suppliers, locations, and employees.
-- SAP has ERP, HR, CRM, supply chain, and procurement systems.
+- BDC was set up to build 'insight apps' that use analytics tools and AI models connected to real-time data from applications.
+- Reltio aimed to create a 'cloud-native' approach to data integration and MDM.
 - SAP has so far struggled to grab users' attention with BDC.
 
 ### 4. Direct Quotes (Speaker / Role)
@@ -37,7 +37,7 @@ SAP announces its acquisition of Reltio, a master data management specialist, po
 - SAP has so far struggled to grab users' attention with BDC.
 - 83 percent of DSAG members were only slightly familiar with BDC or not familiar with it at all.
 - BDC customers stuck mid-migration end up paying full cloud fees for a system they cannot use.
-- The DSAG finding about mid-migration fees 'is going to haunt SAP's sales deck for a while.'
+- The finding about customers paying for unusable systems is noted as a line that 'is going to haunt SAP's sales deck for a while.'
 
 ### 6. Unknowns / Open Questions
 - Whether the move will successfully boost adoption of SAP's Business Data Cloud.
@@ -46,7 +46,7 @@ SAP announces its acquisition of Reltio, a master data management specialist, po
 
 > SAP has so far struggled to grab users' attention with BDC. In December, research from DSAG, the German-speaking user group, found that 83 percent of its members were only slightly familiar with BDC or not familiar with it at all.
 
-> While BDC was mainly about sharing SAP data externally, the Reltio move is about harmonizing data from non-SAP systems and sharing it with SAP, he said. Binoy James, SVP applications at SAP consultancy Protera, noted DSAG had found that BDC customers stuck mid-migration end up paying full cloud fees for a system they cannot use. 'That line is going to haunt SAP's sales deck for a while,' he said.
+> Binoy James, SVP applications at SAP consultancy Protera, noted DSAG had found that BDC customers stuck mid-migration end up paying full cloud fees for a system they cannot use. 'That line is going to haunt SAP's sales deck for a while,' he said.
 
 ---
 

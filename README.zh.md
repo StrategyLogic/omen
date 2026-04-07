@@ -2,7 +2,8 @@
 
 **AI驱动的开源战略推演引擎。**
 
-[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml) [![Package](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml) ![](https://img.shields.io/pypi/l/omenai?timestamp=20260406) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai?label=%20) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
+[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)
+ ![](https://img.shields.io/pypi/l/omenai) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
 
 > 模拟征兆，揭示混沌。
 
@@ -127,7 +128,7 @@ Omen 专为以下角色打造：
 
 ## 📦 许可证
 
-Omen 采取[**AGPL-3.0-or-later**](LICENSE)许可证，由 **[StrategyLogic](https://www.strategylogic.ai)** ® 开发与维护。
+Omen 采取[**AGPL-3.0-or-later**](LICENSE)许可证，由 **[StrategyLogic®](https://www.strategylogic.ai)** 开发与维护。
 
 *注意：如果您希望在闭源环境中使用 Omen 或将其作为 SaaS 服务提供而不公开源码，请联系我们获取商业授权。*
 

@@ -2,7 +2,7 @@
 
 **The AI-Powered Strategic Reasoning Engine.**
 
-[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml) [![Package](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml) ![](https://img.shields.io/pypi/l/omenai?timestamp=20260406) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai?label=%20) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
+[![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![](https://img.shields.io/pypi/l/omenai) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
 
 > **Simulate the Signs. Reveal the Chaos.**
 
@@ -127,7 +127,7 @@ More scenarios are under development (contributions welcome):
 
 ## 📦 License
 
-Omen is under [AGPL-3.0-or-later](LICENSE), the project is developed and maintained by **[StrategyLogic](https://www.strategylogic.ai)** ®.
+Omen is under [AGPL-3.0-or-later](LICENSE), the project is developed and maintained by **[StrategyLogic®](https://www.strategylogic.ai)**.
 
 *Note: If you wish to use Omen in a closed-source environment or provide it as a SaaS service without open-sourcing your code, please contact us for a commercial license.*
 

@@ -174,7 +174,7 @@ def _normalize_signal_impact_type(value: Any) -> str:
     return "driver"
 
 
-def _normalize_signal_strength(value: Any) -> str:
+def _normalize_signal_strength(value: Any) -> float:
     if isinstance(value, (int, float)):
         return _clamp_01(float(value))
 
@@ -239,7 +239,7 @@ def _normalize_signal_targets(
     signal_name: str,
     context: dict[str, Any],
     fallback: dict[str, Any],
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     if isinstance(value, str):
         value = [value]
 
@@ -915,28 +915,3 @@ def analyze_situation_document(
         "actor_ref": actor_ref,
     }
     return enhanced
-
-
-def decompose_scenario_from_situation(
-    *,
-    situation_artifact: dict[str, Any],
-    pack_id: str,
-    pack_version: str,
-    config_path: str = "config/llm.toml",
-    planning_template: dict[str, Any] | None = None,
-    planning_query: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    # Keep this compatibility entrypoint while scenario decomposition logic
-    # lives in services/scenario.py to keep module size and responsibilities clear.
-    from omen.ingest.synthesizer.services.scenario import (
-        decompose_scenario_from_situation as _decompose_scenario_from_situation,
-    )
-
-    return _decompose_scenario_from_situation(
-        situation_artifact=situation_artifact,
-        pack_id=pack_id,
-        pack_version=pack_version,
-        config_path=config_path,
-        planning_template=planning_template,
-        planning_query=planning_query,
-    )

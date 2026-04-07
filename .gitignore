@@ -53,5 +53,6 @@ htmlcov/
 config/llm.toml
 .local.md
 data/ingest/source/
+data/scenarios/
 output/
 *legacy*

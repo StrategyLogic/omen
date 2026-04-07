@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +21,9 @@ from omen.scenario.loader import (
     save_situation_markdown,
 )
 from omen.scenario.planner import plan_scenarios_from_situation
+from omen.scenario.planner import ScenarioDecompositionValidationError
 from omen.ingest.synthesizer.services.situation import (
+    LLMJsonValidationAbort,
     analyze_situation_document,
     build_situation_confidence_trace,
     generate_situation_case_document,
@@ -67,7 +71,104 @@ def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -
 
 
 def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
-    return situation_output_path.with_name("generation.json")
+    return situation_output_path.parent / "generation.json"
+
+
+def _resolve_scenario_generation_trace_path(scenario_output_path: Path) -> Path:
+    return scenario_output_path.parent / "generation" / "generation.json"
+
+
+def _resolve_scenario_raw_output_path(scenario_output_path: Path) -> Path:
+    return scenario_output_path.parent / "generation" / "output.txt"
+
+
+def _resolve_scenario_failure_output_path(*, args: Any, output_path_arg: Path | None, situation_path: Path | None) -> Path:
+    if output_path_arg is not None:
+        return _resolve_scenario_raw_output_path(output_path_arg)
+
+    if situation_path is not None and situation_path.suffix == ".json":
+        if situation_path.parent.name == "generation":
+            return situation_path.parent / "output.txt"
+        return situation_path.parent / "generation" / "output.txt"
+
+    raw_ref = str(args.situation).strip()
+    if "/" not in raw_ref and not raw_ref.endswith(".json"):
+        pack_id = str(args.pack_id or raw_ref)
+        return Path("data/scenarios") / pack_id / "generation" / "output.txt"
+
+    return Path("data/scenarios") / "unknown" / "generation" / "output.txt"
+
+
+def _append_scenario_decomposition_trace(
+    *,
+    trace_path: Path,
+    scenario_artifact_path: Path,
+    situation_ref: Path,
+    decomposition_quality: dict[str, Any] | None,
+) -> None:
+    payload: dict[str, Any] = {}
+    if trace_path.exists():
+        try:
+            payload = json.loads(trace_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                payload = {}
+        except Exception:
+            payload = {}
+
+    payload.setdefault("artifact_type", "situation_generation_trace")
+    payload["scenario_decomposition"] = {
+        "scenario_artifact_path": str(scenario_artifact_path),
+        "situation_ref": str(situation_ref),
+        "generated_at": datetime.now().isoformat(),
+        "schema_completeness_percent": float((decomposition_quality or {}).get("schema_completeness_percent") or 0.0),
+        "logic_usable": bool((decomposition_quality or {}).get("logic_usable", False)),
+        "retries": int((decomposition_quality or {}).get("retries") or 0),
+        "validation_issues": list((decomposition_quality or {}).get("validation_issues") or []),
+        "logic_issues": list((decomposition_quality or {}).get("logic_issues") or []),
+    }
+    save_auxiliary_json(trace_path, payload)
+
+
+def _write_non_json_llm_output(path: Path, *, stage: str, reason: str, raw_output: str, retry_output: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sections = [
+        f"stage: {stage}",
+        f"reason: {reason}",
+        "",
+        "[raw_output]",
+        raw_output,
+    ]
+    if retry_output:
+        sections.extend(["", "[retry_output]", retry_output])
+    content = "\n".join(sections).rstrip() + "\n"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def _write_scenario_failure_trace(
+    *,
+    trace_path: Path,
+    situation_ref: Path | None,
+    stage: str,
+    reason: str,
+) -> Path:
+    payload: dict[str, Any] = {
+        "artifact_type": "situation_generation_trace",
+        "scenario_decomposition": {
+            "scenario_artifact_path": "",
+            "situation_ref": str(situation_ref) if situation_ref else "",
+            "generated_at": datetime.now().isoformat(),
+            "schema_completeness_percent": 0.0,
+            "logic_usable": False,
+            "retries": 0,
+            "validation_issues": [reason],
+            "logic_issues": [],
+            "stage": stage,
+            "status": "failed",
+        },
+    }
+    save_auxiliary_json(trace_path, payload)
+    return trace_path
 
 
 def _resolve_generated_case_path(case_name: str) -> Path:
@@ -256,6 +357,12 @@ def handle_situation_analyze_command(args: Any) -> int:
             "Dynamic scenario authoring and enterprise resistance extensions are deferred."
         )
         return 2
+    except LLMJsonValidationAbort as exc:
+        print(
+            "LLM JSON validation aborted by policy: "
+            f"{exc.stage} -> {exc.reason}. Exiting without retry/fallback."
+        )
+        return 0
     except Exception as exc:
         print(f"Analyze situation failed: {exc}")
         return 2
@@ -265,8 +372,7 @@ def handle_scenario_command(args: Any) -> int:
     try:
         situation_path = resolve_situation_artifact_ref(str(args.situation))
         if not situation_path.exists():
-            print(f"Scenario planning failed: situation artifact not found: {situation_path}")
-            return 2
+            raise ValueError(f"situation artifact not found: {situation_path}")
 
         situation_artifact = load_situation_artifact(situation_path)
         if args.pack_id:
@@ -297,16 +403,74 @@ def handle_scenario_command(args: Any) -> int:
         output_path = save_scenario_ontology_slice(output_path_arg, ontology)
         markdown_path = output_path.with_suffix(".md")
         save_scenario_ontology_markdown(markdown_path, ontology)
+        scenario_trace_path = _resolve_scenario_generation_trace_path(output_path)
+        _append_scenario_decomposition_trace(
+            trace_path=scenario_trace_path,
+            scenario_artifact_path=output_path,
+            situation_ref=situation_path,
+            decomposition_quality=ontology.get("decomposition_quality"),
+        )
         print(f"Saved scenario planning artifact to {output_path}")
         print(f"Saved scenario planning summary to {markdown_path}")
+        print(f"Updated generation trace with scenario decomposition quality: {scenario_trace_path}")
         return 0
-    except DeferredScopeFeatureError as exc:
-        print(f"Deferred scope: {exc}")
-        print(
-            "This release supports deterministic A/B/C packs only. "
-            "Dynamic scenario authoring and enterprise resistance extensions are deferred."
-        )
-        return 2
     except Exception as exc:
-        print(f"Scenario planning failed: {exc}")
+        output_path_arg = locals().get("output_path_arg")
+        if isinstance(output_path_arg, Path):
+            resolved_output_path = output_path_arg
+        else:
+            resolved_output_path = None
+
+        resolved_situation_path = locals().get("situation_path")
+        if isinstance(resolved_situation_path, Path):
+            situation_ref_path = resolved_situation_path
+        else:
+            situation_ref_path = None
+
+        output_dump = _resolve_scenario_failure_output_path(
+            args=args,
+            output_path_arg=resolved_output_path,
+            situation_path=situation_ref_path,
+        )
+
+        if isinstance(exc, LLMJsonValidationAbort):
+            stage = exc.stage
+            reason = exc.reason
+            raw_output = exc.raw_output
+            retry_output = exc.retry_output
+        elif isinstance(exc, ScenarioDecompositionValidationError):
+            stage = "scenario_planning"
+            reason = str(exc)
+            raw_output = json.dumps(exc.decomposition_payload, ensure_ascii=False, indent=2)
+            retry_output = ""
+        elif isinstance(exc, DeferredScopeFeatureError):
+            stage = "deferred_scope"
+            reason = str(exc)
+            raw_output = ""
+            retry_output = ""
+        else:
+            stage = "scenario_planning"
+            reason = str(exc)
+            raw_output = ""
+            retry_output = ""
+
+        _write_non_json_llm_output(
+            output_dump,
+            stage=stage,
+            reason=reason,
+            raw_output=raw_output,
+            retry_output=retry_output,
+        )
+
+        trace_path = output_dump.parent / "generation.json"
+        _write_scenario_failure_trace(
+            trace_path=trace_path,
+            situation_ref=situation_ref_path,
+            stage=stage,
+            reason=reason,
+        )
+
+        print(f"Scenario planning failed: {reason}")
+        print(f"Scenario debug output saved to {output_dump}")
+        print(f"Scenario generation trace saved to {trace_path}")
         return 2

@@ -250,6 +250,8 @@ prompts:
     - version must be '0.1.0'
     - id must equal provided situation_id
     - context must preserve all provided context fields
+    - signals_template_json defines the required structure of each item in signals, not the full top-level artifact
+    - If uncertain, preserve valid JSON and required signal fields first; Omen will normalize defaults, confidence metrics, and trace enrichment after parsing
 
     === SIGNAL EXTRACTION RULES (CRITICAL) ===
     
@@ -288,7 +290,6 @@ prompts:
             - amplifier/dampener: modulation_target, modulation_condition, modulation_factor
     - cascade_rules: array of {trigger_condition, next_signal_id, expected_lag} OR provide no_cascade_reason
     - market_constraints: array of {constraint_key, binding_strength in [0,1]}
-    - evidence_basis: brief note on what evidence supports this signal (not the subject's response to it)
     
     Signal Quantity: Prefer 3 to 7 high-quality, independent signals over many weak summary bullets.
     Signal Independence: Two signals that describe the same underlying factor from different angles should be merged.
@@ -299,12 +300,22 @@ prompts:
     - signals: what is happening in the environment, independent of subject
     
     === UNCERTAINTY SPACE ===
-    - overall_confidence: numeric in [0,1] (confidence in the situation assessment)
-    - assumptions_explicit: array of {target_unknown, assumption_text, quality_score, coverage_type}
+    - uncertainty_space must be a JSON object
+    - include overall_confidence in [0,1]
+    - assumptions_explicit is optional but preferred when the source clearly supports explicit assumptions
+    - assumptions_explicit items may use {target_unknown, assumption_text, quality_score, coverage_type}
     - assumptions should map to known_unknowns when possible
+
+    === SOURCE TRACE ===
+    - source_trace must be a JSON array
+    - if the source evidence cannot be structured confidently, return an empty array rather than invalid objects
     
     === OUTPUT ===
-    Return ONLY valid JSON object matching the structure defined in signals_template_json.
+    - Return ONE valid JSON object only
+    - Top-level object must follow Situation_v0_1_0 artifact structure:
+      version, id, context, signals, tech_space_seed, market_space_seed, uncertainty_space, source_trace
+    - Each item in signals must follow the signal item structure defined in signals_template_json
+    - Do not add markdown, explanations, or reviewer/audit fields
 
     situation_id: [[situation_id]]
     source_path: [[source_path]]
@@ -316,17 +327,59 @@ prompts:
 
   situation_decompose_prompt: |
     You are a strategy analyst. Decompose situation artifact into deterministic scenarios A/B/C.
-    Return ONLY valid JSON object with keys: pack_id, pack_version, derived_from_situation_id, ontology_version, scenarios.
+    Return ONLY valid JSON object with keys:
+    pack_id, pack_version, derived_from_situation_id, ontology_version, scenarios.
 
-    Scenario requirements:
-    - Must include exactly A, B, C each once
+    REQUIRED OUTPUT SHAPE:
+    - scenarios MUST be a JSON array (not an object map) with exactly 3 objects.
+    - Each scenario object MUST contain scenario_key with one of ["A", "B", "C"].
+    - scenario_key values A/B/C must each appear exactly once.
+    - Do NOT return scenarios as {"A": {...}, "B": {...}, "C": {...}}.
+
+    Scenario intent requirements:
     - A intent: Offense (Breakthrough action), proactive rule-changing and asymmetric advantage capture
     - B intent: Defense (Protective action), survival and compliance under hard external constraints
     - C intent: Confrontation action, direct rivalry under rule-bounded resource competition
-    - each scenario must include goal, target, objective, variables, constraints, tradeoff_pressure, resistance_assumptions, modeling_notes
+
+    Per-scenario required fields and types:
+    - scenario_key: string, one of A/B/C
+    - title: string
+    - goal: string
+    - target: string
+    - objective: string
+    - variables: array of objects (each object describes one variable)
+    - constraints: array of strings
+    - tradeoff_pressure: array of strings
+    - resistance_assumptions: object (structured assumptions, not plain string)
+    - modeling_notes: array of strings
+
+    Additional rules:
     - constraints and tradeoff_pressure must reflect constraint-network and rival-network pressure when present
     - planning_template_json is a rule template input; do not treat it as a prompt
-    - raw_prior_scores should be provided as array with A/B/C scenario_key and score values when available
+    - raw_prior_scores is optional; include only when available as array with A/B/C scenario_key and score values
+    - Return ONE valid JSON object only. No markdown, no explanation.
+
+    Minimal shape example (types only):
+    {
+      "pack_id": "sap_v1",
+      "pack_version": "1.0.0",
+      "derived_from_situation_id": "sap_reltio_acquisition",
+      "ontology_version": "scenario_ontology_v1",
+      "scenarios": [
+        {
+          "scenario_key": "A",
+          "title": "...",
+          "goal": "...",
+          "target": "...",
+          "objective": "...",
+          "variables": [{"name": "..."}],
+          "constraints": ["..."],
+          "tradeoff_pressure": ["..."],
+          "resistance_assumptions": {"assumption_rationale": ["..."]},
+          "modeling_notes": ["..."]
+        }
+      ]
+    }
 
     pack_id: [[pack_id]]
     pack_version: [[pack_version]]

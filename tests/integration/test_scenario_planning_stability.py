@@ -21,11 +21,84 @@ def _write_situation_artifact(path: Path) -> None:
             "hard_constraints": ["cash runway", "ecosystem inertia"],
             "known_unknowns": ["partner response"],
         },
-        "signals": [{"name": "ecosystem fragmentation"}, {"name": "cash pressure"}],
+        "signals": [
+            {
+                "id": "sig-ecosystem-fragmentation",
+                "name": "ecosystem fragmentation",
+                "domain": "market",
+                "strength": 0.72,
+                "direction": "down",
+                "mapped_targets": [
+                    {
+                        "space": "MarketSpace",
+                        "element_key": "platform adoption",
+                        "impact_type": "constraint",
+                        "impact_strength": 0.7,
+                        "mechanism_conditions": {
+                            "binding_condition": "When partner switching costs keep rising.",
+                            "release_condition": "When ecosystem migration friction declines.",
+                            "expected_effect": "Suppresses platform conversion velocity.",
+                        },
+                    }
+                ],
+                "cascade_rules": [
+                    {
+                        "trigger_condition": "If partner churn accelerates",
+                        "next_signal_id": "sig-cash-pressure",
+                        "expected_lag": "medium",
+                    }
+                ],
+                "market_constraints": [
+                    {
+                        "constraint_key": "ecosystem inertia",
+                        "binding_strength": 0.75,
+                    }
+                ],
+                "mechanism_note": "Fragmentation reduces cross-partner coordination and slows adoption recovery.",
+            },
+            {
+                "id": "sig-cash-pressure",
+                "name": "cash pressure",
+                "domain": "capital",
+                "strength": 0.81,
+                "direction": "down",
+                "mapped_targets": [
+                    {
+                        "space": "MarketSpace",
+                        "element_key": "strategic option depth",
+                        "impact_type": "constraint",
+                        "impact_strength": 0.8,
+                        "mechanism_conditions": {
+                            "binding_condition": "When runway remains constrained.",
+                            "release_condition": "When financing flexibility improves.",
+                            "expected_effect": "Compresses the range of executable strategic options.",
+                        },
+                    }
+                ],
+                "cascade_rules": [],
+                "no_cascade_reason": "direct financing pressure in the current horizon",
+                "market_constraints": [
+                    {
+                        "constraint_key": "cash runway",
+                        "binding_strength": 0.9,
+                    }
+                ],
+                "mechanism_note": "Financing pressure narrows the feasible time window for platform reset.",
+            },
+        ],
         "tech_space_seed": [],
         "market_space_seed": [],
         "uncertainty_space": {"overall_confidence": 0.5},
-        "source_trace": [{"source_path": "cases/situations/nokia-elop-2010.md"}],
+        "source_trace": [
+            {
+                "trace_id": "trace-1",
+                "source_kind": "doc",
+                "source_ref": "cases/situations/nokia-elop-2010.md",
+                "claim_ref": "signals[0]",
+                "evidence_excerpt": "The platform transition faces cash and ecosystem pressure.",
+                "confidence": 0.7,
+            }
+        ],
         "source_meta": {
             "source_path": "cases/situations/nokia-elop-2010.md",
             "actor_ref": "actors/steve-jobs.md",
@@ -39,7 +112,7 @@ def test_scenario_planning_pack_id_input_stable_prior_order(tmp_path: Path, monk
     monkeypatch.chdir(tmp_path)
 
     pack_id = "strategic_actor_nokia_v1"
-    situation_path = tmp_path / "data" / "scenarios" / pack_id / "situation.json"
+    situation_path = tmp_path / "data" / "scenarios" / pack_id / "generation" / "situation.json"
     _write_situation_artifact(situation_path)
 
     fake_decomposition = {

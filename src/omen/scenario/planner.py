@@ -14,6 +14,34 @@ from omen.scenario.space import build_planning_query
 from omen.scenario.template_loader import load_planning_template
 
 
+def _nonempty_text_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _validate_structured_llm_scenario(raw: dict[str, Any], *, scenario_key: str) -> None:
+    missing_fields: list[str] = []
+    for field_name in ("title", "goal", "target", "objective"):
+        if not str(raw.get(field_name) or "").strip():
+            missing_fields.append(field_name)
+
+    variables = raw.get("variables")
+    if not isinstance(variables, list) or not variables:
+        missing_fields.append("variables")
+
+    if not _nonempty_text_list(raw.get("constraints")):
+        missing_fields.append("constraints")
+    if not _nonempty_text_list(raw.get("tradeoff_pressure")):
+        missing_fields.append("tradeoff_pressure")
+
+    if missing_fields:
+        raise ValueError(
+            "LLM scenario decomposition produced incomplete structured payload "
+            f"for slot {scenario_key}: missing {sorted(set(missing_fields))}"
+        )
+
+
 @dataclass(frozen=True)
 class ScenarioSlotPolicy:
     key: str
@@ -93,18 +121,9 @@ def normalize_llm_scenarios_with_policy(
         if not text:
             continue
         if index < len(slot_order):
-            by_key.setdefault(
-                slot_order[index],
-                {
-                    "scenario_key": slot_order[index],
-                    "title": f"Scenario {slot_order[index]}",
-                    "objective": text,
-                    "constraints": [text],
-                    "tradeoff_pressure": [],
-                    "variables": [],
-                    "resistance_assumptions": {},
-                    "modeling_notes": ["Derived from plain-text LLM scenario payload"],
-                },
+            raise ValueError(
+                "LLM scenario decomposition returned non-object payload "
+                f"for slot {slot_order[index]}: {text!r}"
             )
 
     missing = [slot.key for slot in policies if slot.key not in by_key]
@@ -114,37 +133,20 @@ def normalize_llm_scenarios_with_policy(
     normalized: list[dict[str, Any]] = []
     for policy in policies:
         raw = by_key[policy.key]
-        constraints = [str(x).strip() for x in (raw.get("constraints") or []) if str(x).strip()]
-        if not constraints:
-            constraints = [policy.constraint_hint]
-
-        tradeoffs = [str(x).strip() for x in (raw.get("tradeoff_pressure") or []) if str(x).strip()]
-        if not tradeoffs:
-            tradeoffs = list(policy.tradeoffs)
-
-        variables = raw.get("variables") or []
-        if not isinstance(variables, list) or not variables:
-            variables = [
-                {
-                    "name": "signal_direction",
-                    "type": "categorical",
-                    "value_range_or_enum": ["positive", "neutral", "negative"],
-                    "baseline_assumption": policy.signal_basis,
-                    "rationale": "Policy-guided fallback variable after LLM normalization",
-                    "signal_ref": f"signal::{policy.key.lower()}::primary",
-                    "constraint_ref": "market::primary",
-                }
-            ]
+        _validate_structured_llm_scenario(raw, scenario_key=policy.key)
+        constraints = _nonempty_text_list(raw.get("constraints"))
+        tradeoffs = _nonempty_text_list(raw.get("tradeoff_pressure"))
+        variables = list(raw.get("variables") or [])
 
         resistance = raw.get("resistance_assumptions") or {}
         default_r = policy.resistance
         normalized.append(
             {
                 "scenario_key": policy.key,
-                "title": str(raw.get("title") or f"Scenario {policy.key}: {policy.label}").strip(),
-                "goal": str(raw.get("goal") or policy.objective).strip(),
-                "target": str(raw.get("target") or "strategic-position").strip(),
-                "objective": str(raw.get("objective") or policy.objective).strip(),
+                "title": str(raw.get("title") or "").strip(),
+                "goal": str(raw.get("goal") or "").strip(),
+                "target": str(raw.get("target") or "").strip(),
+                "objective": str(raw.get("objective") or "").strip(),
                 "variables": variables,
                 "constraints": constraints,
                 "tradeoff_pressure": tradeoffs,

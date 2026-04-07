@@ -1,6 +1,6 @@
-# Omen
+# OmenAI
 
-**The Strategic Reasoning Engine.**
+**The AI-Powered Strategic Reasoning Engine.**
 
 [![Pylint](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/pylint.yml) [![Package](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml/badge.svg)](https://github.com/StrategyLogic/omen/actions/workflows/python-package.yml) ![](https://img.shields.io/pypi/l/omenai?timestamp=20260406) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai?label=%20) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
 
@@ -10,19 +10,7 @@
 
 [中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 
-## 💡 Why Omen?
-
-Technological competition has never been linear. Real-world technological evolution is a complex system driven by multiple forces:
-*   **Drivers**: Capability enhancement, cost curves, migration friction, organizational inertia, capital flow, ecosystem lock-in, standard promotion, developer behavior.
-*   **Impacts**: Markets often do not change smoothly; instead, they undergo **accelerated substitution**, **structural reorganization**, or fall into a stalemate of **long-term coexistence** near certain thresholds.
-
-Omen attempts to upgrade this process from *opinion discussion* to **conditional reasoning**:
-1.  Map technological competition into a **Capability Space**
-2.  Instantiate market entities as **Strategic Actors**
-3.  Quantify external shocks as **Injectable Events**
-4.  Present results as **Multi-path Evolution** and **Counterfactual Explanations**
-
-### What Omen Does
+## 💡 What Omen Does
 
 Unlike traditional predictive models, Omen does not promise to *predict a certain future*. Instead, it generates **interpretable, replayable, and comparable future branching paths**. Its core responsibility is to reveal faint omens, critical branching points, and evolutionary trajectories within complex systems, empowering founders, product strategists, technology leaders, and investment analysts to understand:
 
@@ -30,26 +18,6 @@ Unlike traditional predictive models, Omen does not promise to *predict a certai
 *   🛡️ **Capability Evolution**: Which core capabilities will be enhanced first, and which will coexist long-term?
 *   🏆 **Strategy Wins**: Which strategy combinations are more likely to win the market, capital, and developer ecosystem?
 *   ⏳ **Time Windows**: When is the optimal timing for in-house development, alliances, M&A, or contraction?
-
-## 📜 Philosophy & Design Principles
-
-> 💡 **Core Mantra**: *The machine simulates the "Situation"; the human decides the "Destiny".*
-
-Just as **Yao** in the *I Ching* represents change and interaction, Omen is designed only to present the evolution of the **Situation (Xiang)**. Interpreting the deeper meaning behind the situation and making decisions is the exclusive privilege of human wisdom.
-
-Accordingly, Omen is architected as a **human-decision-first** AI simulator, with a clear division of labor between machine simulation and human sovereignty:
-
-#### 🤖 The Machine’s Domain (Simulation & Causality)
-*   **Role**: To compute complexity, map multi-path evolutions, and reveal conditional causal chains.
-*   **Output**: Interpretable scenarios, probability distributions, and "What-if" branching maps.
-*   **Constraint**: It strictly avoids deterministic fate pronouncements or claims of "guaranteed accuracy".
-
-#### 🧠 The Human’s Domain (Interpretation & Sovereignty)
-*   **Role**: To interpret the "Situation" (Xiang), apply ethical judgment, and make the final strategic call.
-*   **Privilege**: Deciding *which* path to take based on values, risk appetite, and vision remains the exclusive privilege of human leaders.
-*   **Synergy**: Omen expands the horizon of visible possibilities; humans provide the compass for navigation.
-
-📜 See [Omen Project Protocol](PROTOCOL.md) to get detailed guidelines.
 
 ## ⚙️ Core Features
 
@@ -71,41 +39,6 @@ A complete reasoning session typically answers the following questions:
 *   **Winners and Losers?** Which entities suffer first, and which benefit unexpectedly?
 *   **Strategy Effectiveness?** Under what circumstances is an "open ecosystem" superior to "vertical integration"?
 *   **Endgame Form?** Does it move towards monopoly, oligarchic balance, or fragmented coexistence?
-
-## 🛠️ How It Works
-
-Omen adopts a layered architecture to ensure the transparency and intervenability of reasoning:
-
-```mermaid
-graph TD
-    A[Signal Layer] -->|Tech/Market/Capital/Standard Signals | B(Tech Space Layer)
-    B -->|Capability Dimensions/Substitution Relations/Risk Factors | C(Strategic Actor Layer)
-    C -->|Goals/Resources/Action Space | D(Simulation Kernel)
-    D -->|Rules+Math Models+LLM Decisions | E(Explanation Layer)
-    E -->|Branching Paths/Counterfactuals/Causal Chains | F[User Insights]
-    
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style D fill:#bbf,stroke:#333,stroke-width:2px
-    style E fill:#bfb,stroke:#333,stroke-width:2px
-```
-
-*   **Signal Layer**: Accesses multi-dimensional macro and micro signals.
-*   **Tech Space Layer**: Transforms signals into structured technical objects and relationship graphs.
-*   **Strategic Actor Layer**: Defines clear Action Spaces for various entities, rather than free-form chatting.
-*   **Simulation Kernel**: Combines hard constraint rules, economic/diffusion models, and LLM decision logic to advance multi-round evolution.
-*   **Explanation Layer**: Extracts key branching points and generates human-readable reasoning reports.
-
-## 🎬 Show Cases
-
-We have built-in classic reasoning:
-*   [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
-*   [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
-
-More scenarios are under development (contributions welcome):
-*   `Agent Infrastructure` vs `Workflow Platforms`
-*   `Vertical AI` vs `General AI Stack`
-*   `Open Source Models` vs `Closed Commercial APIs`
-*   `Data Governance` vs `AI-Native Knowledge Systems`
 
 ## 🚀 Quick Start
 
@@ -180,9 +113,21 @@ Omen is built for the following roles:
 *   Open Source Ecosystem Observers
 *   Investors & Industry Analysts
 
+## 🎬 Show Cases
+
+We have built-in classic reasoning:
+*   [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
+*   [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
+
+More scenarios are under development (contributions welcome):
+*   `Agent Infrastructure` vs `Workflow Platforms`
+*   `Vertical AI` vs `General AI Stack`
+*   `Open Source Models` vs `Closed Commercial APIs`
+*   `Data Governance` vs `AI-Native Knowledge Systems`
+
 ## 📦 License
 
-Omen is under [AGPL-3.0-or-later](LICENSE), the project is developed and maintained by **[StrategyLogic®](https://www.strategylogic.ai)**.
+Omen is under [AGPL-3.0-or-later](LICENSE), the project is developed and maintained by **[StrategyLogic](https://www.strategylogic.ai)** ®.
 
 *Note: If you wish to use Omen in a closed-source environment or provide it as a SaaS service without open-sourcing your code, please contact us for a commercial license.*
 

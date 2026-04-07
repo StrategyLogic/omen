@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omenai"
-version = "0.1.1"
-description = "The open-source strategic reasoning engine for technological evolution."
+version = "0.1.2"
+description = "The AI-Powered open-source strategic reasoning engine."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 authors = [{ name = "StrategyLogic" }]

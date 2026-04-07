@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from omen.ingest.synthesizer.services.situation import analyze_situation_document
-from omen.ingest.synthesizer.services.situation import decompose_scenario_from_situation
+from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
 from omen.scenario.validator import IncompleteDeterministicPackError, validate_situation_artifact_or_raise
 
 

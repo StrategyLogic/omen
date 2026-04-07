@@ -12,6 +12,7 @@ import yaml
 from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
+from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 
 
 _RISK_CONFIDENCE_MIN = 0.2
@@ -34,14 +35,34 @@ def _extract_json_object(text: str) -> dict[str, Any]:
     return payload
 
 
-def _invoke_json(prompt: str, *, config_path: str) -> dict[str, Any]:
+def _invoke_json(
+    prompt: str,
+    *,
+    config_path: str,
+    allow_retry: bool = True,
+    stage: str = "llm_json",
+) -> dict[str, Any]:
     content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
     try:
         return _extract_json_object(content)
-    except Exception:
+    except Exception as exc:
+        if not allow_retry:
+            raise LLMJsonValidationAbort(
+                stage=stage,
+                reason=str(exc),
+                raw_output=content,
+            ) from exc
         retry_prompt = build_json_retry_prompt(prompt)
         retry_content = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
-        return _extract_json_object(retry_content)
+        try:
+            return _extract_json_object(retry_content)
+        except Exception as retry_exc:
+            raise LLMJsonValidationAbort(
+                stage=stage,
+                reason=str(retry_exc),
+                raw_output=content,
+                retry_output=retry_content,
+            ) from retry_exc
 
 
 def _read_source_text(path: str | Path) -> str:
@@ -858,6 +879,8 @@ def analyze_situation_document(
             },
         ),
         config_path=config_path,
+        allow_retry=False,
+        stage="situation_enhance_prompt",
     )
 
     enhanced.setdefault("version", "0.1.0")
@@ -903,31 +926,17 @@ def decompose_scenario_from_situation(
     planning_template: dict[str, Any] | None = None,
     planning_query: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    payload = _invoke_json(
-        _render_base_prompt(
-            "situation_decompose_prompt",
-            {
-                "pack_id": pack_id,
-                "pack_version": pack_version,
-                "situation_artifact_json": json.dumps(situation_artifact, ensure_ascii=False),
-                "planning_template_json": json.dumps(planning_template or {}, ensure_ascii=False),
-                "planning_query_json": json.dumps(planning_query or {}, ensure_ascii=False),
-            },
-        ),
-        config_path=config_path,
+    # Keep this compatibility entrypoint while scenario decomposition logic
+    # lives in services/scenario.py to keep module size and responsibilities clear.
+    from omen.ingest.synthesizer.services.scenario import (
+        decompose_scenario_from_situation as _decompose_scenario_from_situation,
     )
 
-    payload.setdefault("pack_id", pack_id)
-    payload.setdefault("pack_version", pack_version)
-    payload.setdefault("derived_from_situation_id", str(situation_artifact.get("id") or "unknown"))
-    payload.setdefault("ontology_version", "scenario_ontology_v1")
-    payload.setdefault("scenarios", [])
-    payload.setdefault(
-        "source_meta",
-        {
-            "source_path": str((situation_artifact.get("source_meta") or {}).get("source_path") or ""),
-            "generated_at": datetime.now().isoformat(),
-            "generated_from": "situation_artifact",
-        },
+    return _decompose_scenario_from_situation(
+        situation_artifact=situation_artifact,
+        pack_id=pack_id,
+        pack_version=pack_version,
+        config_path=config_path,
+        planning_template=planning_template,
+        planning_query=planning_query,
     )
-    return payload

@@ -8,13 +8,24 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.services.situation import decompose_scenario_from_situation
+from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
 from omen.scenario.prior import build_prior_snapshot
 from omen.scenario.space import build_planning_query
 from omen.scenario.template_loader import load_planning_template
 
 
+class ScenarioDecompositionValidationError(ValueError):
+    """Raised when decomposition payload shape is unusable for local planning."""
+
+    def __init__(self, message: str, *, decomposition_payload: Any) -> None:
+        super().__init__(message)
+        self.decomposition_payload = decomposition_payload
+
+
 def _nonempty_text_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
@@ -102,6 +113,7 @@ def normalize_llm_scenarios_with_policy(
     llm_scenarios: list[Any],
     *,
     source_hint: str,
+    strict_structured: bool = False,
 ) -> list[dict[str, Any]]:
     policies = fixed_slot_policies()
     by_key: dict[str, dict[str, Any]] = {}
@@ -121,9 +133,26 @@ def normalize_llm_scenarios_with_policy(
         if not text:
             continue
         if index < len(slot_order):
-            raise ValueError(
-                "LLM scenario decomposition returned non-object payload "
-                f"for slot {slot_order[index]}: {text!r}"
+            if strict_structured:
+                raise ValueError(
+                    "LLM scenario decomposition returned non-object payload "
+                    f"for slot {slot_order[index]}: {text!r}"
+                )
+            by_key.setdefault(
+                slot_order[index],
+                {
+                    "scenario_key": slot_order[index],
+                    "title": f"Scenario {slot_order[index]}",
+                    "objective": text,
+                    "constraints": [text],
+                    "tradeoff_pressure": [],
+                    "variables": [],
+                    "resistance_assumptions": {},
+                    "modeling_notes": [
+                        "Derived from plain-text LLM scenario payload",
+                        "Schema fallback applied by planner",
+                    ],
+                },
             )
 
     missing = [slot.key for slot in policies if slot.key not in by_key]
@@ -133,20 +162,70 @@ def normalize_llm_scenarios_with_policy(
     normalized: list[dict[str, Any]] = []
     for policy in policies:
         raw = by_key[policy.key]
-        _validate_structured_llm_scenario(raw, scenario_key=policy.key)
-        constraints = _nonempty_text_list(raw.get("constraints"))
-        tradeoffs = _nonempty_text_list(raw.get("tradeoff_pressure"))
-        variables = list(raw.get("variables") or [])
+        if strict_structured:
+            _validate_structured_llm_scenario(raw, scenario_key=policy.key)
 
-        resistance = raw.get("resistance_assumptions") or {}
+        constraints = _nonempty_text_list(raw.get("constraints"))
+        if not constraints:
+            constraints = [policy.constraint_hint]
+
+        tradeoffs = _nonempty_text_list(raw.get("tradeoff_pressure"))
+        if not tradeoffs:
+            tradeoffs = list(policy.tradeoffs)
+
+        raw_variables = raw.get("variables")
+        variables: list[dict[str, Any]] = []
+        if isinstance(raw_variables, list):
+            for index, item in enumerate(raw_variables, start=1):
+                if isinstance(item, dict):
+                    variables.append(item)
+                    continue
+                text = str(item).strip()
+                if not text:
+                    continue
+                variables.append(
+                    {
+                        "name": text,
+                        "type": "text",
+                        "value_range_or_enum": [],
+                        "baseline_assumption": text,
+                        "rationale": "Variable normalized from plain-text decomposition output",
+                        "signal_ref": f"signal::{policy.key.lower()}::{index}",
+                        "constraint_ref": "market::primary",
+                    }
+                )
+
+        if not variables:
+            variables = [
+                {
+                    "name": "signal_direction",
+                    "type": "categorical",
+                    "value_range_or_enum": ["positive", "neutral", "negative"],
+                    "baseline_assumption": policy.signal_basis,
+                    "rationale": "Policy-guided fallback variable after LLM normalization",
+                    "signal_ref": f"signal::{policy.key.lower()}::primary",
+                    "constraint_ref": "market::primary",
+                }
+            ]
+
+        resistance_raw = raw.get("resistance_assumptions") or {}
+        resistance_note = ""
+        if isinstance(resistance_raw, dict):
+            resistance = resistance_raw
+        else:
+            resistance_note = str(resistance_raw).strip()
+            resistance = {}
         default_r = policy.resistance
+        extra_rationale = []
+        if resistance_note:
+            extra_rationale.append(resistance_note)
         normalized.append(
             {
                 "scenario_key": policy.key,
-                "title": str(raw.get("title") or "").strip(),
-                "goal": str(raw.get("goal") or "").strip(),
-                "target": str(raw.get("target") or "").strip(),
-                "objective": str(raw.get("objective") or "").strip(),
+                "title": str(raw.get("title") or f"Scenario {policy.key}: {policy.label}").strip(),
+                "goal": str(raw.get("goal") or policy.objective).strip(),
+                "target": str(raw.get("target") or "strategic-position").strip(),
+                "objective": str(raw.get("objective") or policy.objective).strip(),
                 "variables": variables,
                 "constraints": constraints,
                 "tradeoff_pressure": tradeoffs,
@@ -164,6 +243,7 @@ def normalize_llm_scenarios_with_policy(
                             for x in (resistance.get("assumption_rationale") or [])
                             if str(x).strip()
                         ],
+                        *extra_rationale,
                         source_hint,
                         f"intent: {policy.intent}",
                     ],
@@ -209,6 +289,7 @@ def _build_scenario_ontology_from_situation_artifact(
         "planning_query_ref": str(llm_decomposition.get("planning_query_ref") or "traces/planning_query.json"),
         "prior_snapshot_ref": str(llm_decomposition.get("prior_snapshot_ref") or "traces/prior_snapshot.json"),
         "scenarios": scenarios,
+        "decomposition_quality": llm_decomposition.get("decomposition_quality") or {},
         "source_meta": source_meta,
     }
 
@@ -259,6 +340,24 @@ def _write_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
     return output_path
 
 
+def _validate_decomposition_json_or_raise(decomposition: dict[str, Any]) -> None:
+    scenarios = decomposition.get("scenarios")
+    if not isinstance(scenarios, list):
+        raise ScenarioDecompositionValidationError(
+            "Scenario decomposition validation failed: `scenarios` must be a JSON array. "
+            "No local artifacts were written.",
+            decomposition_payload=decomposition,
+        )
+
+    non_object_items = [idx for idx, item in enumerate(scenarios, start=1) if not isinstance(item, dict)]
+    if non_object_items:
+        raise ScenarioDecompositionValidationError(
+            "Scenario decomposition validation failed: all `scenarios` entries must be JSON objects "
+            f"(invalid positions: {non_object_items}). No local artifacts were written.",
+            decomposition_payload=decomposition,
+        )
+
+
 def plan_scenarios_from_situation(
     *,
     situation_artifact: dict[str, Any],
@@ -283,6 +382,8 @@ def plan_scenarios_from_situation(
         planning_template=template.model_dump(),
         planning_query=planning_query,
     )
+
+    _validate_decomposition_json_or_raise(decomposition)
 
     traces_path = Path(traces_dir)
     traces_path.mkdir(parents=True, exist_ok=True)

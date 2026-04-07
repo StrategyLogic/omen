@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from omen.ingest.synthesizer.services.situation import analyze_situation_document
+from omen.ingest.synthesizer.services.situation import decompose_scenario_from_situation
 from omen.scenario.validator import IncompleteDeterministicPackError, validate_situation_artifact_or_raise
 
 
@@ -133,3 +134,66 @@ def test_validate_situation_artifact_rejects_incomplete_signal_schema() -> None:
 
   with pytest.raises(IncompleteDeterministicPackError, match="mapped_targets"):
     validate_situation_artifact_or_raise(payload)
+
+
+def test_decompose_scenario_from_situation_coerces_scenarios_object_map(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  response_payload = {
+    "pack_id": "sap_v1",
+    "pack_version": "1.0.0",
+    "derived_from_situation_id": "sap_reltio_acquisition",
+    "ontology_version": "1.0",
+    "scenarios": {
+      "A": {
+        "goal": "Goal A",
+        "target": "Target A",
+        "objective": "Objective A",
+        "variables": ["var-a"],
+        "constraints": ["constraint-a"],
+        "tradeoff_pressure": "tradeoff-a",
+        "resistance_assumptions": "resistance-a",
+        "modeling_notes": "notes-a",
+      },
+      "B": {
+        "title": "Scenario B",
+        "goal": "Goal B",
+        "target": "Target B",
+        "objective": "Objective B",
+        "variables": ["var-b"],
+        "constraints": ["constraint-b"],
+        "tradeoff_pressure": "tradeoff-b",
+        "resistance_assumptions": "resistance-b",
+        "modeling_notes": "notes-b",
+      },
+      "C": {
+        "title": "Scenario C",
+        "goal": "Goal C",
+        "target": "Target C",
+        "objective": "Objective C",
+        "variables": ["var-c"],
+        "constraints": ["constraint-c"],
+        "tradeoff_pressure": "tradeoff-c",
+        "resistance_assumptions": "resistance-c",
+        "modeling_notes": "notes-c",
+      },
+    },
+  }
+
+  monkeypatch.setattr(
+    "omen.ingest.synthesizer.services.scenario.invoke_text_prompt",
+    lambda **kwargs: json.dumps(response_payload),
+  )
+
+  decomposition = decompose_scenario_from_situation(
+    situation_artifact={"id": "sap_reltio_acquisition", "source_meta": {}},
+    pack_id="sap_v1",
+    pack_version="1.0.0",
+    planning_template={},
+    planning_query={},
+  )
+
+  assert isinstance(decomposition["scenarios"], list)
+  assert [item.get("scenario_key") for item in decomposition["scenarios"]] == ["A", "B", "C"]
+  assert decomposition["scenarios"][0]["title"].startswith("Scenario A:")
+  assert decomposition["decomposition_quality"]["validation_issues"] == []

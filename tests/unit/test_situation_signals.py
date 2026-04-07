@@ -181,7 +181,7 @@ def test_decompose_scenario_from_situation_coerces_scenarios_object_map(
   }
 
   monkeypatch.setattr(
-    "omen.ingest.synthesizer.services.situation.invoke_text_prompt",
+    "omen.ingest.synthesizer.services.scenario.invoke_text_prompt",
     lambda **kwargs: json.dumps(response_payload),
   )
 

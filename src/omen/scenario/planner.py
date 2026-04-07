@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.services.situation import decompose_scenario_from_situation
+from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
 from omen.scenario.prior import build_prior_snapshot
 from omen.scenario.space import build_planning_query
 from omen.scenario.template_loader import load_planning_template

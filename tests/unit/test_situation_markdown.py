@@ -1,4 +1,4 @@
-import omen.ingest.reportor.situation_brief as situation_brief_renderer
+import omen.ingest.reporter.markdown as situation_brief_renderer
 
 from omen.ingest.synthesizer.builders.situation import situation_artifact_to_markdown
 

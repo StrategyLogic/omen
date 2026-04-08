@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
+from omen.ingest.synthesizer.services.actor_pipeline import ensure_actor_artifacts
 from omen.ingest.processor import fetch_url_text, save_url_source_text
 from omen.ingest.synthesizer.builders.situation import (
     validate_situation_source_or_raise,
@@ -68,18 +68,15 @@ def _resolve_default_output_path(_input_path: Path, pack_id: str) -> Path:
 
 
 def _generate_actor_ref_from_situation_doc(*, situation_doc_path: Path, config_path: str) -> str:
-    # Reuse existing actor pipeline entry to keep artifact structure consistent.
-    from omen.cli.actor import _ensure_actor_artifacts
     from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME
 
-    actor_args = SimpleNamespace(
+    _, case_dir = ensure_actor_artifacts(
         doc=str(situation_doc_path),
         title=None,
         known_outcome=None,
-        config=config_path,
+        config_path=config_path,
         output_dir="output/actors",
     )
-    _, case_dir = _ensure_actor_artifacts(actor_args)
     actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
     return str(actor_path)
 

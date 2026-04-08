@@ -8,11 +8,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
-from omen.ingest.synthesizer.prompts import build_json_retry_prompt
-from omen.ingest.synthesizer.prompts.registry import get_prompt_template
+from omen.ingest.synthesizer.services.actor import ensure_strategic_actor_style
 from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
 from omen.scenario.prior import build_prior_snapshot
+from omen.scenario.prior import score_prior_probabilities
 from omen.scenario.space import build_planning_query
 from omen.scenario.template_loader import load_planning_template
 
@@ -23,364 +22,6 @@ class ScenarioDecompositionValidationError(ValueError):
     def __init__(self, message: str, *, decomposition_payload: Any) -> None:
         super().__init__(message)
         self.decomposition_payload = decomposition_payload
-
-
-def _render_base_prompt(template_key: str, values: dict[str, object]) -> str:
-    return render_prompt_template(get_prompt_template(template_key, tier="base"), values)
-
-
-def _extract_json_object(text: str) -> dict[str, Any]:
-    decoder = json.JSONDecoder()
-    start = text.find("{")
-    if start == -1:
-        raise ValueError("LLM response does not contain JSON object")
-    payload, _ = decoder.raw_decode(text[start:])
-    if not isinstance(payload, dict):
-        raise ValueError("LLM response payload is not an object")
-    return payload
-
-
-def _invoke_json(prompt: str, *, config_path: str, stage: str) -> dict[str, Any]:
-    content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
-    try:
-        return _extract_json_object(content)
-    except Exception:
-        retry_prompt = build_json_retry_prompt(prompt)
-        retry_content = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
-        return _extract_json_object(retry_content)
-
-
-def _resolve_actor_ontology_path(actor_ref: str) -> Path | None:
-    candidate = Path(str(actor_ref).strip())
-    if candidate.exists() and candidate.suffix.lower() == ".json":
-        return candidate
-    return None
-
-
-def _find_strategic_actor(payload: dict[str, Any]) -> dict[str, Any] | None:
-    actors = payload.get("actors") or []
-    if not isinstance(actors, list):
-        return None
-    for actor in actors:
-        if not isinstance(actor, dict):
-            continue
-        if str(actor.get("type") or "").strip() == "StrategicActor":
-            return actor
-    return None
-
-
-def _is_strategic_actor_admissible(payload: dict[str, Any]) -> bool:
-    strategic_actor = _find_strategic_actor(payload)
-    if not isinstance(strategic_actor, dict):
-        return False
-
-    profile = strategic_actor.get("profile") or {}
-    if not isinstance(profile, dict):
-        return False
-    style = profile.get("strategic_style") or {}
-    if not isinstance(style, dict):
-        return False
-
-    filled = 0
-    if str(style.get("decision_style") or "").strip():
-        filled += 1
-    if str(style.get("value_proposition") or "").strip():
-        filled += 1
-    if isinstance(style.get("decision_preferences"), list) and any(str(x).strip() for x in style["decision_preferences"]):
-        filled += 1
-    if isinstance(style.get("non_negotiables"), list) and any(str(x).strip() for x in style["non_negotiables"]):
-        filled += 1
-
-    return filled >= 2
-
-
-def _enhance_actor_ontology_style(
-    *,
-    actor_payload: dict[str, Any],
-    actor_ref: str,
-    strategic_actor_name: str,
-    strategic_actor_role: str,
-    current_case_id_to_exclude: str,
-    config_path: str,
-) -> dict[str, Any]:
-    prompt = _render_base_prompt(
-        "scenario_enhance_prompt",
-        {
-            "actor_ref": actor_ref,
-            "strategic_actor_name": strategic_actor_name,
-            "strategic_actor_role": strategic_actor_role,
-            "current_case_id_to_exclude": current_case_id_to_exclude,
-            "actor_ontology_json": json.dumps(actor_payload, ensure_ascii=False),
-        },
-    )
-    return _invoke_json(prompt, config_path=config_path, stage="scenario_enhance_prompt")
-
-
-def _extract_strategic_actor_identity(actor_payload: dict[str, Any]) -> tuple[str, str]:
-    strategic_actor = _find_strategic_actor(actor_payload)
-    if not isinstance(strategic_actor, dict):
-        return ("unknown_strategic_actor", "")
-    return (
-        str(strategic_actor.get("name") or "unknown_strategic_actor").strip(),
-        str(strategic_actor.get("role") or "").strip(),
-    )
-
-
-def _apply_enhanced_style(actor_payload: dict[str, Any], enhanced: dict[str, Any]) -> bool:
-    strategic_actor = _find_strategic_actor(actor_payload)
-    if not isinstance(strategic_actor, dict):
-        return False
-
-    profile = strategic_actor.setdefault("profile", {})
-    if not isinstance(profile, dict):
-        return False
-
-    existing = profile.get("strategic_style")
-    if not isinstance(existing, dict):
-        existing = {}
-        profile["strategic_style"] = existing
-
-    candidate = enhanced.get("strategic_style") if isinstance(enhanced.get("strategic_style"), dict) else enhanced
-    if not isinstance(candidate, dict):
-        return False
-
-    changed = False
-    for field in ("decision_style", "value_proposition"):
-        value = str(candidate.get(field) or "").strip()
-        if value and str(existing.get(field) or "").strip() != value:
-            existing[field] = value
-            changed = True
-
-    for field in ("decision_preferences", "non_negotiables"):
-        raw = candidate.get(field)
-        if isinstance(raw, list):
-            normalized = [str(item).strip() for item in raw if str(item).strip()]
-            if normalized and normalized != existing.get(field):
-                existing[field] = normalized
-                changed = True
-
-    return changed
-
-
-def _ensure_strategic_actor_admissible(
-    *,
-    actor_ref: str,
-    situation_artifact: dict[str, Any],
-    config_path: str,
-) -> tuple[str, dict[str, Any]]:
-    trace: dict[str, Any] = {
-        "stage": "scenario_enhance_prompt",
-        "actor_ref": actor_ref,
-        "admissible_before": False,
-        "enhanced": False,
-        "status": "skipped",
-        "reason": "",
-    }
-
-    actor_path = _resolve_actor_ontology_path(actor_ref)
-    if actor_path is None:
-        trace["reason"] = "actor_ref is not a local actor ontology json path"
-        return actor_ref, trace
-
-    try:
-        payload = json.loads(actor_path.read_text(encoding="utf-8"))
-    except Exception:
-        trace["reason"] = "failed to read actor ontology payload"
-        return actor_ref, trace
-
-    admissible_before = _is_strategic_actor_admissible(payload)
-    trace["admissible_before"] = admissible_before
-    if admissible_before:
-        trace["status"] = "noop"
-        trace["reason"] = "strategic actor already admissible"
-        return actor_ref, trace
-
-    strategic_actor_name, strategic_actor_role = _extract_strategic_actor_identity(payload)
-    current_case_id_to_exclude = str(situation_artifact.get("id") or "unknown_case").strip()
-
-    try:
-        enhanced = _enhance_actor_ontology_style(
-            actor_payload=payload,
-            actor_ref=actor_ref,
-            strategic_actor_name=strategic_actor_name,
-            strategic_actor_role=strategic_actor_role,
-            current_case_id_to_exclude=current_case_id_to_exclude,
-            config_path=config_path,
-        )
-    except Exception:
-        trace["status"] = "failed"
-        trace["reason"] = "scenario_enhance_prompt failed"
-        return actor_ref, trace
-
-    if _apply_enhanced_style(payload, enhanced):
-        actor_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        trace["enhanced"] = True
-        trace["status"] = "updated"
-        trace["reason"] = "strategic_style enhanced and persisted"
-    else:
-        trace["status"] = "noop"
-        trace["reason"] = "enhancement returned no applicable strategic_style changes"
-
-    return actor_ref, trace
-
-
-def _extract_actor_style_for_prior(actor_ref: str) -> dict[str, Any]:
-    actor_path = _resolve_actor_ontology_path(actor_ref)
-    if actor_path is None:
-        return {}
-    try:
-        payload = json.loads(actor_path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-    strategic_actor = _find_strategic_actor(payload)
-    if not isinstance(strategic_actor, dict):
-        return {}
-
-    profile = strategic_actor.get("profile") or {}
-    style = profile.get("strategic_style") or {}
-    if not isinstance(style, dict):
-        style = {}
-
-    return {
-        "name": str(strategic_actor.get("name") or "").strip(),
-        "role": str(strategic_actor.get("role") or "").strip(),
-        "strategic_style": style,
-    }
-
-
-def _build_prior_candidates_from_scenarios(ontology: dict[str, Any]) -> list[dict[str, Any]]:
-    candidates: list[dict[str, Any]] = []
-    for item in list(ontology.get("scenarios") or []):
-        if not isinstance(item, dict):
-            continue
-        scenario_key = str(item.get("scenario_key") or "").strip().upper()
-        if scenario_key not in {"A", "B", "C"}:
-            continue
-        candidates.append(
-            {
-                "scenario_key": scenario_key,
-                "title": str(item.get("title") or "").strip(),
-                "goal": str(item.get("goal") or "").strip(),
-                "target": str(item.get("target") or "").strip(),
-                "objective": str(item.get("objective") or "").strip(),
-                "constraints": _nonempty_text_list(item.get("constraints")),
-                "tradeoff_pressure": _nonempty_text_list(item.get("tradeoff_pressure")),
-            }
-        )
-    return sorted(candidates, key=lambda x: x["scenario_key"])
-
-
-def _build_raw_priors_fallback(
-    *,
-    decomposition: dict[str, Any],
-    fallback_query: dict[str, Any],
-) -> list[dict[str, Any]]:
-    llm_priors = decomposition.get("raw_prior_scores")
-    if isinstance(llm_priors, list):
-        normalized: list[dict[str, Any]] = []
-        for item in llm_priors:
-            if not isinstance(item, dict):
-                continue
-            key = str(item.get("scenario_key") or "").strip().upper()
-            if key not in {"A", "B", "C"}:
-                continue
-            normalized.append(
-                {
-                    "scenario_key": key,
-                    "score": float(item.get("score") or 0.0),
-                    "explain": str(item.get("explain") or "Derived from decomposition fallback raw_prior_scores").strip(),
-                }
-            )
-        if len(normalized) == 3:
-            return sorted(normalized, key=lambda item: item["scenario_key"])
-
-    fallback = fallback_query.get("similarity_scores") or []
-    output = [
-        {
-            "scenario_key": str(item.get("scenario_key") or "").strip().upper(),
-            "score": float(item.get("score") or 0.0),
-            "explain": f"Fallback from planning_query similarity source={str(item.get('source') or 'unknown')}",
-        }
-        for item in fallback
-        if str(item.get("scenario_key") or "").strip().upper() in {"A", "B", "C"}
-    ]
-    if len(output) != 3:
-        output = [
-            {"scenario_key": "A", "score": 0.4, "explain": "Hard fallback default prior"},
-            {"scenario_key": "B", "score": 0.35, "explain": "Hard fallback default prior"},
-            {"scenario_key": "C", "score": 0.25, "explain": "Hard fallback default prior"},
-        ]
-    return sorted(output, key=lambda item: item["scenario_key"])
-
-
-def _build_raw_priors_llm(
-    *,
-    actor_ref: str,
-    ontology: dict[str, Any],
-    decomposition: dict[str, Any],
-    fallback_query: dict[str, Any],
-    config_path: str,
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    fallback = _build_raw_priors_fallback(decomposition=decomposition, fallback_query=fallback_query)
-    actor_style = _extract_actor_style_for_prior(actor_ref)
-    scenario_candidates = _build_prior_candidates_from_scenarios(ontology)
-
-    trace: dict[str, Any] = {
-        "stage": "scenario_prior_prompt",
-        "status": "fallback",
-        "reason": "",
-        "scoring_source": "fallback",
-    }
-
-    if not scenario_candidates:
-        trace["reason"] = "scenario candidates unavailable"
-        return fallback, trace
-
-    prompt = _render_base_prompt(
-        "scenario_prior_prompt",
-        {
-            "actor_ref": actor_ref,
-            "actor_style_json": json.dumps(actor_style, ensure_ascii=False),
-            "scenario_candidates_json": json.dumps(scenario_candidates, ensure_ascii=False),
-            "fallback_similarity_json": json.dumps(fallback_query.get("similarity_scores") or [], ensure_ascii=False),
-        },
-    )
-
-    try:
-        prior_payload = _invoke_json(prompt, config_path=config_path, stage="scenario_prior_prompt")
-    except Exception:
-        trace["reason"] = "scenario_prior_prompt invocation failed"
-        return fallback, trace
-
-    prior_items = prior_payload.get("raw_prior_scores")
-    if not isinstance(prior_items, list):
-        trace["reason"] = "scenario_prior_prompt returned invalid raw_prior_scores"
-        return fallback, trace
-
-    output: list[dict[str, Any]] = []
-    for item in prior_items:
-        if not isinstance(item, dict):
-            continue
-        key = str(item.get("scenario_key") or "").strip().upper()
-        if key not in {"A", "B", "C"}:
-            continue
-        output.append(
-            {
-                "scenario_key": key,
-                "score": float(item.get("score") or 0.0),
-                "explain": str(item.get("explain") or "").strip() or "LLM prior selection explanation not provided",
-            }
-        )
-
-    if len(output) != 3:
-        trace["reason"] = "scenario_prior_prompt output missing A/B/C"
-        return fallback, trace
-
-    trace["status"] = "ok"
-    trace["scoring_source"] = "llm"
-    trace["reason"] = "scenario_prior_prompt scored A/B/C with explanations"
-    return sorted(output, key=lambda item: item["scenario_key"]), trace
 
 
 def _nonempty_text_list(value: Any) -> list[str]:
@@ -499,22 +140,7 @@ def normalize_llm_scenarios_with_policy(
                     "LLM scenario decomposition returned non-object payload "
                     f"for slot {slot_order[index]}: {text!r}"
                 )
-            by_key.setdefault(
-                slot_order[index],
-                {
-                    "scenario_key": slot_order[index],
-                    "title": f"Scenario {slot_order[index]}",
-                    "objective": text,
-                    "constraints": [text],
-                    "tradeoff_pressure": [],
-                    "variables": [],
-                    "resistance_assumptions": {},
-                    "modeling_notes": [
-                        "Derived from plain-text LLM scenario payload",
-                        "Schema fallback applied by planner",
-                    ],
-                },
-            )
+            raise ValueError("LLM scenario decomposition must return JSON objects for all slots")
 
     missing = [slot.key for slot in policies if slot.key not in by_key]
     if missing:
@@ -537,49 +163,20 @@ def normalize_llm_scenarios_with_policy(
         raw_variables = raw.get("variables")
         variables: list[dict[str, Any]] = []
         if isinstance(raw_variables, list):
-            for index, item in enumerate(raw_variables, start=1):
+            for item in raw_variables:
                 if isinstance(item, dict):
                     variables.append(item)
-                    continue
-                text = str(item).strip()
-                if not text:
-                    continue
-                variables.append(
-                    {
-                        "name": text,
-                        "type": "text",
-                        "value_range_or_enum": [],
-                        "baseline_assumption": text,
-                        "rationale": "Variable normalized from plain-text decomposition output",
-                        "signal_ref": f"signal::{policy.key.lower()}::{index}",
-                        "constraint_ref": "market::primary",
-                    }
-                )
 
         if not variables:
-            variables = [
-                {
-                    "name": "signal_direction",
-                    "type": "categorical",
-                    "value_range_or_enum": ["positive", "neutral", "negative"],
-                    "baseline_assumption": policy.signal_basis,
-                    "rationale": "Policy-guided fallback variable after LLM normalization",
-                    "signal_ref": f"signal::{policy.key.lower()}::primary",
-                    "constraint_ref": "market::primary",
-                }
-            ]
+            raise ValueError(f"LLM scenario decomposition slot {policy.key} has empty variables")
 
         resistance_raw = raw.get("resistance_assumptions") or {}
-        resistance_note = ""
         if isinstance(resistance_raw, dict):
             resistance = resistance_raw
         else:
-            resistance_note = str(resistance_raw).strip()
             resistance = {}
+
         default_r = policy.resistance
-        extra_rationale = []
-        if resistance_note:
-            extra_rationale.append(resistance_note)
         normalized.append(
             {
                 "scenario_key": policy.key,
@@ -604,7 +201,6 @@ def normalize_llm_scenarios_with_policy(
                             for x in (resistance.get("assumption_rationale") or [])
                             if str(x).strip()
                         ],
-                        *extra_rationale,
                         source_hint,
                         f"intent: {policy.intent}",
                     ],
@@ -692,9 +288,9 @@ def plan_scenarios_from_situation(
     config_path: str,
     traces_dir: str | Path,
 ) -> dict[str, Any]:
-    actor_ref, actor_enhancement_trace = _ensure_strategic_actor_admissible(
+    actor_enhancement_trace = ensure_strategic_actor_style(
         actor_ref=actor_ref,
-        situation_artifact=situation_artifact,
+        current_case_id_to_exclude=str(situation_artifact.get("id") or "unknown_case"),
         config_path=config_path,
     )
 
@@ -729,11 +325,10 @@ def plan_scenarios_from_situation(
         pack_version=pack_version,
     )
 
-    raw_priors, prior_scoring_trace = _build_raw_priors_llm(
+    raw_priors, prior_scoring_trace = score_prior_probabilities(
         actor_ref=actor_ref,
-        ontology=ontology,
-        decomposition=decomposition,
-        fallback_query=planning_query,
+        scenario_ontology=ontology,
+        planning_query=planning_query,
         config_path=config_path,
     )
 

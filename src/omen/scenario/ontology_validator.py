@@ -12,7 +12,7 @@ import warnings
 from pydantic import ValidationError
 
 from omen.ingest.synthesizer.schema import BACKGROUND_FACT_FIELDS, VERSION
-from omen.scenario.ontology_models import OntologyInputPackage
+from omen.ingest.models import OntologyInputPackage
 from omen.scenario.ontology_vocab import looks_like_actor_concept
 
 

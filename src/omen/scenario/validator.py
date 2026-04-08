@@ -11,9 +11,9 @@ from omen.scenario.ingest_validator import (
     DeferredScopeFeatureError,
     IncompleteDeterministicPackError,
 )
-from omen.scenario.ontology_models import DeterministicScenarioPackModel
-from omen.scenario.ontology_models import ScenarioOntologySliceModel
-from omen.scenario.ontology_models import SituationArtifactModel
+from omen.ingest.models import DeterministicScenarioPackModel
+from omen.ingest.models import ScenarioOntologySliceModel
+from omen.ingest.models import SituationArtifactModel
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 

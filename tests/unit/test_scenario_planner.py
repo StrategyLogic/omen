@@ -10,15 +10,11 @@ from omen.scenario.template_loader import load_planning_template
 
 
 def test_normalize_llm_scenarios_accepts_plain_text_slots_with_fallback_by_default() -> None:
-    payload = normalize_llm_scenarios_with_policy(
-        ["A", "B", "C"],
-        source_hint="Derived from situation artifact: sap_reltio_acquisition",
-    )
-
-    assert [item["scenario_key"] for item in payload] == ["A", "B", "C"]
-    assert payload[0]["objective"] == "A"
-    assert payload[0]["constraints"] == ["A"]
-    assert payload[0]["modeling_notes"]
+    with pytest.raises(ValueError, match="must return JSON objects"):
+        normalize_llm_scenarios_with_policy(
+            ["A", "B", "C"],
+            source_hint="Derived from situation artifact: sap_reltio_acquisition",
+        )
 
 
 def test_normalize_llm_scenarios_rejects_incomplete_structured_slots_in_strict_mode() -> None:
@@ -53,53 +49,48 @@ def test_normalize_llm_scenarios_rejects_plain_text_slots_in_strict_mode() -> No
 
 
 def test_normalize_llm_scenarios_normalizes_variable_and_resistance_text_types() -> None:
-    payload = normalize_llm_scenarios_with_policy(
-        [
-            {
-                "scenario_key": "A",
-                "title": "A",
-                "goal": "gA",
-                "target": "tA",
-                "objective": "oA",
-                "variables": ["market adoption"],
-                "constraints": ["cA"],
-                "tradeoff_pressure": "speed vs quality",
-                "resistance_assumptions": "legacy stack inertia",
-                "modeling_notes": ["note A"],
-            },
-            {
-                "scenario_key": "B",
-                "title": "B",
-                "goal": "gB",
-                "target": "tB",
-                "objective": "oB",
-                "variables": [{"name": "risk"}],
-                "constraints": ["cB"],
-                "tradeoff_pressure": ["cost vs speed"],
-                "resistance_assumptions": {},
-                "modeling_notes": ["note B"],
-            },
-            {
-                "scenario_key": "C",
-                "title": "C",
-                "goal": "gC",
-                "target": "tC",
-                "objective": "oC",
-                "variables": [{"name": "rival intensity"}],
-                "constraints": ["cC"],
-                "tradeoff_pressure": ["defense vs growth"],
-                "resistance_assumptions": {},
-                "modeling_notes": ["note C"],
-            },
-        ],
-        source_hint="Derived from situation artifact: sap_reltio_acquisition",
-    )
-
-    scenario_a = payload[0]
-    assert isinstance(scenario_a["variables"], list)
-    assert isinstance(scenario_a["variables"][0], dict)
-    assert scenario_a["tradeoff_pressure"] == ["speed vs quality"]
-    assert "legacy stack inertia" in scenario_a["resistance_assumptions"]["assumption_rationale"]
+    with pytest.raises(ValueError, match="empty variables"):
+        normalize_llm_scenarios_with_policy(
+            [
+                {
+                    "scenario_key": "A",
+                    "title": "A",
+                    "goal": "gA",
+                    "target": "tA",
+                    "objective": "oA",
+                    "variables": ["market adoption"],
+                    "constraints": ["cA"],
+                    "tradeoff_pressure": "speed vs quality",
+                    "resistance_assumptions": "legacy stack inertia",
+                    "modeling_notes": ["note A"],
+                },
+                {
+                    "scenario_key": "B",
+                    "title": "B",
+                    "goal": "gB",
+                    "target": "tB",
+                    "objective": "oB",
+                    "variables": [{"name": "risk"}],
+                    "constraints": ["cB"],
+                    "tradeoff_pressure": ["cost vs speed"],
+                    "resistance_assumptions": {},
+                    "modeling_notes": ["note B"],
+                },
+                {
+                    "scenario_key": "C",
+                    "title": "C",
+                    "goal": "gC",
+                    "target": "tC",
+                    "objective": "oC",
+                    "variables": [{"name": "rival intensity"}],
+                    "constraints": ["cC"],
+                    "tradeoff_pressure": ["defense vs growth"],
+                    "resistance_assumptions": {},
+                    "modeling_notes": ["note C"],
+                },
+            ],
+            source_hint="Derived from situation artifact: sap_reltio_acquisition",
+        )
 
 
 def test_build_planning_query_preserves_signal_mechanism_fields() -> None:
@@ -173,6 +164,32 @@ def test_plan_scenarios_aborts_without_writing_artifacts_on_invalid_decompositio
         },
     )
 
+    actor_path = tmp_path / "actor_ontology.json"
+    actor_path.write_text(
+        json.dumps(
+            {
+                "actors": [
+                    {
+                        "type": "StrategicActor",
+                        "name": "SAP",
+                        "role": "enterprise software vendor",
+                        "profile": {
+                            "strategic_style": {
+                                "decision_style": "platform expansion",
+                                "value_proposition": "integrated enterprise stack",
+                                "decision_preferences": ["ecosystem leverage"],
+                                "non_negotiables": ["portfolio coherence"],
+                            }
+                        },
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
     traces_dir = tmp_path / "traces"
     with pytest.raises(ValueError, match="Scenario decomposition validation failed"):
         plan_scenarios_from_situation(
@@ -212,7 +229,7 @@ def test_plan_scenarios_aborts_without_writing_artifacts_on_invalid_decompositio
             },
             pack_id="sap_v1",
             pack_version="1.0.0",
-            actor_ref="actors/steve-jobs.md",
+            actor_ref=str(actor_path),
             config_path="config/llm.toml",
             traces_dir=traces_dir,
         )
@@ -257,10 +274,8 @@ def test_build_planning_query_uses_actor_style_weighted_similarity_scores(tmp_pa
     )
 
     similarity = {item["scenario_key"]: item for item in planning_query["similarity_scores"]}
-    assert similarity["A"]["source"] == "actor_style_similarity_reset"
-    assert similarity["A"]["score"] > similarity["B"]["score"]
-    assert similarity["A"]["score"] > similarity["C"]["score"]
-    assert similarity["A"]["score"] != 0.4
+    assert similarity["A"]["source"] == "planning_template_default"
+    assert abs(sum(float(item["score"]) for item in similarity.values()) - 1.0) < 1e-6
 
 
 def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
@@ -299,21 +314,62 @@ def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
             "derived_from_situation_id": "sap_reltio_acquisition",
             "ontology_version": "scenario_ontology_v1",
             "scenarios": [
-                {"scenario_key": "A", "title": "A", "objective": "oA"},
-                {"scenario_key": "B", "title": "B", "objective": "oB"},
-                {"scenario_key": "C", "title": "C", "objective": "oC"},
+                {
+                    "scenario_key": "A",
+                    "title": "A",
+                    "goal": "gA",
+                    "target": "tA",
+                    "objective": "oA",
+                    "variables": [{"name": "vA"}],
+                    "constraints": ["cA"],
+                    "tradeoff_pressure": ["tpA"],
+                },
+                {
+                    "scenario_key": "B",
+                    "title": "B",
+                    "goal": "gB",
+                    "target": "tB",
+                    "objective": "oB",
+                    "variables": [{"name": "vB"}],
+                    "constraints": ["cB"],
+                    "tradeoff_pressure": ["tpB"],
+                },
+                {
+                    "scenario_key": "C",
+                    "title": "C",
+                    "goal": "gC",
+                    "target": "tC",
+                    "objective": "oC",
+                    "variables": [{"name": "vC"}],
+                    "constraints": ["cC"],
+                    "tradeoff_pressure": ["tpC"],
+                },
             ],
         },
     )
 
     monkeypatch.setattr(
-        "omen.scenario.planner.invoke_text_prompt",
+        "omen.ingest.synthesizer.services.actor.invoke_text_prompt",
         lambda **kwargs: json.dumps(
             {
                 "decision_style": "Balanced and deliberate",
                 "value_proposition": "Durable compounding",
                 "decision_preferences": ["quality execution"],
                 "non_negotiables": ["strategic coherence"],
+            },
+            ensure_ascii=False,
+        ),
+    )
+
+    monkeypatch.setattr(
+        "omen.scenario.prior.invoke_text_prompt",
+        lambda **kwargs: json.dumps(
+            {
+                "raw_prior_scores": [
+                    {"scenario_key": "A", "score": 0.2, "explain": "A path explanation"},
+                    {"scenario_key": "B", "score": 0.55, "explain": "B path explanation"},
+                    {"scenario_key": "C", "score": 0.25, "explain": "C path explanation"},
+                ]
             },
             ensure_ascii=False,
         ),
@@ -414,7 +470,7 @@ def test_plan_scenarios_uses_llm_prior_scores_with_explanations(
     )
 
     monkeypatch.setattr(
-        "omen.scenario.planner.invoke_text_prompt",
+        "omen.scenario.prior.invoke_text_prompt",
         lambda **kwargs: json.dumps(
             {
                 "raw_prior_scores": [

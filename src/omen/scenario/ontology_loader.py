@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.scenario.ontology_models import OntologyInputPackage
+from omen.ingest.models import OntologyInputPackage
 from omen.scenario.ontology_validator import (
     OntologyValidationIssue,
     OntologyValidationError,

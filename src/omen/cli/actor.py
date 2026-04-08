@@ -8,11 +8,8 @@ from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
-from omen.ingest.synthesizer.services.actor import generate_actor_and_events_from_document
-from omen.ingest.synthesizer.services.strategy import generate_strategy_ontology_from_document
+from omen.ingest.synthesizer.services.actor_pipeline import ensure_actor_artifacts
 from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
-from omen.ingest.synthesizer.assembler import attach_actor_ref, attach_timeline_events
-from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.scenario.ontology_validator import (
     validate_actor_ontology_payload,
     validate_actor_strategy_link_payload,
@@ -24,10 +21,6 @@ from omen.ui.artifacts import (
   ensure_actor_output_dir,
 )
 from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
-from omen.cli.situation import (
-  handle_situation_analyze_command,
-  register_situation_analyze_commands,
-)
 
 
 ACTOR_DEFAULT_OUTPUT_ROOT = "output/actors"
@@ -57,11 +50,9 @@ def _add_actor_common_args(parser: Any) -> None:
   )
 
 
-def register_analyze_commands(subparsers: Any) -> None:
+def register_analyze_commands(subparsers: Any) -> Any:
   analyze = subparsers.add_parser("analyze", help="top-level analysis commands")
   analyze_sub = analyze.add_subparsers(dest="analyze_object", required=True)
-
-  register_situation_analyze_commands(analyze_sub)
 
   actor = analyze_sub.add_parser("actor", help="strategic actor analysis flow")
   _add_actor_common_args(actor)
@@ -84,6 +75,7 @@ def register_analyze_commands(subparsers: Any) -> None:
   founder.add_argument("--date", required=False)
   founder.add_argument("--config", required=False, default="config/llm.toml")
   founder.add_argument("--output-dir", required=False, default="output/founder")
+  return analyze_sub
 
 
 def register_validate_commands(subparsers: Any) -> None:
@@ -100,21 +92,6 @@ def register_validate_commands(subparsers: Any) -> None:
   actor.add_argument("--output-dir", required=False, default=ACTOR_DEFAULT_OUTPUT_ROOT)
 
 
-def _resolve_doc_path(doc: str) -> Path:
-  raw = str(doc).strip()
-  if "/" in raw:
-    candidate = Path(raw)
-    if not candidate.suffix:
-        candidate = candidate.with_suffix(".md")
-    return candidate
-
-  stem = raw[:-3] if raw.endswith(".md") else raw
-  actor_candidate = Path("cases/actors") / f"{stem}.md"
-  if actor_candidate.exists():
-    return actor_candidate
-  return Path("cases") / f"{stem}.md"
-
-
 def _load_analysis_artifacts(case_id: str, output_dir: str) -> tuple[Path, dict[str, Any] | None, dict[str, Any]]:
   case_dir = ensure_actor_output_dir(case_id, output_root=output_dir)
   strategy_path = case_dir / STRATEGY_ONTOLOGY_FILENAME
@@ -128,65 +105,6 @@ def _load_analysis_artifacts(case_id: str, output_dir: str) -> tuple[Path, dict[
   if strategy_path.exists():
     strategy_payload = json.loads(strategy_path.read_text(encoding="utf-8"))
   return case_dir, strategy_payload, actor_payload
-
-
-def _ensure_actor_artifacts(args: Any) -> tuple[str, Path]:
-  case_id = normalize_case_id(args.doc)
-  doc_path = _resolve_doc_path(args.doc)
-  if not doc_path.exists():
-    raise FileNotFoundError(f"document not found: {doc_path}")
-
-  case_dir = ensure_actor_output_dir(case_id, output_root=args.output_dir)
-  strategy_path = case_dir / STRATEGY_ONTOLOGY_FILENAME
-  actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
-
-  if strategy_path.exists() and actor_path.exists():
-    return case_id, case_dir
-
-  title = args.title or case_display_title(case_id)
-  known_outcome = args.known_outcome or suggest_known_outcome(case_id)
-
-  generation = generate_strategy_ontology_from_document(
-    document_path=str(doc_path),
-    case_id=case_id,
-    title=title,
-    strategy=None,
-    known_outcome=known_outcome,
-    config_path=args.config,
-  )
-  known_outcome_effective = generation.inferred_known_outcome or known_outcome
-
-  actor_payload, timeline_events = generate_actor_and_events_from_document(
-    document_path=str(doc_path),
-    case_id=case_id,
-    title=title,
-    known_outcome=known_outcome_effective,
-    config_path=args.config,
-  )
-
-  strategy_payload = attach_timeline_events(generation.strategy_ontology, timeline_events)
-  strategy_payload = attach_actor_ref(
-    strategy_payload,
-    actor_payload,
-    actor_filename=actor_path.name,
-  )
-
-  save_strategy_ontology(strategy_payload, strategy_path)
-  actor_path.write_text(json.dumps(actor_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-  report = {
-    "case_id": case_id,
-    "strategy_ontology_path": str(strategy_path),
-    "actor_ontology_path": str(actor_path),
-    "validation_passed": generation.validation_passed,
-    "validation_issues": generation.validation_issues,
-    "reused_existing": False,
-  }
-  (case_dir / "generation.json").write_text(
-    json.dumps(report, ensure_ascii=False, indent=2),
-    encoding="utf-8",
-  )
-  return case_id, case_dir
 
 
 def _run_status(
@@ -231,9 +149,6 @@ def _run_persona(
 
 
 def handle_analyze_command(args: Any) -> int:
-  if args.analyze_object == "situation":
-    return handle_situation_analyze_command(args)
-
   if args.analyze_object != "actor":
     print(f"Analyze object `{args.analyze_object}` is not supported")
     return 3
@@ -245,7 +160,13 @@ def handle_analyze_command(args: Any) -> int:
     return 2
 
   try:
-    case_id, _ = _ensure_actor_artifacts(args)
+    case_id, _ = ensure_actor_artifacts(
+      doc=str(args.doc),
+      title=str(args.title) if args.title else None,
+      known_outcome=str(args.known_outcome) if args.known_outcome else None,
+      config_path=str(args.config),
+      output_dir=str(args.output_dir),
+    )
     case_dir, strategy_payload, actor_payload = _load_analysis_artifacts(case_id, args.output_dir)
   except Exception as exc:
     print(f"Analyze actor setup failed: {exc}")

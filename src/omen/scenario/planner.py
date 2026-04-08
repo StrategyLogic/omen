@@ -8,12 +8,25 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.services.actor import ensure_strategic_actor_style
+import yaml
+
+from omen.analysis.actor.formation import ensure_strategic_actor_style
 from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
+from omen.scenario.models import ScenarioPlanningRuleTemplateModel
 from omen.scenario.prior import build_prior_snapshot
 from omen.scenario.prior import score_prior_probabilities
 from omen.scenario.space import build_planning_query
-from omen.scenario.template_loader import load_planning_template
+
+
+def load_planning_template(path: str | Path = "config/templates/planning.yaml") -> ScenarioPlanningRuleTemplateModel:
+    template_path = Path(path)
+    if not template_path.is_absolute() and not template_path.exists():
+        repo_root = Path(__file__).resolve().parents[3]
+        template_path = repo_root / template_path
+    payload = yaml.safe_load(template_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("planning template must be a YAML object")
+    return ScenarioPlanningRuleTemplateModel.model_validate(payload)
 
 
 class ScenarioDecompositionValidationError(ValueError):

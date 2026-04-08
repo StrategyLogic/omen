@@ -51,3 +51,9 @@ STRATEGIC_STYLE_FIELDS = (
 	"decision_preferences",
 	"non_negotiables",
 )
+
+ACTOR_SUFFIX = "Actor"
+
+
+def looks_like_actor_concept(name: str) -> bool:
+	return name.endswith(ACTOR_SUFFIX)

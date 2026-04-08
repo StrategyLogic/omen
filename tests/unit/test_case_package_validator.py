@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from omen.scenario.validator import (
+from omen.ingest.validators.scenario import (
     validate_case_package_or_raise,
     validate_cross_case_output_contract_or_raise,
     validate_runtime_support_or_raise,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from omen.scenario.ontology_validator import validate_actor_ontology_payload
-from omen.scenario.validator import format_validation_report
+from omen.ingest.validators.actor import validate_actor_ontology_payload
+from omen.ingest.validators.scenario import format_validation_report
 
 
 def test_actor_validator_report_pass() -> None:

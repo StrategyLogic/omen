@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from omen.scenario.loader import load_scenario
-from omen.scenario.validator import validate_scenario_or_raise
+from omen.ingest.validators.scenario import validate_scenario_or_raise
 
 
 ROOT = Path(__file__).resolve().parents[2]

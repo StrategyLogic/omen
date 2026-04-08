@@ -10,15 +10,15 @@ from omen.ingest.synthesizer.builders.situation import (
     scenario_ontology_to_markdown,
     situation_artifact_to_markdown,
 )
-from omen.scenario.ontology_loader import bind_ontology_to_scenario, load_ontology_input
-from omen.scenario.ontology_validator import validate_ontology_input_or_raise
-from omen.scenario.validator import (
+from omen.ingest.validators.scenario import (
     ScenarioConfig,
     validate_case_package_or_raise,
-    validate_situation_artifact_or_raise,
     validate_scenario_ontology_slice_or_raise,
     validate_scenario_or_raise,
 )
+from omen.ingest.validators.situation import validate_situation_artifact_or_raise
+from omen.ingest.validators.strategy import validate_ontology_input_or_raise
+from omen.scenario.ontology_loader import bind_ontology_to_scenario, load_ontology_input
 from omen.types import CasePackage
 
 

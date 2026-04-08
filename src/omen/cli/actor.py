@@ -8,13 +8,13 @@ from typing import Any
 
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
-from omen.ingest.synthesizer.services.actor_pipeline import ensure_actor_artifacts
+from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
 from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
-from omen.scenario.ontology_validator import (
+from omen.ingest.validators.actor import (
     validate_actor_ontology_payload,
     validate_actor_strategy_link_payload,
 )
-from omen.scenario.validator import format_validation_report
+from omen.ingest.validators.scenario import format_validation_report
 from omen.ui.artifacts import (
   ACTOR_ONTOLOGY_FILENAME,
   STRATEGY_ONTOLOGY_FILENAME,

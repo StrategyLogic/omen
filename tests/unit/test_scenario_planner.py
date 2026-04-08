@@ -6,7 +6,7 @@ import pytest
 from omen.scenario.planner import normalize_llm_scenarios_with_policy
 from omen.scenario.planner import plan_scenarios_from_situation
 from omen.scenario.space import build_planning_query
-from omen.scenario.template_loader import load_planning_template
+from omen.scenario.planner import load_planning_template
 
 
 def test_normalize_llm_scenarios_accepts_plain_text_slots_with_fallback_by_default() -> None:
@@ -349,7 +349,7 @@ def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
     )
 
     monkeypatch.setattr(
-        "omen.ingest.synthesizer.services.actor.invoke_text_prompt",
+        "omen.analysis.actor.formation.invoke_text_prompt",
         lambda **kwargs: json.dumps(
             {
                 "decision_style": "Balanced and deliberate",

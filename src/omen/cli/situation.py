@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.services.actor_pipeline import ensure_actor_artifacts
+from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
 from omen.ingest.processor import fetch_url_text, save_url_source_text
 from omen.ingest.synthesizer.builders.situation import (
     validate_situation_source_or_raise,

@@ -7,7 +7,7 @@ import uuid
 from dataclasses import asdict
 
 from omen.explain.report import build_explanation_report
-from omen.scenario.validator import ScenarioConfig
+from omen.ingest.validators.scenario import ScenarioConfig
 from omen.simulation.state import ActorRuntimeState, SimulationState
 from omen.simulation.step import (
     can_apply_action,

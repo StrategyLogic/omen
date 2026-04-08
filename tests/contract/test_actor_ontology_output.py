@@ -1,5 +1,5 @@
 from __future__ import annotations
-from omen.scenario.ontology_validator import validate_actor_ontology_payload
+from omen.ingest.validators.actor import validate_actor_ontology_payload
 
 
 def test_actor_ontology_contract_minimal_shape() -> None:

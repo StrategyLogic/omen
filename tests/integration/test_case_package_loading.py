@@ -29,7 +29,7 @@ def test_reject_missing_case_package_artifacts() -> None:
     import json
 
     payload = json.loads(INVALID_CASE_PACKAGE.read_text(encoding="utf-8"))
-    from omen.scenario.validator import validate_case_package_or_raise
+    from omen.ingest.validators.scenario import validate_case_package_or_raise
 
     with pytest.raises(ValueError):
         validate_case_package_or_raise(payload, base_dir=ROOT)

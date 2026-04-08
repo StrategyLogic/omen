@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from omen.scenario.ontology_validator import (
+from omen.ingest.validators.actor import (
     validate_actor_ontology_payload,
     validate_actor_strategy_link_payload,
 )

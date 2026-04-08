@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from omen.explain.report import build_explanation_report
-from omen.scenario.validator import ScenarioConfig, validate_scenario_or_raise
+from omen.ingest.validators.scenario import ScenarioConfig, validate_scenario_or_raise
 from omen.simulation.condition_types import normalize_semantic_conditions
 from omen.simulation.engine import run_simulation
 from omen.simulation.precision_metrics import (

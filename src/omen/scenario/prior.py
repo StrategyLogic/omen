@@ -8,8 +8,8 @@ from typing import Any
 from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
-from omen.ingest.synthesizer.builders.actor import extract_strategic_actor_style_payload
-from omen.ingest.synthesizer.builders.actor import load_actor_ontology_payload
+from omen.analysis.actor.formation import extract_strategic_actor_style_payload
+from omen.analysis.actor.formation import load_actor_ontology_payload
 from omen.scenario.models import ScenarioPriorProbabilitySnapshotModel
 
 

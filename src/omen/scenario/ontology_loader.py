@@ -7,12 +7,14 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.models import OntologyInputPackage
-from omen.scenario.ontology_validator import (
+from omen.ingest.validators.actor import (
     OntologyValidationIssue,
     OntologyValidationError,
+)
+from omen.ingest.validators.strategy import (
     validate_ontology_input_or_raise,
 )
-from omen.scenario.validator import ScenarioConfig
+from omen.ingest.validators.scenario import ScenarioConfig
 
 
 def _extract_actor_ids(actor_items: Any) -> set[str]:

@@ -8,10 +8,25 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+from omen.analysis.actor.formation import ensure_strategic_actor_style
 from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
+from omen.scenario.models import ScenarioPlanningRuleTemplateModel
 from omen.scenario.prior import build_prior_snapshot
+from omen.scenario.prior import score_prior_probabilities
 from omen.scenario.space import build_planning_query
-from omen.scenario.template_loader import load_planning_template
+
+
+def load_planning_template(path: str | Path = "config/templates/planning.yaml") -> ScenarioPlanningRuleTemplateModel:
+    template_path = Path(path)
+    if not template_path.is_absolute() and not template_path.exists():
+        repo_root = Path(__file__).resolve().parents[3]
+        template_path = repo_root / template_path
+    payload = yaml.safe_load(template_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("planning template must be a YAML object")
+    return ScenarioPlanningRuleTemplateModel.model_validate(payload)
 
 
 class ScenarioDecompositionValidationError(ValueError):
@@ -138,22 +153,7 @@ def normalize_llm_scenarios_with_policy(
                     "LLM scenario decomposition returned non-object payload "
                     f"for slot {slot_order[index]}: {text!r}"
                 )
-            by_key.setdefault(
-                slot_order[index],
-                {
-                    "scenario_key": slot_order[index],
-                    "title": f"Scenario {slot_order[index]}",
-                    "objective": text,
-                    "constraints": [text],
-                    "tradeoff_pressure": [],
-                    "variables": [],
-                    "resistance_assumptions": {},
-                    "modeling_notes": [
-                        "Derived from plain-text LLM scenario payload",
-                        "Schema fallback applied by planner",
-                    ],
-                },
-            )
+            raise ValueError("LLM scenario decomposition must return JSON objects for all slots")
 
     missing = [slot.key for slot in policies if slot.key not in by_key]
     if missing:
@@ -176,49 +176,20 @@ def normalize_llm_scenarios_with_policy(
         raw_variables = raw.get("variables")
         variables: list[dict[str, Any]] = []
         if isinstance(raw_variables, list):
-            for index, item in enumerate(raw_variables, start=1):
+            for item in raw_variables:
                 if isinstance(item, dict):
                     variables.append(item)
-                    continue
-                text = str(item).strip()
-                if not text:
-                    continue
-                variables.append(
-                    {
-                        "name": text,
-                        "type": "text",
-                        "value_range_or_enum": [],
-                        "baseline_assumption": text,
-                        "rationale": "Variable normalized from plain-text decomposition output",
-                        "signal_ref": f"signal::{policy.key.lower()}::{index}",
-                        "constraint_ref": "market::primary",
-                    }
-                )
 
         if not variables:
-            variables = [
-                {
-                    "name": "signal_direction",
-                    "type": "categorical",
-                    "value_range_or_enum": ["positive", "neutral", "negative"],
-                    "baseline_assumption": policy.signal_basis,
-                    "rationale": "Policy-guided fallback variable after LLM normalization",
-                    "signal_ref": f"signal::{policy.key.lower()}::primary",
-                    "constraint_ref": "market::primary",
-                }
-            ]
+            raise ValueError(f"LLM scenario decomposition slot {policy.key} has empty variables")
 
         resistance_raw = raw.get("resistance_assumptions") or {}
-        resistance_note = ""
         if isinstance(resistance_raw, dict):
             resistance = resistance_raw
         else:
-            resistance_note = str(resistance_raw).strip()
             resistance = {}
+
         default_r = policy.resistance
-        extra_rationale = []
-        if resistance_note:
-            extra_rationale.append(resistance_note)
         normalized.append(
             {
                 "scenario_key": policy.key,
@@ -243,7 +214,6 @@ def normalize_llm_scenarios_with_policy(
                             for x in (resistance.get("assumption_rationale") or [])
                             if str(x).strip()
                         ],
-                        *extra_rationale,
                         source_hint,
                         f"intent: {policy.intent}",
                     ],
@@ -294,42 +264,6 @@ def _build_scenario_ontology_from_situation_artifact(
     }
 
 
-def _build_raw_priors(
-    *,
-    decomposition: dict[str, Any],
-    fallback_query: dict[str, Any],
-) -> list[dict[str, Any]]:
-    llm_priors = decomposition.get("raw_prior_scores")
-    if isinstance(llm_priors, list):
-        normalized: list[dict[str, Any]] = []
-        for item in llm_priors:
-            if not isinstance(item, dict):
-                continue
-            key = str(item.get("scenario_key") or "").strip().upper()
-            if key not in {"A", "B", "C"}:
-                continue
-            normalized.append({"scenario_key": key, "score": float(item.get("score") or 0.0)})
-        if len(normalized) == 3:
-            return sorted(normalized, key=lambda item: item["scenario_key"])
-
-    fallback = fallback_query.get("similarity_scores") or []
-    output = [
-        {
-            "scenario_key": str(item.get("scenario_key") or "").strip().upper(),
-            "score": float(item.get("score") or 0.0),
-        }
-        for item in fallback
-        if str(item.get("scenario_key") or "").strip().upper() in {"A", "B", "C"}
-    ]
-    if len(output) != 3:
-        output = [
-            {"scenario_key": "A", "score": 0.4},
-            {"scenario_key": "B", "score": 0.35},
-            {"scenario_key": "C", "score": 0.25},
-        ]
-    return sorted(output, key=lambda item: item["scenario_key"])
-
-
 def _write_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -367,6 +301,12 @@ def plan_scenarios_from_situation(
     config_path: str,
     traces_dir: str | Path,
 ) -> dict[str, Any]:
+    actor_enhancement_trace = ensure_strategic_actor_style(
+        actor_ref=actor_ref,
+        current_case_id_to_exclude=str(situation_artifact.get("id") or "unknown_case"),
+        config_path=config_path,
+    )
+
     template = load_planning_template()
     planning_query = build_planning_query(
         situation_artifact=situation_artifact,
@@ -391,7 +331,20 @@ def plan_scenarios_from_situation(
     planning_query_path = traces_path / "planning_query.json"
     _write_auxiliary_json(planning_query_path, planning_query)
 
-    raw_priors = _build_raw_priors(decomposition=decomposition, fallback_query=planning_query)
+    ontology = _build_scenario_ontology_from_situation_artifact(
+        situation_artifact=situation_artifact,
+        llm_decomposition=decomposition,
+        pack_id=pack_id,
+        pack_version=pack_version,
+    )
+
+    raw_priors, prior_scoring_trace = score_prior_probabilities(
+        actor_ref=actor_ref,
+        scenario_ontology=ontology,
+        planning_query=planning_query,
+        config_path=config_path,
+    )
+
     prior_snapshot = build_prior_snapshot(
         pack_id=pack_id,
         pack_version=pack_version,
@@ -403,17 +356,15 @@ def plan_scenarios_from_situation(
     prior_snapshot_path = traces_path / "prior_snapshot.json"
     _write_auxiliary_json(prior_snapshot_path, prior_snapshot)
 
-    ontology = _build_scenario_ontology_from_situation_artifact(
-        situation_artifact=situation_artifact,
-        llm_decomposition=decomposition,
-        pack_id=pack_id,
-        pack_version=pack_version,
-    )
     ontology["planning_query_ref"] = str(planning_query_path)
     ontology["prior_snapshot_ref"] = str(prior_snapshot_path)
     ontology["source_meta"] = {
         **(ontology.get("source_meta") or {}),
         "generated_at": datetime.now().isoformat(),
         "planner": "planner_v1",
+    }
+    ontology["_planner_trace"] = {
+        "actor_style_enhancement": actor_enhancement_trace,
+        "prior_scoring": prior_scoring_trace,
     }
     return ontology

@@ -1,4 +1,4 @@
-"""Ontology vocabulary and semantic naming constraints for case ontology inputs."""
+"""Relation naming and allow-list schema constants."""
 
 from __future__ import annotations
 
@@ -12,12 +12,6 @@ APPROVED_RELATIONS: set[str] = {
     "influences",
 }
 
-ACTOR_SUFFIX = "Actor"
-
 
 def is_relation_approved(name: str) -> bool:
     return name in APPROVED_RELATIONS
-
-
-def looks_like_actor_concept(name: str) -> bool:
-    return name.endswith(ACTOR_SUFFIX)

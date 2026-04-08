@@ -9,6 +9,28 @@ import networkx as nx
 from omen.scenario.models import ScenarioPlanningRuleTemplateModel, StrategyActorPlanningQueryResultModel
 
 
+def _normalize_similarity_scores(scores: dict[str, float], *, source: str) -> list[dict[str, Any]]:
+    total = sum(max(0.0, float(value)) for value in scores.values())
+    if total <= 0.0:
+        total = 1.0
+    return [
+        {
+            "scenario_key": key,
+            "score": round(max(0.0, float(value)) / total, 6),
+            "source": source,
+        }
+        for key, value in sorted(scores.items())
+    ]
+
+
+def _build_template_default_similarity_scores(template: ScenarioPlanningRuleTemplateModel) -> list[dict[str, Any]]:
+    default_scores = {
+        slot.scenario_key: float(slot.default_prior)
+        for slot in sorted(template.slot_policy, key=lambda item: item.scenario_key)
+    }
+    return _normalize_similarity_scores(default_scores, source="planning_template_default")
+
+
 def _normalize_signal_query_payload(signal: dict[str, Any]) -> dict[str, Any]:
     name = str(signal.get("name") or "").strip()
     payload: dict[str, Any] = {
@@ -73,16 +95,7 @@ def build_planning_query(
 
     constraints = list((situation_artifact.get("context") or {}).get("hard_constraints") or [])
     constraint_signals = [{"name": str(item), "kind": "constraint"} for item in constraints if str(item).strip()]
-
-    # Keep local preparation deterministic and structural; semantic planning stays in LLM.
-    similarity_scores = [
-        {
-            "scenario_key": slot.scenario_key,
-            "score": float(slot.default_prior),
-            "source": "planning_template_default",
-        }
-        for slot in sorted(template.slot_policy, key=lambda item: item.scenario_key)
-    ]
+    similarity_scores = _build_template_default_similarity_scores(template)
 
     query = StrategyActorPlanningQueryResultModel(
         situation_id=situation_id,

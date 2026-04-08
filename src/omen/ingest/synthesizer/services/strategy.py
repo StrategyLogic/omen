@@ -24,10 +24,8 @@ def generate_strategy_ontology_from_document(
     config_path: str = "config/llm.toml",
     logger: LogFn | None = None,
 ) -> OntologyGenerationResult:
-    from omen.scenario.ontology_validator import (
-        OntologyValidationError,
-        validate_ontology_input_or_raise,
-    )
+    from omen.ingest.validators.actor import OntologyValidationError
+    from omen.ingest.validators.strategy import validate_ontology_input_or_raise
 
     def emit(step: str, status: str, message: str) -> None:
         if logger:

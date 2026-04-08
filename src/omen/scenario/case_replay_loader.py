@@ -9,10 +9,10 @@ from typing import Any
 from pydantic import ValidationError
 
 from omen.scenario.ontology_loader import bind_ontology_to_scenario
-from omen.scenario.ontology_validator import (
+from omen.ingest.validators.strategy import (
     validate_ontology_input_with_warnings,
 )
-from omen.scenario.validator import validate_scenario_or_raise
+from omen.ingest.validators.scenario import validate_scenario_or_raise
 
 
 _DEFAULT_ACTIONS = [

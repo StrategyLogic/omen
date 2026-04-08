@@ -1,6 +1,6 @@
 from omen.scenario.ontology_loader import bind_ontology_to_scenario
-from omen.scenario.ontology_validator import validate_ontology_input_or_raise
-from omen.scenario.validator import validate_scenario_or_raise
+from omen.ingest.validators.strategy import validate_ontology_input_or_raise
+from omen.ingest.validators.scenario import validate_scenario_or_raise
 
 
 def test_bind_ontology_to_scenario_includes_space_summary() -> None:

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from omen.scenario.ontology_validator import OntologyValidationError, validate_ontology_input_or_raise
+from omen.ingest.validators.strategy import OntologyValidationError, validate_ontology_input_or_raise
 
 
 ROOT = Path(__file__).resolve().parents[2]

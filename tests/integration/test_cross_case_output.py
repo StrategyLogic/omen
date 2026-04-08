@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from omen.scenario.loader import load_scenario_with_ontology
-from omen.scenario.validator import validate_cross_case_output_contract_or_raise
+from omen.ingest.validators.scenario import validate_cross_case_output_contract_or_raise
 from omen.simulation.engine import run_simulation
 from omen.simulation.replay import compare_run_results, run_counterfactual
 

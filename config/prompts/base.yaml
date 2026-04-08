@@ -30,6 +30,12 @@ prompt_meta:
   situation_source_to_case_prompt:
     id: base.situation_source_to_case_prompt
     version: 1.0.0
+  scenario_enhance_prompt:
+    id: base.scenario_enhance_prompt
+    version: 1.0.0
+  scenario_prior_prompt:
+    id: base.scenario_prior_prompt
+    version: 1.0.0
 prompts:
   system_prompt: |
     You are a strategic ontology engineer.
@@ -326,7 +332,7 @@ prompts:
     [[source_text]]
 
   situation_decompose_prompt: |
-    You are a strategy analyst. Decompose situation artifact into deterministic scenarios A/B/C.
+    You are a strategy planner. Decompose situation artifact into deterministic scenarios A/B/C.
     Return ONLY valid JSON object with keys:
     pack_id, pack_version, derived_from_situation_id, ontology_version, scenarios.
 
@@ -422,3 +428,57 @@ prompts:
 
     source_text:
     [[source_text]]
+
+  scenario_enhance_prompt: |
+    You are a organizational behavior analyst. Derive StrategicActor strategic_style from widely known historical similar cases.
+    Return ONE valid JSON object only.
+
+    Required output keys:
+    - decision_style
+    - value_proposition
+    - decision_preferences (array)
+    - non_negotiables (array)
+
+    Rules:
+    - Fill only strategic_style semantics for the existing StrategicActor.
+    - Use historical similar cases of the actor in the same industry (e.g., prior acquisitions, partnerships, competitive responses).
+    - Explicitly EXCLUDE the current case from evidence and reasoning.
+    - Do not infer style by rephrasing current-case facts.
+    - Keep content concise, behavior-focused, and useful for A/B/C planning priors.
+    - Do not modify actor IDs, event IDs, or ontology structure.
+    - If evidence is weak, provide conservative but non-empty defaults suitable for deterministic planning.
+    - No markdown, no explanation, JSON only.
+
+    actor_ref: [[actor_ref]]
+    strategic_actor_name: [[strategic_actor_name]]
+    strategic_actor_role: [[strategic_actor_role]]
+    current_case_id_to_exclude: [[current_case_id_to_exclude]]
+    actor_ontology_json: [[actor_ontology_json]]
+
+  scenario_prior_prompt: |
+    You are a organizational behavior analyst. Score the probability of selecting scenario A/B/C based on StrategicActor style.
+    Return ONE valid JSON object only.
+
+    Required output:
+    {
+      "raw_prior_scores": [
+        {"scenario_key": "A", "score": 0.00-1.00, "explain": "..."},
+        {"scenario_key": "B", "score": 0.00-1.00, "explain": "..."},
+        {"scenario_key": "C", "score": 0.00-1.00, "explain": "..."}
+      ]
+    }
+
+    Rules:
+    - Use only StrategicActor style and scenario candidate definitions.
+    - Evaluate behavioral fit, not textual overlap.
+    - Treat this as a probability distribution problem. If one scenario is highly likely due to actor style, the others must be discounted accordingly to maintain the sum.
+    - Provide A/B/C exactly once.
+    - The sum of scores for A, B, and C MUST equal exactly 1.0 (A + B + C = 1).
+    - score must be numeric and non-negative.
+    - explain must be concise and decision-relevant.
+    - Do not output markdown or extra keys.
+
+    actor_ref: [[actor_ref]]
+    actor_style_json: [[actor_style_json]]
+    scenario_candidates_json: [[scenario_candidates_json]]
+    fallback_similarity_json: [[fallback_similarity_json]]

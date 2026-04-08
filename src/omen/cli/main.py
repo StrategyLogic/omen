@@ -22,6 +22,7 @@ from omen.cli.actor import (
 from omen.cli.situation import (
     handle_scenario_command,
     handle_situation_analyze_command,
+    register_situation_analyze_commands,
     register_scenario_command,
 )
 from omen.explain.precision_report import build_precision_report
@@ -385,7 +386,8 @@ def main() -> None:
         help="Add timestamp suffix to output filename to avoid overwrite",
     )
 
-    register_analyze_commands(sub)
+    analyze_sub = register_analyze_commands(sub)
+    register_situation_analyze_commands(analyze_sub)
     register_validate_commands(sub)
     register_case_commands(sub)
     register_scenario_command(sub)
@@ -702,7 +704,7 @@ def main() -> None:
     elif args.command == "case-replay-generate":
         from omen.ingest.synthesizer.services.strategy import generate_strategy_ontology_from_document
         from omen.scenario.case_replay_loader import save_strategy_ontology
-        from omen.scenario.ontology_validator import validate_ontology_input_or_raise
+        from omen.ingest.validators.strategy import validate_ontology_input_or_raise
         from omen.ui.artifacts import ensure_case_output_dir
 
         def _step_logger(step: str, status: str, message: str) -> None:

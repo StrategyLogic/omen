@@ -2,11 +2,11 @@
 
 **The AI-Powered Strategic Reasoning Engine.**
 
-![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![](https://img.shields.io/pypi/l/omenai) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
+![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai) ![GitHub Stars](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
 
 > **Simulate the Signs. Reveal the Chaos.**
 
-[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source engine built for strategic reasoning in technological evolution. Leveraging **multi-agent game theory**, **capability space modeling**, and **counterfactual analysis**, it calculates how technological evolution reconstructs market landscapes.
+[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source strategic reasoning engine. It leverages multi-agent game theory, capability space modeling to simulate phenomena, and counterfactual analysis to reason how technological evolution impacts market landscapes.
 
 [中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 

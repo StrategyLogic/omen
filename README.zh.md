@@ -2,7 +2,7 @@
 
 **AI驱动的开源战略推演引擎。**
 
-[![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![](https://img.shields.io/pypi/l/omenai) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
+![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![](https://img.shields.io/pypi/l/omenai) ![](https://img.shields.io/pepy/dt/omenai) ![](https://img.shields.io/pypi/v/omenai) ![](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
 
 > 模拟征兆，揭示混沌。
 

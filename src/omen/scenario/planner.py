@@ -8,6 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
+from omen.ingest.synthesizer.prompts import build_json_retry_prompt
+from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
 from omen.scenario.prior import build_prior_snapshot
 from omen.scenario.space import build_planning_query
@@ -20,6 +23,182 @@ class ScenarioDecompositionValidationError(ValueError):
     def __init__(self, message: str, *, decomposition_payload: Any) -> None:
         super().__init__(message)
         self.decomposition_payload = decomposition_payload
+
+
+def _render_base_prompt(template_key: str, values: dict[str, object]) -> str:
+    return render_prompt_template(get_prompt_template(template_key, tier="base"), values)
+
+
+def _extract_json_object(text: str) -> dict[str, Any]:
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    if start == -1:
+        raise ValueError("LLM response does not contain JSON object")
+    payload, _ = decoder.raw_decode(text[start:])
+    if not isinstance(payload, dict):
+        raise ValueError("LLM response payload is not an object")
+    return payload
+
+
+def _invoke_json(prompt: str, *, config_path: str, stage: str) -> dict[str, Any]:
+    content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
+    try:
+        return _extract_json_object(content)
+    except Exception:
+        retry_prompt = build_json_retry_prompt(prompt)
+        retry_content = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
+        return _extract_json_object(retry_content)
+
+
+def _resolve_actor_ontology_path(actor_ref: str) -> Path | None:
+    candidate = Path(str(actor_ref).strip())
+    if candidate.exists() and candidate.suffix.lower() == ".json":
+        return candidate
+    return None
+
+
+def _find_strategic_actor(payload: dict[str, Any]) -> dict[str, Any] | None:
+    actors = payload.get("actors") or []
+    if not isinstance(actors, list):
+        return None
+    for actor in actors:
+        if not isinstance(actor, dict):
+            continue
+        if str(actor.get("type") or "").strip() == "StrategicActor":
+            return actor
+    return None
+
+
+def _is_strategic_actor_admissible(payload: dict[str, Any]) -> bool:
+    strategic_actor = _find_strategic_actor(payload)
+    if not isinstance(strategic_actor, dict):
+        return False
+
+    profile = strategic_actor.get("profile") or {}
+    if not isinstance(profile, dict):
+        return False
+    style = profile.get("strategic_style") or {}
+    if not isinstance(style, dict):
+        return False
+
+    filled = 0
+    if str(style.get("decision_style") or "").strip():
+        filled += 1
+    if str(style.get("value_proposition") or "").strip():
+        filled += 1
+    if isinstance(style.get("decision_preferences"), list) and any(str(x).strip() for x in style["decision_preferences"]):
+        filled += 1
+    if isinstance(style.get("non_negotiables"), list) and any(str(x).strip() for x in style["non_negotiables"]):
+        filled += 1
+
+    return filled >= 2
+
+
+def _enhance_actor_ontology_style(
+    *,
+    actor_payload: dict[str, Any],
+    actor_ref: str,
+    strategic_actor_name: str,
+    strategic_actor_role: str,
+    current_case_id_to_exclude: str,
+    config_path: str,
+) -> dict[str, Any]:
+    prompt = _render_base_prompt(
+        "scenario_enhance_prompt",
+        {
+            "actor_ref": actor_ref,
+            "strategic_actor_name": strategic_actor_name,
+            "strategic_actor_role": strategic_actor_role,
+            "current_case_id_to_exclude": current_case_id_to_exclude,
+            "actor_ontology_json": json.dumps(actor_payload, ensure_ascii=False),
+        },
+    )
+    return _invoke_json(prompt, config_path=config_path, stage="scenario_enhance_prompt")
+
+
+def _extract_strategic_actor_identity(actor_payload: dict[str, Any]) -> tuple[str, str]:
+    strategic_actor = _find_strategic_actor(actor_payload)
+    if not isinstance(strategic_actor, dict):
+        return ("unknown_strategic_actor", "")
+    return (
+        str(strategic_actor.get("name") or "unknown_strategic_actor").strip(),
+        str(strategic_actor.get("role") or "").strip(),
+    )
+
+
+def _apply_enhanced_style(actor_payload: dict[str, Any], enhanced: dict[str, Any]) -> bool:
+    strategic_actor = _find_strategic_actor(actor_payload)
+    if not isinstance(strategic_actor, dict):
+        return False
+
+    profile = strategic_actor.setdefault("profile", {})
+    if not isinstance(profile, dict):
+        return False
+
+    existing = profile.get("strategic_style")
+    if not isinstance(existing, dict):
+        existing = {}
+        profile["strategic_style"] = existing
+
+    candidate = enhanced.get("strategic_style") if isinstance(enhanced.get("strategic_style"), dict) else enhanced
+    if not isinstance(candidate, dict):
+        return False
+
+    changed = False
+    for field in ("decision_style", "value_proposition"):
+        value = str(candidate.get(field) or "").strip()
+        if value and str(existing.get(field) or "").strip() != value:
+            existing[field] = value
+            changed = True
+
+    for field in ("decision_preferences", "non_negotiables"):
+        raw = candidate.get(field)
+        if isinstance(raw, list):
+            normalized = [str(item).strip() for item in raw if str(item).strip()]
+            if normalized and normalized != existing.get(field):
+                existing[field] = normalized
+                changed = True
+
+    return changed
+
+
+def _ensure_strategic_actor_admissible(
+    *,
+    actor_ref: str,
+    situation_artifact: dict[str, Any],
+    config_path: str,
+) -> str:
+    actor_path = _resolve_actor_ontology_path(actor_ref)
+    if actor_path is None:
+        return actor_ref
+
+    try:
+        payload = json.loads(actor_path.read_text(encoding="utf-8"))
+    except Exception:
+        return actor_ref
+
+    if _is_strategic_actor_admissible(payload):
+        return actor_ref
+
+    strategic_actor_name, strategic_actor_role = _extract_strategic_actor_identity(payload)
+    current_case_id_to_exclude = str(situation_artifact.get("id") or "unknown_case").strip()
+
+    try:
+        enhanced = _enhance_actor_ontology_style(
+            actor_payload=payload,
+            actor_ref=actor_ref,
+            strategic_actor_name=strategic_actor_name,
+            strategic_actor_role=strategic_actor_role,
+            current_case_id_to_exclude=current_case_id_to_exclude,
+            config_path=config_path,
+        )
+    except Exception:
+        return actor_ref
+
+    if _apply_enhanced_style(payload, enhanced):
+        actor_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return actor_ref
 
 
 def _nonempty_text_list(value: Any) -> list[str]:
@@ -367,6 +546,12 @@ def plan_scenarios_from_situation(
     config_path: str,
     traces_dir: str | Path,
 ) -> dict[str, Any]:
+    actor_ref = _ensure_strategic_actor_admissible(
+        actor_ref=actor_ref,
+        situation_artifact=situation_artifact,
+        config_path=config_path,
+    )
+
     template = load_planning_template()
     planning_query = build_planning_query(
         situation_artifact=situation_artifact,

@@ -138,6 +138,7 @@ class SituationContextModel(BaseModel):
     target_outcomes: list[str] = Field(min_length=1)
     hard_constraints: list[str] = Field(min_length=1)
     known_unknowns: list[str] = Field(default_factory=list)
+    actor_ref: str | None = None
 
 
 class SituationEnhanceRequestModel(BaseModel):

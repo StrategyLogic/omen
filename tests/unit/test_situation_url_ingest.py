@@ -106,6 +106,107 @@ def test_handle_situation_analyze_command_rejects_doc_and_url_together(capsys) -
     assert "use either --doc or --url, not both" in output
 
 
+def test_handle_situation_analyze_command_auto_generates_actor_ref(monkeypatch, tmp_path: Path) -> None:
+    input_doc = tmp_path / "case.md"
+    input_doc.write_text("example", encoding="utf-8")
+
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
+    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
+    monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "strategic_actor_case_v1")
+    monkeypatch.setattr(
+        situation_cli,
+        "_generate_actor_ref_from_situation_doc",
+        lambda *, situation_doc_path, config_path: "output/actors/case/actor_ontology.json",
+    )
+
+    def _fake_analyze(**kwargs: object) -> dict[str, object]:
+        captured["actor_ref"] = kwargs.get("actor_ref")
+        return {
+            "version": "0.1.0",
+            "id": "case",
+            "context": {
+                "title": "Case",
+                "core_question": "Q",
+                "current_state": "S",
+                "core_dilemma": "D",
+                "key_decision_point": "K",
+                "target_outcomes": ["T"],
+                "hard_constraints": ["H"],
+                "known_unknowns": [],
+            },
+            "signals": [
+                {
+                    "id": "sig_market_001",
+                    "name": "Signal",
+                    "domain": "market",
+                    "strength": 0.6,
+                    "direction": "up",
+                    "mapped_targets": [
+                        {
+                            "space": "MarketSpace",
+                            "element_key": "x",
+                            "impact_type": "driver",
+                            "impact_strength": 0.6,
+                            "mechanism_conditions": {
+                                "activation_condition": "a",
+                                "expected_effect": "e",
+                            },
+                        }
+                    ],
+                    "cascade_rules": [],
+                    "market_constraints": [
+                        {
+                            "constraint_key": "c",
+                            "binding_strength": 0.5,
+                        }
+                    ],
+                    "mechanism_note": "m",
+                    "no_cascade_reason": "direct local effect in current horizon",
+                }
+            ],
+            "tech_space_seed": [],
+            "market_space_seed": [],
+            "uncertainty_space": {"overall_confidence": 0.6},
+            "source_trace": [],
+            "source_meta": {
+                "source_path": str(input_doc),
+                "generated_at": "2026-04-08T12:00:00",
+                "pack_id": "strategic_actor_case_v1",
+                "pack_version": "1.0.0",
+                "actor_ref": "output/actors/case/actor_ontology.json",
+            },
+        }
+
+    monkeypatch.setattr(situation_cli, "analyze_situation_document", _fake_analyze)
+
+    def _fake_save(path: Path, payload: dict[str, object]) -> Path:
+        captured["saved_context_actor_ref"] = ((payload.get("context") or {}).get("actor_ref"))
+        return path
+
+    monkeypatch.setattr(situation_cli, "save_situation_artifact", _fake_save)
+    monkeypatch.setattr(situation_cli, "save_situation_markdown", lambda path, payload, config_path=None: path)
+    monkeypatch.setattr(situation_cli, "build_situation_confidence_trace", lambda **kwargs: {"artifact_type": "situation_generation_trace"})
+    monkeypatch.setattr(situation_cli, "save_auxiliary_json", lambda path, payload: path)
+
+    args = Namespace(
+        doc="case",
+        input=None,
+        url=None,
+        actor="auto",
+        output=str(tmp_path / "situation.json"),
+        pack_id=None,
+        pack_version="1.0.0",
+        config="config/llm.toml",
+    )
+
+    result = situation_cli.handle_situation_analyze_command(args)
+    assert result == 0
+    assert captured["actor_ref"] == "output/actors/case/actor_ontology.json"
+    assert captured["saved_context_actor_ref"] == "output/actors/case/actor_ontology.json"
+
+
 def test_handle_situation_analyze_command_exits_gracefully_on_invalid_enhance_json(
     monkeypatch,
     tmp_path: Path,

@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 
@@ -217,3 +218,124 @@ def test_plan_scenarios_aborts_without_writing_artifacts_on_invalid_decompositio
         )
 
     assert not traces_dir.exists()
+
+
+def test_build_planning_query_uses_actor_style_weighted_similarity_scores(tmp_path: Path) -> None:
+    actor_path = tmp_path / "actor_ontology.json"
+    actor_path.write_text(
+        json.dumps(
+            {
+                "actors": [
+                    {
+                        "type": "StrategicActor",
+                        "profile": {
+                            "strategic_style": {
+                                "decision_style": "Aggressive growth and proactive competition",
+                                "value_proposition": "Expand through bold product bets",
+                                "decision_preferences": ["high speed", "offensive positioning"],
+                                "non_negotiables": ["win key rival battles"],
+                            }
+                        },
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    template = load_planning_template()
+    planning_query = build_planning_query(
+        situation_artifact={
+            "id": "sap_reltio_acquisition",
+            "signals": [{"name": "ecosystem pressure", "strength": 0.7}],
+            "context": {"hard_constraints": []},
+        },
+        actor_ref=str(actor_path),
+        template=template,
+    )
+
+    similarity = {item["scenario_key"]: item for item in planning_query["similarity_scores"]}
+    assert similarity["A"]["source"] == "actor_style_similarity_reset"
+    assert similarity["A"]["score"] > similarity["B"]["score"]
+    assert similarity["A"]["score"] > similarity["C"]["score"]
+    assert similarity["A"]["score"] != 0.4
+
+
+def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    actor_path = tmp_path / "actor_ontology.json"
+    actor_path.write_text(
+        json.dumps(
+            {
+                "actors": [
+                    {
+                        "type": "StrategicActor",
+                        "profile": {
+                            "strategic_style": {
+                                "decision_style": "",
+                                "value_proposition": "",
+                                "decision_preferences": [],
+                                "non_negotiables": [],
+                            }
+                        },
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "omen.scenario.planner.decompose_scenario_from_situation",
+        lambda **kwargs: {
+            "pack_id": kwargs["pack_id"],
+            "pack_version": kwargs["pack_version"],
+            "derived_from_situation_id": "sap_reltio_acquisition",
+            "ontology_version": "scenario_ontology_v1",
+            "scenarios": [
+                {"scenario_key": "A", "title": "A", "objective": "oA"},
+                {"scenario_key": "B", "title": "B", "objective": "oB"},
+                {"scenario_key": "C", "title": "C", "objective": "oC"},
+            ],
+        },
+    )
+
+    monkeypatch.setattr(
+        "omen.scenario.planner.invoke_text_prompt",
+        lambda **kwargs: json.dumps(
+            {
+                "decision_style": "Balanced and deliberate",
+                "value_proposition": "Durable compounding",
+                "decision_preferences": ["quality execution"],
+                "non_negotiables": ["strategic coherence"],
+            },
+            ensure_ascii=False,
+        ),
+    )
+
+    traces_dir = tmp_path / "traces"
+    plan_scenarios_from_situation(
+        situation_artifact={
+            "id": "sap_reltio_acquisition",
+            "signals": [{"name": "signal", "strength": 0.6}],
+            "context": {"hard_constraints": []},
+        },
+        pack_id="sap_v1",
+        pack_version="1.0.0",
+        actor_ref=str(actor_path),
+        config_path="config/llm.toml",
+        traces_dir=traces_dir,
+    )
+
+    refreshed = json.loads(actor_path.read_text(encoding="utf-8"))
+    style = refreshed["actors"][0]["profile"]["strategic_style"]
+    assert style["decision_style"] == "Balanced and deliberate"
+    assert style["value_proposition"] == "Durable compounding"
+    assert style["decision_preferences"] == ["quality execution"]
+    assert style["non_negotiables"] == ["strategic coherence"]

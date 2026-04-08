@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
@@ -64,6 +65,50 @@ def _derive_default_pack_id(input_path: Path, *, actor_ref: str | None) -> str:
 
 def _resolve_default_output_path(_input_path: Path, pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "situation.json"
+
+
+def _generate_actor_ref_from_situation_doc(*, situation_doc_path: Path, config_path: str) -> str:
+    # Reuse existing actor pipeline entry to keep artifact structure consistent.
+    from omen.cli.actor import _ensure_actor_artifacts
+    from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME
+
+    actor_args = SimpleNamespace(
+        doc=str(situation_doc_path),
+        title=None,
+        known_outcome=None,
+        config=config_path,
+        output_dir="output/actors",
+    )
+    _, case_dir = _ensure_actor_artifacts(actor_args)
+    actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
+    return str(actor_path)
+
+
+def _resolve_effective_actor_ref(
+    *,
+    actor_arg: str | None,
+    situation_doc_path: Path,
+    config_path: str,
+) -> str | None:
+    raw = str(actor_arg or "").strip()
+    if not raw:
+        return None
+
+    if raw.lower() in {"auto", "generate"}:
+        return _generate_actor_ref_from_situation_doc(
+            situation_doc_path=situation_doc_path,
+            config_path=config_path,
+        )
+
+    # Explicit file/path-like references remain unchanged for backward compatibility.
+    if "/" in raw or raw.endswith(".md") or raw.endswith(".json") or Path(raw).exists():
+        return raw
+
+    # Non-file actor token falls back to auto generation from current situation document.
+    return _generate_actor_ref_from_situation_doc(
+        situation_doc_path=situation_doc_path,
+        config_path=config_path,
+    )
 
 
 def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -> Path:
@@ -206,7 +251,9 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--actor",
         required=False,
-        help="Optional actor reference path or identifier",
+        nargs="?",
+        const="auto",
+        help="Optional actor reference path or identifier. Use --actor (without value) to auto-generate from the situation document.",
     )
     situation.add_argument(
         "--output",
@@ -320,23 +367,31 @@ def handle_situation_analyze_command(args: Any) -> int:
             return 2
 
         validate_situation_source_or_raise(input_path)
-        pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=args.actor)
+        effective_actor_ref = _resolve_effective_actor_ref(
+            actor_arg=args.actor,
+            situation_doc_path=input_path,
+            config_path=str(args.config),
+        )
+        pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
         output_path_arg = (
             Path(args.output)
             if args.output
             else _resolve_default_output_path(input_path, pack_id)
         )
 
-        if args.actor:
+        if effective_actor_ref:
             print("Building scenario pack with strategic actor context...")
 
         situation_artifact = analyze_situation_document(
             situation_file=input_path,
-            actor_ref=args.actor,
+            actor_ref=effective_actor_ref,
             pack_id=pack_id,
             pack_version=str(args.pack_version),
             config_path=str(args.config),
         )
+        context = situation_artifact.get("context")
+        if effective_actor_ref and isinstance(context, dict):
+            context["actor_ref"] = effective_actor_ref
         output_path = save_situation_artifact(output_path_arg, situation_artifact)
         markdown_path = output_path.with_suffix(".md")
         save_situation_markdown(markdown_path, situation_artifact, config_path=str(args.config))

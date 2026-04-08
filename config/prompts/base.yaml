@@ -30,6 +30,9 @@ prompt_meta:
   situation_source_to_case_prompt:
     id: base.situation_source_to_case_prompt
     version: 1.0.0
+  scenario_enhance_prompt:
+    id: base.scenario_enhance_prompt
+    version: 1.0.0
 prompts:
   system_prompt: |
     You are a strategic ontology engineer.
@@ -422,3 +425,29 @@ prompts:
 
     source_text:
     [[source_text]]
+
+  scenario_enhance_prompt: |
+    You are a strategy analyst. Derive StrategicActor strategic_style from widely known historical similar cases.
+    Return ONE valid JSON object only.
+
+    Required output keys:
+    - decision_style
+    - value_proposition
+    - decision_preferences (array)
+    - non_negotiables (array)
+
+    Rules:
+    - Fill only strategic_style semantics for the existing StrategicActor.
+    - Use historical similar cases of the actor in the same industry (e.g., prior acquisitions, partnerships, competitive responses).
+    - Explicitly EXCLUDE the current case from evidence and reasoning.
+    - Do not infer style by rephrasing current-case facts.
+    - Keep content concise, behavior-focused, and useful for A/B/C planning priors.
+    - Do not modify actor IDs, event IDs, or ontology structure.
+    - If evidence is weak, provide conservative but non-empty defaults suitable for deterministic planning.
+    - No markdown, no explanation, JSON only.
+
+    actor_ref: [[actor_ref]]
+    strategic_actor_name: [[strategic_actor_name]]
+    strategic_actor_role: [[strategic_actor_role]]
+    current_case_id_to_exclude: [[current_case_id_to_exclude]]
+    actor_ontology_json: [[actor_ontology_json]]

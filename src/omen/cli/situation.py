@@ -63,7 +63,7 @@ def _derive_default_pack_id(input_path: Path, *, actor_ref: str | None) -> str:
 
 
 def _resolve_default_output_path(_input_path: Path, pack_id: str) -> Path:
-    return Path("data/scenarios") / pack_id / "generation" / "situation.json"
+    return Path("data/scenarios") / pack_id / "situation.json"
 
 
 def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -> Path:
@@ -71,11 +71,11 @@ def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -
 
 
 def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
-    return situation_output_path.parent / "generation.json"
+    return situation_output_path.parent / "generation" / "log.json"
 
 
 def _resolve_scenario_generation_trace_path(scenario_output_path: Path) -> Path:
-    return scenario_output_path.parent / "generation" / "generation.json"
+    return scenario_output_path.parent / "generation" / "log.json"
 
 
 def _resolve_scenario_raw_output_path(scenario_output_path: Path) -> Path:
@@ -211,7 +211,7 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--output",
         required=False,
-        help="Optional output path for generated situation JSON. Defaults to data/scenarios/<pack_id>/generation/situation.json",
+        help="Optional output path for generated situation JSON. Defaults to data/scenarios/<pack_id>/situation.json",
     )
     situation.add_argument(
         "--pack-id",
@@ -362,7 +362,7 @@ def handle_situation_analyze_command(args: Any) -> int:
             "LLM JSON validation aborted by policy: "
             f"{exc.stage} -> {exc.reason}. Exiting without retry/fallback."
         )
-        return 0
+        return 2
     except Exception as exc:
         print(f"Analyze situation failed: {exc}")
         return 2
@@ -462,7 +462,7 @@ def handle_scenario_command(args: Any) -> int:
             retry_output=retry_output,
         )
 
-        trace_path = output_dump.parent / "generation.json"
+        trace_path = output_dump.parent / "log.json"
         _write_scenario_failure_trace(
             trace_path=trace_path,
             situation_ref=situation_ref_path,

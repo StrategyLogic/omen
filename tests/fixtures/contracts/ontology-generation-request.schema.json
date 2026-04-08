@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omen/specs/006-startup-case-replay/contracts/ontology-generation-request.schema.json",
+  "title": "OntologyGenerationRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "title", "document", "llm_config"],
+  "properties": {
+    "case_id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "strategy": { "type": "string", "minLength": 1 },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_type", "content"],
+      "properties": {
+        "content_type": { "type": "string", "enum": ["markdown", "text", "pdf"] },
+        "content": { "type": "string", "minLength": 1 },
+        "source_path": { "type": "string" },
+        "known_outcome": { "type": "string" }
+      }
+    },
+    "llm_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model", "base_url", "api_key"],
+      "properties": {
+        "provider": { "type": "string", "enum": ["deepseek"] },
+        "model": { "type": "string", "minLength": 1 },
+        "base_url": { "type": "string", "minLength": 1 },
+        "api_key": { "type": "string", "minLength": 1 },
+        "timeout_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "generation_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strict_schema": { "type": "boolean" },
+        "include_case_package": { "type": "boolean" },
+        "seed": { "type": ["integer", "null"] }
+      }
+    }
+  }
+}

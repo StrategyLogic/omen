@@ -5,6 +5,7 @@ import pytest
 
 from omen.ingest.synthesizer.services.situation import analyze_situation_document
 from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
+from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 from omen.scenario.validator import IncompleteDeterministicPackError, validate_situation_artifact_or_raise
 
 
@@ -86,6 +87,65 @@ def test_analyze_situation_document_injects_signal_template_and_normalizes_schem
   assert signal["market_constraints"][0]["constraint_key"] == "Carrier negotiation leverage"
   assert 0.0 <= signal["market_constraints"][0]["binding_strength"] <= 1.0
   assert signal["mechanism_note"]
+
+
+def test_analyze_situation_document_requires_llm_signals(
+  tmp_path: Path,
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  situation_file = tmp_path / "carrier-pressure.md"
+  situation_file.write_text("Carrier pressure and ecosystem lock-in are rising.", encoding="utf-8")
+
+  responses = iter(
+    [
+      json.dumps(
+        {
+          "title": "Carrier pressure",
+          "core_question": "How should the platform respond?",
+          "current_state": "Distribution leverage is shifting outward.",
+          "core_dilemma": "Speed versus control",
+          "key_decision_point": "Commit to a platform response",
+          "target_outcomes": ["Protect adoption"],
+          "hard_constraints": ["Carrier negotiation leverage"],
+          "known_unknowns": ["Partner switching intent"],
+        }
+      ),
+      json.dumps(
+        {
+          "version": "0.1.0",
+          "id": "carrier-pressure",
+          "context": {
+            "title": "Carrier pressure",
+            "core_question": "How should the platform respond?",
+            "current_state": "Distribution leverage is shifting outward.",
+            "core_dilemma": "Speed versus control",
+            "key_decision_point": "Commit to a platform response",
+            "target_outcomes": ["Protect adoption"],
+            "hard_constraints": ["Carrier negotiation leverage"],
+            "known_unknowns": ["Partner switching intent"],
+          },
+          "signals": [],
+          "tech_space_seed": [],
+          "market_space_seed": [],
+          "uncertainty_space": {"overall_confidence": 0.6},
+          "source_trace": [],
+        }
+      ),
+    ]
+  )
+
+  monkeypatch.setattr(
+    "omen.ingest.synthesizer.services.situation.invoke_text_prompt",
+    lambda **kwargs: next(responses),
+  )
+
+  with pytest.raises(LLMJsonValidationAbort, match="missing or empty `signals`"):
+    analyze_situation_document(
+      situation_file=situation_file,
+      actor_ref=None,
+      pack_id="carrier_v1",
+      pack_version="1.0.0",
+    )
 
 
 def test_validate_situation_artifact_rejects_incomplete_signal_schema() -> None:

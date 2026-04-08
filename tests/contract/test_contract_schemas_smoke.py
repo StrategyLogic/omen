@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def _contracts_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "specs" / "006-startup-case-replay" / "contracts"
+    return Path(__file__).resolve().parents[1] / "fixtures" / "contracts"
 
 
 def test_contract_schemas_are_valid_json() -> None:

@@ -142,7 +142,7 @@ def test_handle_situation_analyze_command_exits_gracefully_on_invalid_enhance_js
     result = situation_cli.handle_situation_analyze_command(args)
     output = capsys.readouterr().out
 
-    assert result == 0
+    assert result == 2
     assert "LLM JSON validation aborted by policy" in output
     assert "Exiting without retry/fallback" in output
 
@@ -189,7 +189,7 @@ def test_handle_scenario_command_writes_non_json_llm_output(monkeypatch, tmp_pat
     output = capsys.readouterr().out
 
     output_file = tmp_path / "data" / "scenarios" / "sap_v1" / "generation" / "output.txt"
-    generation_trace_file = tmp_path / "data" / "scenarios" / "sap_v1" / "generation" / "generation.json"
+    generation_trace_file = tmp_path / "data" / "scenarios" / "sap_v1" / "generation" / "log.json"
     assert result == 2
     assert output_file.exists()
     assert generation_trace_file.exists()
@@ -245,7 +245,7 @@ def test_handle_scenario_command_writes_output_for_generic_validation_failure(
     output = capsys.readouterr().out
 
     output_file = tmp_path / "data" / "scenarios" / "sap_v1" / "generation" / "output.txt"
-    generation_trace_file = tmp_path / "data" / "scenarios" / "sap_v1" / "generation" / "generation.json"
+    generation_trace_file = tmp_path / "data" / "scenarios" / "sap_v1" / "generation" / "log.json"
     assert result == 2
     assert output_file.exists()
     assert generation_trace_file.exists()

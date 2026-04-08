@@ -169,8 +169,8 @@
     "scenario_file": "data/scenarios/ontology.json",
     "case_doc_file": "cases/ontology.md",
     "required_artifacts": [
-      "specs/003-scenario-system-foundation/contracts/case-package.schema.json",
-      "specs/003-scenario-system-foundation/contracts/cross-case-output.schema.json"
+      "tests/fixtures/contracts/case-package.schema.json",
+      "tests/fixtures/contracts/cross-case-output.schema.json"
     ],
     "ontology_presence": true,
     "runtime_support": {

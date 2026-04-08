@@ -30,7 +30,7 @@ def test_scenario_pack_id_infers_actor_context_from_situation_artifact() -> None
     }
     pack_id = _derive_pack_id_from_situation_artifact(
         situation_artifact,
-        Path("data/scenarios/nokia_v1/generation/situation.json"),
+        Path("data/scenarios/nokia_v1/situation.json"),
     )
     assert pack_id == "strategic_actor_nokia_v1"
 
@@ -41,16 +41,16 @@ def test_default_output_paths_follow_pack_id() -> None:
         "nokia_v1",
     )
     scenario_output = _resolve_splitter_default_output_path(
-        Path("data/scenarios/nokia_v1/generation/situation.json"),
+        Path("data/scenarios/nokia_v1/situation.json"),
         "nokia_v1",
     )
 
-    assert analyze_output == Path("data/scenarios/nokia_v1/generation/situation.json")
+    assert analyze_output == Path("data/scenarios/nokia_v1/situation.json")
     assert scenario_output == Path("data/scenarios/nokia_v1/scenario_pack.json")
 
 
 def test_generation_trace_path_uses_generation_suffix() -> None:
     trace_output = _resolve_generation_trace_output_path(
-        Path("data/scenarios/nokia_v1/generation/situation.json")
+        Path("data/scenarios/nokia_v1/situation.json")
     )
-    assert trace_output == Path("data/scenarios/nokia_v1/generation/generation.json")
+    assert trace_output == Path("data/scenarios/nokia_v1/generation/log.json")

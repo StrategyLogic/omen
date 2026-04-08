@@ -106,7 +106,7 @@ def test_handle_situation_analyze_command_rejects_doc_and_url_together(capsys) -
     assert "use either --doc or --url, not both" in output
 
 
-def test_handle_situation_analyze_command_auto_generates_actor_ref(monkeypatch, tmp_path: Path) -> None:
+def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, tmp_path: Path) -> None:
     input_doc = tmp_path / "case.md"
     input_doc.write_text("example", encoding="utf-8")
 
@@ -115,11 +115,8 @@ def test_handle_situation_analyze_command_auto_generates_actor_ref(monkeypatch, 
     monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
     monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
     monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "strategic_actor_case_v1")
-    monkeypatch.setattr(
-        situation_cli,
-        "_generate_actor_ref_from_situation_doc",
-        lambda *, situation_doc_path, config_path: "output/actors/case/actor_ontology.json",
-    )
+    actor_json = tmp_path / "actor_ontology.json"
+    actor_json.write_text("{}", encoding="utf-8")
 
     def _fake_analyze(**kwargs: object) -> dict[str, object]:
         captured["actor_ref"] = kwargs.get("actor_ref")
@@ -175,7 +172,7 @@ def test_handle_situation_analyze_command_auto_generates_actor_ref(monkeypatch, 
                 "generated_at": "2026-04-08T12:00:00",
                 "pack_id": "strategic_actor_case_v1",
                 "pack_version": "1.0.0",
-                "actor_ref": "output/actors/case/actor_ontology.json",
+                "actor_ref": str(actor_json),
             },
         }
 
@@ -194,7 +191,7 @@ def test_handle_situation_analyze_command_auto_generates_actor_ref(monkeypatch, 
         doc="case",
         input=None,
         url=None,
-        actor="auto",
+        actor=str(actor_json),
         output=str(tmp_path / "situation.json"),
         pack_id=None,
         pack_version="1.0.0",
@@ -203,8 +200,36 @@ def test_handle_situation_analyze_command_auto_generates_actor_ref(monkeypatch, 
 
     result = situation_cli.handle_situation_analyze_command(args)
     assert result == 0
-    assert captured["actor_ref"] == "output/actors/case/actor_ontology.json"
-    assert captured["saved_context_actor_ref"] == "output/actors/case/actor_ontology.json"
+    assert captured["actor_ref"] == str(actor_json)
+    assert captured["saved_context_actor_ref"] == str(actor_json)
+
+
+def test_handle_situation_analyze_command_rejects_missing_explicit_actor_ref(
+    monkeypatch,
+    tmp_path: Path,
+    capsys,
+) -> None:
+    input_doc = tmp_path / "case.md"
+    input_doc.write_text("example", encoding="utf-8")
+
+    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
+    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
+
+    args = Namespace(
+        doc="case",
+        input=None,
+        url=None,
+        actor="actors/missing.md",
+        output=str(tmp_path / "situation.json"),
+        pack_id=None,
+        pack_version="1.0.0",
+        config="config/llm.toml",
+    )
+
+    result = situation_cli.handle_situation_analyze_command(args)
+    output = capsys.readouterr().out
+    assert result == 2
+    assert "actor reference not found" in output
 
 
 def test_handle_situation_analyze_command_exits_gracefully_on_invalid_enhance_json(

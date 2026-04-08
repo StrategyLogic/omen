@@ -10,16 +10,28 @@ from omen.scenario.models import ScenarioPlanningRuleTemplateModel, StrategyActo
 
 
 def _normalize_similarity_scores(scores: dict[str, float], *, source: str) -> list[dict[str, Any]]:
-    total = sum(max(0.0, float(value)) for value in scores.values())
-    if total <= 0.0:
-        total = 1.0
+    normalized_items: list[tuple[str, float]] = [
+        (key, max(0.0, float(value)))
+        for key, value in sorted(scores.items())
+    ]
+    total = sum(score for _, score in normalized_items)
+    if total <= 0.0 and normalized_items:
+        fallback = round(1.0 / len(normalized_items), 6)
+        return [
+            {
+                "scenario_key": key,
+                "score": fallback,
+                "source": f"{source}_uniform_fallback",
+            }
+            for key, _ in normalized_items
+        ]
     return [
         {
             "scenario_key": key,
-            "score": round(max(0.0, float(value)) / total, 6),
+            "score": round(score / total, 6),
             "source": source,
         }
-        for key, value in sorted(scores.items())
+        for key, score in normalized_items
     ]
 
 

@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -10,6 +11,10 @@ from omen.cli.main import main
 ROOT = Path(__file__).resolve().parents[2]
 SITUATION_INPUT = ROOT / "cases" / "situations" / "nokia-elop-2010.md"
 ACTOR_REF = "actors/steve-jobs.md"
+
+
+def _prepare_tmp_runtime_config(tmp_path: Path) -> None:
+    shutil.copytree(ROOT / "config", tmp_path / "config")
 
 
 def test_analyze_situation_then_simulate_happy_path(tmp_path: Path, monkeypatch) -> None:
@@ -255,6 +260,7 @@ def test_analyze_situation_doc_without_md_suffix(tmp_path: Path, monkeypatch) ->
 
 
 def test_analyze_situation_defaults_output_under_data_scenarios(tmp_path: Path, monkeypatch) -> None:
+    _prepare_tmp_runtime_config(tmp_path)
     monkeypatch.chdir(tmp_path)
     default_json = tmp_path / "data" / "scenarios" / "nokia_v1" / "situation.json"
     default_md = tmp_path / "data" / "scenarios" / "nokia_v1" / "situation.md"
@@ -280,6 +286,7 @@ def test_analyze_situation_defaults_output_under_data_scenarios(tmp_path: Path, 
 
 
 def test_scenario_command_defaults_output_under_data_scenario_pack(tmp_path: Path, monkeypatch) -> None:
+    _prepare_tmp_runtime_config(tmp_path)
     monkeypatch.chdir(tmp_path)
     situation_default_json = tmp_path / "data" / "scenarios" / "nokia_v1" / "situation.json"
     default_json = tmp_path / "data" / "scenarios" / "nokia_v1" / "scenario_pack.json"

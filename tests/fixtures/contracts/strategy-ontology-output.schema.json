@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omen/specs/006-startup-case-replay/contracts/strategy-ontology-output.schema.json",
+  "title": "StrategyOntologyOutput",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "meta",
+    "tbox",
+    "abox",
+    "reasoning_profile",
+    "tech_space_ontology",
+    "market_space_ontology",
+    "shared_actors",
+    "case_package",
+    "scenario_id",
+    "name",
+    "time_steps",
+    "seed",
+    "actors",
+    "capabilities"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["version", "case_id", "domain", "strategy"],
+      "properties": {
+        "version": { "type": "string" },
+        "case_id": { "type": "string" },
+        "domain": { "type": "string" },
+        "strategy": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tbox": {
+      "type": "object",
+      "required": ["concepts", "relations", "axioms"],
+      "properties": {
+        "concepts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "category"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "category": {
+                "type": "string",
+                "enum": ["actor", "capability", "constraint", "event", "outcome", "game", "other"]
+              }
+            }
+          }
+        },
+        "relations": { "type": "array", "minItems": 1 },
+        "axioms": { "type": "array", "minItems": 1 }
+      }
+    },
+    "abox": {
+      "type": "object",
+      "required": ["actors", "capabilities", "constraints"],
+      "properties": {
+        "actors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["actor_id", "actor_type", "role"],
+            "properties": {
+              "actor_id": { "type": "string", "minLength": 1 },
+              "actor_type": { "type": "string", "enum": ["Actor", "StrategicActor"] },
+              "role": { "type": "string", "minLength": 1 },
+              "shared_id": { "type": ["string", "null"] },
+              "labels": { "type": "array", "items": { "type": "string" } },
+              "profile": { "type": "object" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "capabilities": { "type": "array", "minItems": 1 },
+        "constraints": { "type": "array", "minItems": 1 },
+        "events": { "type": "array" }
+      }
+    },
+    "reasoning_profile": {
+      "type": "object",
+      "required": ["activation_rules", "propagation_rules", "counterfactual_rules"],
+      "properties": {
+        "activation_rules": { "type": "array", "minItems": 1 },
+        "propagation_rules": { "type": "array", "minItems": 1 },
+        "counterfactual_rules": { "type": "array", "minItems": 1 }
+      }
+    },
+    "tech_space_ontology": {
+      "$ref": "./tech-space-ontology.schema.json"
+    },
+    "market_space_ontology": {
+      "$ref": "./market-space-ontology.schema.json"
+    },
+    "shared_actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "case_package": { "type": "object" },
+    "scenario_id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "time_steps": { "type": "integer", "minimum": 1 },
+    "seed": { "type": ["integer", "null"] },
+    "actors": { "type": "array", "minItems": 1 },
+    "capabilities": { "type": "array", "minItems": 1 }
+  }
+}

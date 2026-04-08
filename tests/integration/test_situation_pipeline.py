@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -10,6 +11,10 @@ from omen.cli.main import main
 ROOT = Path(__file__).resolve().parents[2]
 SITUATION_INPUT = ROOT / "cases" / "situations" / "nokia-elop-2010.md"
 ACTOR_REF = "actors/steve-jobs.md"
+
+
+def _prepare_tmp_runtime_config(tmp_path: Path) -> None:
+    shutil.copytree(ROOT / "config", tmp_path / "config")
 
 
 def test_analyze_situation_then_simulate_happy_path(tmp_path: Path, monkeypatch) -> None:
@@ -254,115 +259,78 @@ def test_analyze_situation_doc_without_md_suffix(tmp_path: Path, monkeypatch) ->
     assert situation_output.exists()
 
 
-def test_analyze_situation_defaults_output_under_data_scenarios(monkeypatch) -> None:
-    default_json = Path("data/scenarios/nokia_v1/generation/situation.json")
-    default_md = Path("data/scenarios/nokia_v1/generation/situation.md")
-    backup_json = default_json.read_text(encoding="utf-8") if default_json.exists() else None
-    backup_md = default_md.read_text(encoding="utf-8") if default_md.exists() else None
+def test_analyze_situation_defaults_output_under_data_scenarios(tmp_path: Path, monkeypatch) -> None:
+    _prepare_tmp_runtime_config(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    default_json = tmp_path / "data" / "scenarios" / "nokia_v1" / "situation.json"
+    default_md = tmp_path / "data" / "scenarios" / "nokia_v1" / "situation.md"
 
-    try:
-        monkeypatch.setattr(
-            sys,
-            "argv",
-            [
-                "omen",
-                "analyze",
-                "situation",
-                "--doc",
-                "nokia-elop-2010.md",
-            ],
-        )
-
-        with pytest.raises(SystemExit) as exc_info:
-            main()
-
-        assert exc_info.value.code == 0
-        assert default_json.exists()
-        assert default_md.exists()
-    finally:
-        if backup_json is None and default_json.exists():
-            default_json.unlink()
-        elif backup_json is not None:
-            default_json.write_text(backup_json, encoding="utf-8")
-
-        if backup_md is None and default_md.exists():
-            default_md.unlink()
-        elif backup_md is not None:
-            default_md.write_text(backup_md, encoding="utf-8")
-
-
-def test_scenario_command_defaults_output_under_data_scenario_pack(monkeypatch) -> None:
-    situation_default_json = Path("data/scenarios/nokia_v1/generation/situation.json")
-    default_json = Path("data/scenarios/nokia_v1/scenario_pack.json")
-    default_md = Path("data/scenarios/nokia_v1/scenario_pack.md")
-    default_planning_query = Path("data/scenarios/nokia_v1/traces/planning_query.json")
-    default_prior_snapshot = Path("data/scenarios/nokia_v1/traces/prior_snapshot.json")
-    situation_backup_json = (
-        situation_default_json.read_text(encoding="utf-8")
-        if situation_default_json.exists()
-        else None
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "analyze",
+            "situation",
+            "--doc",
+            str(SITUATION_INPUT),
+        ],
     )
-    backup_json = default_json.read_text(encoding="utf-8") if default_json.exists() else None
-    backup_md = default_md.read_text(encoding="utf-8") if default_md.exists() else None
 
-    try:
-        monkeypatch.setattr(
-            sys,
-            "argv",
-            [
-                "omen",
-                "analyze",
-                "situation",
-                "--doc",
-                "nokia-elop-2010.md",
-            ],
-        )
+    with pytest.raises(SystemExit) as exc_info:
+        main()
 
-        with pytest.raises(SystemExit) as exc_info:
-            main()
+    assert exc_info.value.code == 0
+    assert default_json.exists()
+    assert default_md.exists()
 
-        assert exc_info.value.code == 0
-        assert situation_default_json.exists()
 
-        monkeypatch.setattr(
-            sys,
-            "argv",
-            [
-                "omen",
-                "scenario",
-                "--situation",
-                str(situation_default_json),
-            ],
-        )
+def test_scenario_command_defaults_output_under_data_scenario_pack(tmp_path: Path, monkeypatch) -> None:
+    _prepare_tmp_runtime_config(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    situation_default_json = tmp_path / "data" / "scenarios" / "nokia_v1" / "situation.json"
+    default_json = tmp_path / "data" / "scenarios" / "nokia_v1" / "scenario_pack.json"
+    default_md = tmp_path / "data" / "scenarios" / "nokia_v1" / "scenario_pack.md"
+    default_planning_query = tmp_path / "data" / "scenarios" / "nokia_v1" / "traces" / "planning_query.json"
+    default_prior_snapshot = tmp_path / "data" / "scenarios" / "nokia_v1" / "traces" / "prior_snapshot.json"
 
-        with pytest.raises(SystemExit) as exc_info:
-            main()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "analyze",
+            "situation",
+            "--doc",
+            str(SITUATION_INPUT),
+        ],
+    )
 
-        assert exc_info.value.code == 0
-        assert default_json.exists()
-        assert default_md.exists()
-        assert default_planning_query.exists()
-        assert default_prior_snapshot.exists()
-        payload = json.loads(default_json.read_text(encoding="utf-8"))
-        keys = [item["scenario_key"] for item in payload["scenarios"]]
-        assert keys == ["A", "B", "C"]
-    finally:
-        if situation_backup_json is None and situation_default_json.exists():
-            situation_default_json.unlink()
-        elif situation_backup_json is not None:
-            situation_default_json.write_text(situation_backup_json, encoding="utf-8")
+    with pytest.raises(SystemExit) as exc_info:
+        main()
 
-        if backup_json is None and default_json.exists():
-            default_json.unlink()
-        elif backup_json is not None:
-            default_json.write_text(backup_json, encoding="utf-8")
+    assert exc_info.value.code == 0
+    assert situation_default_json.exists()
 
-        if backup_md is None and default_md.exists():
-            default_md.unlink()
-        elif backup_md is not None:
-            default_md.write_text(backup_md, encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "scenario",
+            "--situation",
+            str(situation_default_json),
+        ],
+    )
 
-        if default_planning_query.exists():
-            default_planning_query.unlink()
-        if default_prior_snapshot.exists():
-            default_prior_snapshot.unlink()
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 0
+    assert default_json.exists()
+    assert default_md.exists()
+    assert default_planning_query.exists()
+    assert default_prior_snapshot.exists()
+    payload = json.loads(default_json.read_text(encoding="utf-8"))
+    keys = [item["scenario_key"] for item in payload["scenarios"]]
+    assert keys == ["A", "B", "C"]

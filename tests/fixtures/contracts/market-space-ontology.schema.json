@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omen/specs/006-startup-case-replay/contracts/market-space-ontology.schema.json",
+  "title": "MarketSpaceOntology",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["actors", "axioms"],
+  "properties": {
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "actor_id": { "type": "string", "minLength": 1 },
+              "id": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
+      }
+    },
+    "market_attributes": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["adoption_resistance"],
+      "properties": {
+        "adoption_resistance": {
+          "type": ["number", "string", "boolean", "object"]
+        }
+      }
+    },
+    "constraints": {
+      "type": "array"
+    },
+    "axioms": {
+      "type": "array",
+      "minItems": 1
+    }
+  },
+  "anyOf": [
+    { "required": ["market_attributes"] },
+    { "required": ["constraints"] }
+  ]
+}

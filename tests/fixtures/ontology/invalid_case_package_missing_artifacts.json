@@ -10,8 +10,8 @@
   "scenario_file": "data/scenarios/missing.json",
   "case_doc_file": "cases/missing.md",
   "required_artifacts": [
-    "specs/003-scenario-system-foundation/contracts/case-package.schema.json",
-    "specs/003-scenario-system-foundation/contracts/does-not-exist.schema.json"
+    "tests/fixtures/contracts/case-package.schema.json",
+    "tests/fixtures/contracts/does-not-exist.schema.json"
   ],
   "ontology_presence": true,
   "runtime_support": {

@@ -146,6 +146,11 @@ def resolve_situation_artifact_ref(ref: str | Path) -> Path:
     if candidate.exists():
         return candidate
 
+    root_candidate = Path("data/scenarios") / raw / "situation.json"
+    if root_candidate.exists():
+        return root_candidate
+
+    # Backward compatibility for legacy artifact layout.
     return Path("data/scenarios") / raw / "generation" / "situation.json"
 
 

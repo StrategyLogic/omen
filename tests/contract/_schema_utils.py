@@ -9,7 +9,7 @@ from referencing import Registry, Resource
 
 
 def contracts_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "specs" / "006-startup-case-replay" / "contracts"
+    return Path(__file__).resolve().parents[1] / "fixtures" / "contracts"
 
 
 def load_schema(filename: str) -> tuple[dict[str, Any], Path]:

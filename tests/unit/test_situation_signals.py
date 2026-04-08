@@ -6,7 +6,8 @@ import pytest
 from omen.ingest.synthesizer.services.situation import analyze_situation_document
 from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
 from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
-from omen.ingest.validators.scenario import IncompleteDeterministicPackError, validate_situation_artifact_or_raise
+from omen.ingest.validators.scenario import IncompleteDeterministicPackError
+from omen.ingest.validators.situation import validate_situation_artifact_or_raise
 
 
 def test_analyze_situation_document_injects_signal_template_and_normalizes_schema(

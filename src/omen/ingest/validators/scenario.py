@@ -13,7 +13,6 @@ from omen.scenario.ingest_validator import (
 )
 from omen.ingest.models import DeterministicScenarioPackModel
 from omen.ingest.models import ScenarioOntologySliceModel
-from omen.ingest.validators.situation import validate_situation_artifact_or_raise
 from omen.types import CasePackage, RuntimeSupportDeclaration
 from omen.simulation.step import is_action_known
 

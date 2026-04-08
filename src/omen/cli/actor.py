@@ -20,7 +20,7 @@ from omen.ui.artifacts import (
   STRATEGY_ONTOLOGY_FILENAME,
   ensure_actor_output_dir,
 )
-from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
+from omen.ui.case_catalog import normalize_case_id
 
 
 ACTOR_DEFAULT_OUTPUT_ROOT = "output/actors"

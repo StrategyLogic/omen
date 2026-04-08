@@ -29,6 +29,7 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 
 def _invoke_json(prompt: str, *, config_path: str, stage: str) -> dict[str, Any]:
+    _ = stage
     content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
     try:
         return _extract_json_object(content)

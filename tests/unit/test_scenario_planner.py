@@ -339,3 +339,114 @@ def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
     assert style["value_proposition"] == "Durable compounding"
     assert style["decision_preferences"] == ["quality execution"]
     assert style["non_negotiables"] == ["strategic coherence"]
+
+
+def test_plan_scenarios_uses_llm_prior_scores_with_explanations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    actor_path = tmp_path / "actor_ontology.json"
+    actor_path.write_text(
+        json.dumps(
+            {
+                "actors": [
+                    {
+                        "type": "StrategicActor",
+                        "name": "SAP",
+                        "role": "enterprise software vendor",
+                        "profile": {
+                            "strategic_style": {
+                                "decision_style": "platform expansion",
+                                "value_proposition": "integrated enterprise stack",
+                                "decision_preferences": ["ecosystem leverage"],
+                                "non_negotiables": ["portfolio coherence"],
+                            }
+                        },
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "omen.scenario.planner.decompose_scenario_from_situation",
+        lambda **kwargs: {
+            "pack_id": kwargs["pack_id"],
+            "pack_version": kwargs["pack_version"],
+            "derived_from_situation_id": "sap_reltio_acquisition",
+            "ontology_version": "scenario_ontology_v1",
+            "scenarios": [
+                {
+                    "scenario_key": "A",
+                    "title": "A",
+                    "goal": "gA",
+                    "target": "tA",
+                    "objective": "oA",
+                    "variables": [{"name": "vA"}],
+                    "constraints": ["cA"],
+                    "tradeoff_pressure": ["tpA"],
+                },
+                {
+                    "scenario_key": "B",
+                    "title": "B",
+                    "goal": "gB",
+                    "target": "tB",
+                    "objective": "oB",
+                    "variables": [{"name": "vB"}],
+                    "constraints": ["cB"],
+                    "tradeoff_pressure": ["tpB"],
+                },
+                {
+                    "scenario_key": "C",
+                    "title": "C",
+                    "goal": "gC",
+                    "target": "tC",
+                    "objective": "oC",
+                    "variables": [{"name": "vC"}],
+                    "constraints": ["cC"],
+                    "tradeoff_pressure": ["tpC"],
+                },
+            ],
+        },
+    )
+
+    monkeypatch.setattr(
+        "omen.scenario.planner.invoke_text_prompt",
+        lambda **kwargs: json.dumps(
+            {
+                "raw_prior_scores": [
+                    {"scenario_key": "A", "score": 0.2, "explain": "Style less aligned with offense path"},
+                    {"scenario_key": "B", "score": 0.55, "explain": "Style prefers stability and integration defense"},
+                    {"scenario_key": "C", "score": 0.25, "explain": "Some rivalry response pressure exists"},
+                ]
+            },
+            ensure_ascii=False,
+        ),
+    )
+
+    traces_dir = tmp_path / "traces"
+    plan_scenarios_from_situation(
+        situation_artifact={
+            "id": "sap_reltio_acquisition",
+            "signals": [{"name": "signal", "strength": 0.6}],
+            "context": {"hard_constraints": []},
+        },
+        pack_id="sap_v1",
+        pack_version="1.0.0",
+        actor_ref=str(actor_path),
+        config_path="config/llm.toml",
+        traces_dir=traces_dir,
+    )
+
+    prior_snapshot = json.loads((traces_dir / "prior_snapshot.json").read_text(encoding="utf-8"))
+    raw = {item["scenario_key"]: item for item in prior_snapshot["raw_prior_scores"]}
+    normalized = {item["scenario_key"]: item for item in prior_snapshot["normalized_priors"]}
+
+    assert raw["B"]["score"] == 0.55
+    assert "stability" in raw["B"]["explain"]
+    assert "rivalry" in raw["C"]["explain"]
+    assert abs(sum(float(item["score"]) for item in normalized.values()) - 1.0) < 1e-6
+    assert all(str(item.get("explain") or "").strip() for item in normalized.values())

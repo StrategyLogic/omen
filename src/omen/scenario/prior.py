@@ -14,10 +14,12 @@ def _normalize_priors(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     for item in raw:
         score = float(item.get("score") or 0.0)
+        explain = str(item.get("explain") or "").strip()
         normalized.append(
             {
                 "scenario_key": str(item.get("scenario_key") or ""),
                 "score": round(score / total, 6),
+                "explain": explain,
             }
         )
     return normalized

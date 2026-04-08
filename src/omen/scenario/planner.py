@@ -167,18 +167,33 @@ def _ensure_strategic_actor_admissible(
     actor_ref: str,
     situation_artifact: dict[str, Any],
     config_path: str,
-) -> str:
+) -> tuple[str, dict[str, Any]]:
+    trace: dict[str, Any] = {
+        "stage": "scenario_enhance_prompt",
+        "actor_ref": actor_ref,
+        "admissible_before": False,
+        "enhanced": False,
+        "status": "skipped",
+        "reason": "",
+    }
+
     actor_path = _resolve_actor_ontology_path(actor_ref)
     if actor_path is None:
-        return actor_ref
+        trace["reason"] = "actor_ref is not a local actor ontology json path"
+        return actor_ref, trace
 
     try:
         payload = json.loads(actor_path.read_text(encoding="utf-8"))
     except Exception:
-        return actor_ref
+        trace["reason"] = "failed to read actor ontology payload"
+        return actor_ref, trace
 
-    if _is_strategic_actor_admissible(payload):
-        return actor_ref
+    admissible_before = _is_strategic_actor_admissible(payload)
+    trace["admissible_before"] = admissible_before
+    if admissible_before:
+        trace["status"] = "noop"
+        trace["reason"] = "strategic actor already admissible"
+        return actor_ref, trace
 
     strategic_actor_name, strategic_actor_role = _extract_strategic_actor_identity(payload)
     current_case_id_to_exclude = str(situation_artifact.get("id") or "unknown_case").strip()
@@ -193,12 +208,179 @@ def _ensure_strategic_actor_admissible(
             config_path=config_path,
         )
     except Exception:
-        return actor_ref
+        trace["status"] = "failed"
+        trace["reason"] = "scenario_enhance_prompt failed"
+        return actor_ref, trace
 
     if _apply_enhanced_style(payload, enhanced):
         actor_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        trace["enhanced"] = True
+        trace["status"] = "updated"
+        trace["reason"] = "strategic_style enhanced and persisted"
+    else:
+        trace["status"] = "noop"
+        trace["reason"] = "enhancement returned no applicable strategic_style changes"
 
-    return actor_ref
+    return actor_ref, trace
+
+
+def _extract_actor_style_for_prior(actor_ref: str) -> dict[str, Any]:
+    actor_path = _resolve_actor_ontology_path(actor_ref)
+    if actor_path is None:
+        return {}
+    try:
+        payload = json.loads(actor_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+    strategic_actor = _find_strategic_actor(payload)
+    if not isinstance(strategic_actor, dict):
+        return {}
+
+    profile = strategic_actor.get("profile") or {}
+    style = profile.get("strategic_style") or {}
+    if not isinstance(style, dict):
+        style = {}
+
+    return {
+        "name": str(strategic_actor.get("name") or "").strip(),
+        "role": str(strategic_actor.get("role") or "").strip(),
+        "strategic_style": style,
+    }
+
+
+def _build_prior_candidates_from_scenarios(ontology: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for item in list(ontology.get("scenarios") or []):
+        if not isinstance(item, dict):
+            continue
+        scenario_key = str(item.get("scenario_key") or "").strip().upper()
+        if scenario_key not in {"A", "B", "C"}:
+            continue
+        candidates.append(
+            {
+                "scenario_key": scenario_key,
+                "title": str(item.get("title") or "").strip(),
+                "goal": str(item.get("goal") or "").strip(),
+                "target": str(item.get("target") or "").strip(),
+                "objective": str(item.get("objective") or "").strip(),
+                "constraints": _nonempty_text_list(item.get("constraints")),
+                "tradeoff_pressure": _nonempty_text_list(item.get("tradeoff_pressure")),
+            }
+        )
+    return sorted(candidates, key=lambda x: x["scenario_key"])
+
+
+def _build_raw_priors_fallback(
+    *,
+    decomposition: dict[str, Any],
+    fallback_query: dict[str, Any],
+) -> list[dict[str, Any]]:
+    llm_priors = decomposition.get("raw_prior_scores")
+    if isinstance(llm_priors, list):
+        normalized: list[dict[str, Any]] = []
+        for item in llm_priors:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("scenario_key") or "").strip().upper()
+            if key not in {"A", "B", "C"}:
+                continue
+            normalized.append(
+                {
+                    "scenario_key": key,
+                    "score": float(item.get("score") or 0.0),
+                    "explain": str(item.get("explain") or "Derived from decomposition fallback raw_prior_scores").strip(),
+                }
+            )
+        if len(normalized) == 3:
+            return sorted(normalized, key=lambda item: item["scenario_key"])
+
+    fallback = fallback_query.get("similarity_scores") or []
+    output = [
+        {
+            "scenario_key": str(item.get("scenario_key") or "").strip().upper(),
+            "score": float(item.get("score") or 0.0),
+            "explain": f"Fallback from planning_query similarity source={str(item.get('source') or 'unknown')}",
+        }
+        for item in fallback
+        if str(item.get("scenario_key") or "").strip().upper() in {"A", "B", "C"}
+    ]
+    if len(output) != 3:
+        output = [
+            {"scenario_key": "A", "score": 0.4, "explain": "Hard fallback default prior"},
+            {"scenario_key": "B", "score": 0.35, "explain": "Hard fallback default prior"},
+            {"scenario_key": "C", "score": 0.25, "explain": "Hard fallback default prior"},
+        ]
+    return sorted(output, key=lambda item: item["scenario_key"])
+
+
+def _build_raw_priors_llm(
+    *,
+    actor_ref: str,
+    ontology: dict[str, Any],
+    decomposition: dict[str, Any],
+    fallback_query: dict[str, Any],
+    config_path: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    fallback = _build_raw_priors_fallback(decomposition=decomposition, fallback_query=fallback_query)
+    actor_style = _extract_actor_style_for_prior(actor_ref)
+    scenario_candidates = _build_prior_candidates_from_scenarios(ontology)
+
+    trace: dict[str, Any] = {
+        "stage": "scenario_prior_prompt",
+        "status": "fallback",
+        "reason": "",
+        "scoring_source": "fallback",
+    }
+
+    if not scenario_candidates:
+        trace["reason"] = "scenario candidates unavailable"
+        return fallback, trace
+
+    prompt = _render_base_prompt(
+        "scenario_prior_prompt",
+        {
+            "actor_ref": actor_ref,
+            "actor_style_json": json.dumps(actor_style, ensure_ascii=False),
+            "scenario_candidates_json": json.dumps(scenario_candidates, ensure_ascii=False),
+            "fallback_similarity_json": json.dumps(fallback_query.get("similarity_scores") or [], ensure_ascii=False),
+        },
+    )
+
+    try:
+        prior_payload = _invoke_json(prompt, config_path=config_path, stage="scenario_prior_prompt")
+    except Exception:
+        trace["reason"] = "scenario_prior_prompt invocation failed"
+        return fallback, trace
+
+    prior_items = prior_payload.get("raw_prior_scores")
+    if not isinstance(prior_items, list):
+        trace["reason"] = "scenario_prior_prompt returned invalid raw_prior_scores"
+        return fallback, trace
+
+    output: list[dict[str, Any]] = []
+    for item in prior_items:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("scenario_key") or "").strip().upper()
+        if key not in {"A", "B", "C"}:
+            continue
+        output.append(
+            {
+                "scenario_key": key,
+                "score": float(item.get("score") or 0.0),
+                "explain": str(item.get("explain") or "").strip() or "LLM prior selection explanation not provided",
+            }
+        )
+
+    if len(output) != 3:
+        trace["reason"] = "scenario_prior_prompt output missing A/B/C"
+        return fallback, trace
+
+    trace["status"] = "ok"
+    trace["scoring_source"] = "llm"
+    trace["reason"] = "scenario_prior_prompt scored A/B/C with explanations"
+    return sorted(output, key=lambda item: item["scenario_key"]), trace
 
 
 def _nonempty_text_list(value: Any) -> list[str]:
@@ -473,42 +655,6 @@ def _build_scenario_ontology_from_situation_artifact(
     }
 
 
-def _build_raw_priors(
-    *,
-    decomposition: dict[str, Any],
-    fallback_query: dict[str, Any],
-) -> list[dict[str, Any]]:
-    llm_priors = decomposition.get("raw_prior_scores")
-    if isinstance(llm_priors, list):
-        normalized: list[dict[str, Any]] = []
-        for item in llm_priors:
-            if not isinstance(item, dict):
-                continue
-            key = str(item.get("scenario_key") or "").strip().upper()
-            if key not in {"A", "B", "C"}:
-                continue
-            normalized.append({"scenario_key": key, "score": float(item.get("score") or 0.0)})
-        if len(normalized) == 3:
-            return sorted(normalized, key=lambda item: item["scenario_key"])
-
-    fallback = fallback_query.get("similarity_scores") or []
-    output = [
-        {
-            "scenario_key": str(item.get("scenario_key") or "").strip().upper(),
-            "score": float(item.get("score") or 0.0),
-        }
-        for item in fallback
-        if str(item.get("scenario_key") or "").strip().upper() in {"A", "B", "C"}
-    ]
-    if len(output) != 3:
-        output = [
-            {"scenario_key": "A", "score": 0.4},
-            {"scenario_key": "B", "score": 0.35},
-            {"scenario_key": "C", "score": 0.25},
-        ]
-    return sorted(output, key=lambda item: item["scenario_key"])
-
-
 def _write_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -546,7 +692,7 @@ def plan_scenarios_from_situation(
     config_path: str,
     traces_dir: str | Path,
 ) -> dict[str, Any]:
-    actor_ref = _ensure_strategic_actor_admissible(
+    actor_ref, actor_enhancement_trace = _ensure_strategic_actor_admissible(
         actor_ref=actor_ref,
         situation_artifact=situation_artifact,
         config_path=config_path,
@@ -576,7 +722,21 @@ def plan_scenarios_from_situation(
     planning_query_path = traces_path / "planning_query.json"
     _write_auxiliary_json(planning_query_path, planning_query)
 
-    raw_priors = _build_raw_priors(decomposition=decomposition, fallback_query=planning_query)
+    ontology = _build_scenario_ontology_from_situation_artifact(
+        situation_artifact=situation_artifact,
+        llm_decomposition=decomposition,
+        pack_id=pack_id,
+        pack_version=pack_version,
+    )
+
+    raw_priors, prior_scoring_trace = _build_raw_priors_llm(
+        actor_ref=actor_ref,
+        ontology=ontology,
+        decomposition=decomposition,
+        fallback_query=planning_query,
+        config_path=config_path,
+    )
+
     prior_snapshot = build_prior_snapshot(
         pack_id=pack_id,
         pack_version=pack_version,
@@ -588,17 +748,15 @@ def plan_scenarios_from_situation(
     prior_snapshot_path = traces_path / "prior_snapshot.json"
     _write_auxiliary_json(prior_snapshot_path, prior_snapshot)
 
-    ontology = _build_scenario_ontology_from_situation_artifact(
-        situation_artifact=situation_artifact,
-        llm_decomposition=decomposition,
-        pack_id=pack_id,
-        pack_version=pack_version,
-    )
     ontology["planning_query_ref"] = str(planning_query_path)
     ontology["prior_snapshot_ref"] = str(prior_snapshot_path)
     ontology["source_meta"] = {
         **(ontology.get("source_meta") or {}),
         "generated_at": datetime.now().isoformat(),
         "planner": "planner_v1",
+    }
+    ontology["_planner_trace"] = {
+        "actor_style_enhancement": actor_enhancement_trace,
+        "prior_scoring": prior_scoring_trace,
     }
     return ontology

@@ -150,6 +150,7 @@ def _append_scenario_decomposition_trace(
     scenario_artifact_path: Path,
     situation_ref: Path,
     decomposition_quality: dict[str, Any] | None,
+    planner_trace: dict[str, Any] | None = None,
 ) -> None:
     payload: dict[str, Any] = {}
     if trace_path.exists():
@@ -171,6 +172,11 @@ def _append_scenario_decomposition_trace(
         "validation_issues": list((decomposition_quality or {}).get("validation_issues") or []),
         "logic_issues": list((decomposition_quality or {}).get("logic_issues") or []),
     }
+    if isinstance(planner_trace, dict):
+        payload["scenario_planner"] = {
+            "actor_style_enhancement": dict(planner_trace.get("actor_style_enhancement") or {}),
+            "prior_scoring": dict(planner_trace.get("prior_scoring") or {}),
+        }
     save_auxiliary_json(trace_path, payload)
 
 
@@ -455,6 +461,8 @@ def handle_scenario_command(args: Any) -> int:
             config_path=str(args.config),
             traces_dir=output_path_arg.parent / "traces",
         )
+        planner_trace = dict(ontology.pop("_planner_trace", {}) or {})
+
         output_path = save_scenario_ontology_slice(output_path_arg, ontology)
         markdown_path = output_path.with_suffix(".md")
         save_scenario_ontology_markdown(markdown_path, ontology)
@@ -464,6 +472,7 @@ def handle_scenario_command(args: Any) -> int:
             scenario_artifact_path=output_path,
             situation_ref=situation_path,
             decomposition_quality=ontology.get("decomposition_quality"),
+            planner_trace=planner_trace,
         )
         print(f"Saved scenario planning artifact to {output_path}")
         print(f"Saved scenario planning summary to {markdown_path}")

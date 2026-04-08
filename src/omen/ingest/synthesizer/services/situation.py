@@ -773,21 +773,28 @@ def analyze_situation_document(
         stage="situation_enhance_prompt",
     )
 
+    llm_signals = enhanced.get("signals")
+    if not isinstance(llm_signals, list) or not llm_signals:
+        raise LLMJsonValidationAbort(
+            stage="situation_enhance_prompt",
+            reason="missing or empty `signals` in enhance response",
+            raw_output=json.dumps(enhanced, ensure_ascii=False),
+        )
+
     enhanced.setdefault("version", "0.1.0")
     enhanced.setdefault("id", situation_id)
     enhanced.setdefault("context", context)
     enhanced["signals"] = _normalize_situation_signals(
-        enhanced.get("signals"),
+        llm_signals,
         situation_id=situation_id,
         context=context,
         signal_template=signal_template,
     )
     if not enhanced["signals"]:
-        enhanced["signals"] = _normalize_situation_signals(
-            [{"name": "Signal extracted from source document"}],
-            situation_id=situation_id,
-            context=context,
-            signal_template=signal_template,
+        raise LLMJsonValidationAbort(
+            stage="situation_enhance_prompt",
+            reason="`signals` failed normalization after enhance response",
+            raw_output=json.dumps(enhanced, ensure_ascii=False),
         )
     enhanced["tech_space_seed"] = _as_dict_list(enhanced.get("tech_space_seed"), key_name="name")
     enhanced["market_space_seed"] = _as_dict_list(enhanced.get("market_space_seed"), key_name="name")

@@ -391,7 +391,7 @@ def plan_scenarios_from_situation(
             planning_query=planning_query,
             config_path=config_path,
         )
-    except Exception as exc:
+    except Exception:
         if not actor_json_ref:  
             raw_priors = _build_random_prior_fallback(scenario_ontology=ontology)  
             prior_scoring_trace = {  
@@ -428,7 +428,7 @@ def plan_scenarios_from_situation(
                     "actor_style_enhancement": actor_enhancement_trace,  
                     "prior_scoring": prior_scoring_trace,  
                 }  
-                raise exc
+                raise
 
     prior_snapshot = build_prior_snapshot(
         pack_id=pack_id,

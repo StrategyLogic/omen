@@ -749,3 +749,6 @@ prompts:
     3. All numeric values must have confidence.
     4. If confidence < 0.5, add "validation_needed": true.
     5. Do not invent facts. Only use inputs provided.
+    6. Output MUST be a raw JSON object only (single root object).
+    7. Do NOT wrap output in markdown/code fences such as ```json.
+    8. Do NOT prepend or append any explanation text before/after JSON.

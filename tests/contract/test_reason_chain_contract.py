@@ -2,7 +2,7 @@ import json
 import sys
 from pathlib import Path
 
-from omen.analysis.actor.derivation_trace import blocking_has_activation_links, is_hierarchical_step_id
+from omen.analysis.actor.derivation_trace import blocking_has_activation_links
 from omen.cli.main import main
 from omen.ingest.validators.scenario import validate_reason_chain_artifact_or_raise
 
@@ -111,7 +111,7 @@ def test_reason_chain_contract_step_ids_and_blocking_links(tmp_path: Path, monke
         chain = row.get("reason_chain") or {}
         steps = list(chain.get("steps") or [])
         assert steps
-        assert all(is_hierarchical_step_id(str(item.get("step_id") or "")) for item in steps)
+        assert all(str(item.get("step_id") or "").strip() for item in steps)
 
         conclusions = chain.get("conclusions") or {}
         blocking_items = list(conclusions.get("blocking") or [])

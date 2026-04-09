@@ -64,6 +64,7 @@ def run_deterministic_simulate_from_pack(
     planned_scenarios: dict[str, dict[str, Any]] | None = None,
     actor_derivation_output_path: str | Path | None = None,
     config_path: str | None = None,
+    debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
 
@@ -174,6 +175,10 @@ def run_deterministic_simulate_from_pack(
     }
 
     if actor_derivation_output_path:
+        traces_dir = Path(actor_derivation_output_path).parent
+        generation_output_path = traces_dir.parent / "generation" / "output.txt"
+        debug_output_path = str(generation_output_path) if debug else None
+
         derivation_artifact = build_actor_derivation_artifact(
             run_id=run_id,
             actor_profile_ref=actor_profile_ref,
@@ -205,14 +210,17 @@ def run_deterministic_simulate_from_pack(
                 planning_query_json={},
                 situation_markdown="",
                 config_path=config_path,
+                debug_output_path=debug_output_path,
+                scenario_key=scenario_key,
             )
             if isinstance(llm_payload, dict):
                 llm_chain = llm_payload.get("reason_chain") if isinstance(llm_payload.get("reason_chain"), dict) else {}
+                if isinstance(llm_chain.get("steps"), list) and llm_chain.get("steps"):
+                    chain["steps"] = llm_chain.get("steps")
+                if isinstance(llm_chain.get("conclusions"), dict) and llm_chain.get("conclusions"):
+                    chain["conclusions"] = llm_chain.get("conclusions")
                 llm_intermediate = llm_chain.get("intermediate") if isinstance(llm_chain.get("intermediate"), dict) else {}
-                if llm_intermediate:
-                    chain["intermediate"] = llm_intermediate
-                else:
-                    chain["intermediate"] = deterministic_intermediate
+                chain["intermediate"] = llm_intermediate or deterministic_intermediate
             else:
                 chain["intermediate"] = deterministic_intermediate
 
@@ -257,6 +265,7 @@ def run_deterministic_compare_from_pack(
     planned_scenarios: dict[str, dict[str, Any]] | None = None,
     actor_derivation_output_path: str | Path | None = None,
     config_path: str | None = None,
+    debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
     payload = run_deterministic_simulate_from_pack(
@@ -266,6 +275,7 @@ def run_deterministic_compare_from_pack(
         planned_scenarios=planned_scenarios,
         actor_derivation_output_path=actor_derivation_output_path,
         config_path=config_path,
+        debug=debug,
         workshop_ui_mode=workshop_ui_mode,
     )
     payload["comparison_type"] = "deterministic_pack"

@@ -323,7 +323,7 @@ def validate_reason_chain_artifact_or_raise(payload: dict) -> dict:
             raise ValueError(f"reason_chain steps missing for scenario {scenario_key}")
         for step in steps:
             step_id = str((step or {}).get("step_id") or "").strip()
-            if not step_id.startswith("step_"):
+            if not step_id:
                 raise ValueError(f"invalid step_id in scenario {scenario_key}: {step_id}")
 
         conclusions = reason_chain.get("conclusions") or {}

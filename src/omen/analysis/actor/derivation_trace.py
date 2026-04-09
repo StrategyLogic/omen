@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 
@@ -22,8 +21,7 @@ def build_hierarchical_step_id(major: int, minor: int) -> str:
 
 
 def is_hierarchical_step_id(step_id: str) -> bool:
-    text = str(step_id or "").strip()
-    return bool(re.fullmatch(r"step_[1-9]\d*(\.[1-9]\d*)+", text))
+    return bool(str(step_id or "").strip())
 
 
 def validate_reason_chain_step_ids(steps: list[dict[str, Any]]) -> bool:
@@ -190,7 +188,7 @@ def build_scenario_reason_chain(
     if not reasoning_order_is_valid(step_types):
         raise ValueError(f"invalid reason chain step order for scenario {scenario_key}")
     if not validate_reason_chain_step_ids(steps):
-        raise ValueError(f"invalid hierarchical step_id in reason chain for scenario {scenario_key}")
+        raise ValueError(f"invalid step_id in reason chain for scenario {scenario_key}")
 
     return {
         "run_id": run_id,

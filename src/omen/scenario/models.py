@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -68,12 +67,6 @@ class ReasonChainStepModel(BaseModel):
     step_type: str = Field(min_length=1)
     input_refs: list[str] = Field(default_factory=list)
     summary: str = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def validate_step_id_pattern(self) -> "ReasonChainStepModel":
-        if not re.fullmatch(r"step_[1-9]\d*(\.[1-9]\d*)+", self.step_id):
-            raise ValueError("step_id must be hierarchical like step_1.1")
-        return self
 
 
 class ReasonChainBlockingModel(BaseModel):

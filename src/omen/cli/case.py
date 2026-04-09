@@ -10,7 +10,7 @@ from typing import Any
 
 from omen.analysis.actor.derivation import (
     derive_actor_path,
-    derive_strategic_freedom_conditions,
+    get_simulate_reasoning_order,
 )
 from omen.analysis.actor.derivation_trace import (
     extract_conclusion_buckets,
@@ -146,17 +146,21 @@ def run_deterministic_simulate_from_pack(
             capability_scores=capability_templates.get(scenario_key, {}),
             capability_fit=capability_fit["fit"],
         )
-        strategic_conditions = derive_strategic_freedom_conditions(
-            scenario_key=scenario_key,
-            actor_derivation=actor_derivation,
-            selected_dimensions=selected_dimensions,
-            resistance_baseline=scenario["resistance_baseline"],
-            capability_fit=capability_fit["fit"],
-        )
         confidence_level, missing_reasons = apply_partial_evidence_confidence_policy(
             evidence_refs=[],
             scenario_key=scenario_key,
         )
+        strategic_score = calculate_strategic_freedom_factor(
+            capability_fit=capability_fit["fit"],
+            resistance_baseline=scenario["resistance_baseline"],
+        )
+        strategic_conditions = {
+            "score": strategic_score,
+            "required": [],
+            "warning": [],
+            "blocking": [],
+            "reasoning_order": list(get_simulate_reasoning_order()),
+        }
         derivation_trace = build_actor_derivation_trace(
             scenario_key=scenario_key,
             scenario_ontology=scene,
@@ -164,10 +168,6 @@ def run_deterministic_simulate_from_pack(
             selected_dimensions=selected_dimensions,
             strategic_conditions=strategic_conditions,
             missing_evidence_reasons=missing_reasons,
-        )
-        strategic_score = calculate_strategic_freedom_factor(
-            capability_fit=capability_fit["fit"],
-            resistance_baseline=scenario["resistance_baseline"],
         )
 
         scenario_results.append(
@@ -246,7 +246,12 @@ def run_deterministic_simulate_from_pack(
             }
             llm_payload = try_generate_scenario_reason_chain_via_llm(
                 scenario_json=llm_scenario_input,
-                actor_profile_json={"actor_profile_ref": actor_profile_ref},
+                actor_profile_json={
+                    "actor_profile_ref": actor_profile_ref,
+                    "actor_derivation": dict(result.get("actor_derivation") or {}),
+                    "selected_dimensions": list((result.get("selected_dimensions") or {}).get("selected_dimension_keys") or []),
+                    "resistance": dict(result.get("resistance") or {}),
+                },
                 planning_query_json={},
                 situation_markdown="",
                 config_path=config_path,
@@ -318,12 +323,11 @@ def run_deterministic_simulate_from_pack(
             key = str(result.get("scenario_key") or "")
             reason_chain = chain_by_key.get(key, {})
             buckets = extract_conclusion_buckets(dict(reason_chain.get("conclusions") or {}))
-            if any(buckets[name] for name in ("required", "warning", "blocking")):
-                freedom = dict(result.get("strategic_freedom") or {})
-                freedom["required"] = [str(item.get("text") or "").strip() for item in buckets["required"] if str(item.get("text") or "").strip()]
-                freedom["warning"] = [str(item.get("text") or "").strip() for item in buckets["warning"] if str(item.get("text") or "").strip()]
-                freedom["blocking"] = [str(item.get("text") or "").strip() for item in buckets["blocking"] if str(item.get("text") or "").strip()]
-                result["strategic_freedom"] = freedom
+            freedom = dict(result.get("strategic_freedom") or {})
+            freedom["required"] = [str(item.get("text") or "").strip() for item in buckets["required"] if str(item.get("text") or "").strip()]
+            freedom["warning"] = [str(item.get("text") or "").strip() for item in buckets["warning"] if str(item.get("text") or "").strip()]
+            freedom["blocking"] = [str(item.get("text") or "").strip() for item in buckets["blocking"] if str(item.get("text") or "").strip()]
+            result["strategic_freedom"] = freedom
             result["evidence_refs"] = build_linked_evidence_refs(reason_chain)
 
             if result["evidence_refs"]:

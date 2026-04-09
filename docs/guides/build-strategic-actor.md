@@ -1,8 +1,8 @@
-# 构建 Strategic Actor
+# 指南：构建战略主体
 
 本指南说明如何从案例文档构建自定义的战略行动者产出物。
 
-## 工作目录
+## 📁 工作目录
 
 Omen 基于文件目录来管理和运行自动化工作流，目录结构如下：
 
@@ -46,7 +46,7 @@ Omen 将在 `output/actors/<actor_name>/` 下生成以下文件：
 | 战略画像 | `analyze_persona.json` | 行动者画像分析结果（叙事、关键特质等） |
 | 生成元数据 | `generation.json` | 本次生成过程与校验信息（是否复用、校验问题等） |
 
-## 使用流程
+## 🔄 使用流程
 
 如果你尚未安装 Omen，请先阅读 [快速指南（LLM）](../quick-start-llm.md)，完成环境配置和模型接入。
 
@@ -140,9 +140,9 @@ omen analyze actor --doc chen-jiaxing
 | `analyze_persona.json` | ✅ | 战略画像 |
 | `generation.json` | ✅ | 生成元数据 |
 
-### 3. 高级命令使用
+## ✨ 高级命令使用
 
-#### 校验生成物
+### 校验生成物
 
 `omen validate` 命令提供产物结构校验功能：
 
@@ -164,7 +164,7 @@ omen validate actor --doc chen-jiaxing
 
 如果校验失败，会显示具体错误和警告信息。
 
-#### 自定义参数
+### 自定义参数
 
 | 参数 | 说明 | 示例 |
 |------|------|------|
@@ -174,7 +174,7 @@ omen validate actor --doc chen-jiaxing
 | `--date` | 状态快照精确日期 | `--date 2019-10-24` |
 | `--force` | 强制重新生成，忽略缓存 | `--force` |
 
-##### 参数使用示例
+#### 参数使用示例
 
 ```bash
 # 分析并指定输出目录
@@ -189,7 +189,7 @@ omen analyze actor --doc chen-jiaxing --force
 
 ---
 
-## 常见问题
+## ❓ 常见问题
 
 **Q：Omen Token 消耗严重吗？**
 

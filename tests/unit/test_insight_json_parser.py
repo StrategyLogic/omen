@@ -1,5 +1,3 @@
-import json
-
 from omen.analysis.actor.insight import _extract_json_object
 
 

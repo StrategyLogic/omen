@@ -7,8 +7,10 @@ import json
 from typing import Any
 
 from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.synthesizer.config import load_llm_config
 from omen.ingest.synthesizer.prompts.registry import get_analyze_prompt_version_token
+from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt, build_persona_insight_prompt
 
 
@@ -274,3 +276,68 @@ def apply_partial_evidence_confidence_policy(
         "reduced-confidence",
         [f"Scenario {key}: no evidence refs linked in current iteration"],
     )
+
+
+def render_scenario_reason_chain_prompt(
+    *,
+    scenario_json: dict[str, Any],
+    actor_profile_json: dict[str, Any],
+    planning_query_json: dict[str, Any],
+    situation_markdown: str,
+) -> str:
+    template = get_prompt_template("scenario_reason_chain_prompt", tier="base")
+    return render_prompt_template(
+        template,
+        {
+            "scenario_json": json.dumps(scenario_json, ensure_ascii=False),
+            "actor_profile_json": json.dumps(actor_profile_json, ensure_ascii=False),
+            "planning_query_json": json.dumps(planning_query_json, ensure_ascii=False),
+            "situation_markdown": str(situation_markdown or ""),
+        },
+    )
+
+
+def try_generate_scenario_reason_chain_via_llm(
+    *,
+    scenario_json: dict[str, Any],
+    actor_profile_json: dict[str, Any],
+    planning_query_json: dict[str, Any],
+    situation_markdown: str,
+    config_path: str | None,
+) -> dict[str, Any] | None:
+    if not config_path:
+        return None
+
+    prompt = render_scenario_reason_chain_prompt(
+        scenario_json=scenario_json,
+        actor_profile_json=actor_profile_json,
+        planning_query_json=planning_query_json,
+        situation_markdown=situation_markdown,
+    )
+    try:
+        content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
+        payload = _extract_json_object(content)
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
+
+
+def link_blocking_to_reason_steps(
+    blocking_texts: list[str],
+    *,
+    activation_step_id: str,
+    reason_step_id: str,
+) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for text in blocking_texts:
+        normalized = str(text).strip()
+        if not normalized:
+            continue
+        output.append(
+            {
+                "text": normalized,
+                "activation_step_ids": [activation_step_id],
+                "reason_step_ids": [reason_step_id],
+            }
+        )
+    return output

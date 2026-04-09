@@ -125,6 +125,11 @@ def main() -> None:
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
     )
+    simulate.add_argument(
+        "--workshop-ui-mode",
+        action="store_true",
+        help="Emit reason-chain view model artifact for workshop DAG rendering",
+    )
 
     explain = sub.add_parser("explain", help="generate explanation from a saved run result")
     explain.add_argument("--input", required=True, help="Path to saved run result JSON")
@@ -178,6 +183,11 @@ def main() -> None:
         "--incremental",
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
+    )
+    compare.add_argument(
+        "--workshop-ui-mode",
+        action="store_true",
+        help="Emit reason-chain view model artifact for workshop DAG rendering",
     )
 
     precision_eval = sub.add_parser(
@@ -430,6 +440,7 @@ def main() -> None:
                     calculation_policy_version=args.calc_policy_version,
                     planned_scenarios=planned_scenarios,
                     actor_derivation_output_path=actor_derivation_output_path,
+                    workshop_ui_mode=bool(args.workshop_ui_mode),
                 )
                 rendered = json.dumps(payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(
@@ -479,6 +490,7 @@ def main() -> None:
                     calculation_policy_version=args.calc_policy_version,
                     planned_scenarios=planned_scenarios,
                     actor_derivation_output_path=actor_derivation_output_path,
+                    workshop_ui_mode=bool(args.workshop_ui_mode),
                 )
                 rendered = json.dumps(payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(

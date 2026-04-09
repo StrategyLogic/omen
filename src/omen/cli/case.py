@@ -13,12 +13,17 @@ from omen.analysis.actor.derivation import (
     derive_strategic_freedom_conditions,
 )
 from omen.analysis.actor.derivation_trace import (
+    build_linked_evidence_refs,
     build_actor_derivation_artifact,
     build_actor_derivation_trace,
+    build_reason_chain_artifact,
+    build_reason_chain_view_model_artifact,
+    build_scenario_reason_chain,
 )
 from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.insight import build_recommendation_from_condition_sets
 from omen.analysis.actor.insight import apply_partial_evidence_confidence_policy
+from omen.analysis.actor.insight import try_generate_scenario_reason_chain_via_llm
 from omen.analysis.actor.comparability import build_comparability_metadata
 from omen.analysis.actor.formation import (
     assemble_capability_dilemma_fit,
@@ -29,6 +34,8 @@ from omen.analysis.actor.report_writer import (
     build_fixed_order_scenario_comparison,
     write_actor_derivation_artifact,
     write_deterministic_run_artifact,
+    write_reason_chain_artifact,
+    write_reason_chain_view_model_artifact,
 )
 from omen.analysis.actor.strategy import (
     calculate_strategic_freedom_factor,
@@ -37,6 +44,7 @@ from omen.analysis.actor.query import build_events_snapshot
 from omen.types import DETERMINISTIC_PACK_REQUIRED_SLOTS
 from omen.ingest.synthesizer.services.actor import generate_actor_and_events_from_document
 from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+from omen.ingest.synthesizer.prompts.registry import get_scenario_reason_chain_prompt_version_token
 from omen.ingest.synthesizer.assembler import attach_founder_ref, attach_timeline_events
 from omen.scenario.case_replay_loader import save_strategy_ontology
 from omen.ui.artifacts import ensure_case_output_dir
@@ -55,6 +63,8 @@ def run_deterministic_simulate_from_pack(
     calculation_policy_version: str,
     planned_scenarios: dict[str, dict[str, Any]] | None = None,
     actor_derivation_output_path: str | Path | None = None,
+    config_path: str | None = None,
+    workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
 
     capability_templates = {
@@ -65,6 +75,7 @@ def run_deterministic_simulate_from_pack(
 
     scenario_results = []
     scenario_derivations: list[dict[str, Any]] = []
+    raw_reason_chain_inputs: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
     for scenario in pack["scenarios"]:
         scenario_key = scenario["scenario_key"]
         scene = (planned_scenarios or {}).get(scenario_key) or {
@@ -135,6 +146,7 @@ def run_deterministic_simulate_from_pack(
                 "strategic_freedom_score": strategic_score,
             }
         )
+        raw_reason_chain_inputs.append((scenario_key, scene, scenario_results[-1]))
 
     scenario_order = [str(item.get("scenario_key") or "") for item in scenario_results]
 
@@ -171,6 +183,69 @@ def run_deterministic_simulate_from_pack(
         saved = write_actor_derivation_artifact(actor_derivation_output_path, derivation_artifact)
         artifact["actor_derivation_ref"] = str(saved)
 
+        reason_chain_rows = [
+            build_scenario_reason_chain(
+                run_id=run_id,
+                scenario_key=scenario_key,
+                scenario_ontology=scene,
+                scenario_result=result,
+            )
+            for scenario_key, scene, result in raw_reason_chain_inputs
+        ]
+
+        # Optional LLM override path for intermediate reasoning detail only.
+        # Deterministic core chain remains generated locally for replay stability.
+        for item in reason_chain_rows:
+            scenario_key = str(item.get("scenario_key") or "")
+            chain = item.get("reason_chain") or {}
+            deterministic_intermediate = dict(chain.get("intermediate") or {})
+            llm_payload = try_generate_scenario_reason_chain_via_llm(
+                scenario_json=(planned_scenarios or {}).get(scenario_key) or {},
+                actor_profile_json={"actor_profile_ref": actor_profile_ref},
+                planning_query_json={},
+                situation_markdown="",
+                config_path=config_path,
+            )
+            if isinstance(llm_payload, dict):
+                llm_chain = llm_payload.get("reason_chain") if isinstance(llm_payload.get("reason_chain"), dict) else {}
+                llm_intermediate = llm_chain.get("intermediate") if isinstance(llm_chain.get("intermediate"), dict) else {}
+                if llm_intermediate:
+                    chain["intermediate"] = llm_intermediate
+                else:
+                    chain["intermediate"] = deterministic_intermediate
+            else:
+                chain["intermediate"] = deterministic_intermediate
+
+        reason_chain_artifact = build_reason_chain_artifact(
+            run_id=run_id,
+            scenario_pack_ref=pack["pack_id"],
+            scenario_chains=reason_chain_rows,
+        )
+        reason_chain_artifact["prompt_token"] = get_scenario_reason_chain_prompt_version_token()
+        reason_chain_path = Path(actor_derivation_output_path).parent / "reason_chain.json"
+        saved_reason_chain = write_reason_chain_artifact(reason_chain_path, reason_chain_artifact)
+        artifact["reason_chain_ref"] = str(saved_reason_chain)
+
+        chain_by_key = {
+            str(item.get("scenario_key") or ""): dict(item.get("reason_chain") or {})
+            for item in reason_chain_rows
+            if isinstance(item, dict)
+        }
+        for result in scenario_results:
+            key = str(result.get("scenario_key") or "")
+            reason_chain = chain_by_key.get(key, {})
+            result["evidence_refs"] = build_linked_evidence_refs(reason_chain)
+
+        if workshop_ui_mode:
+            view_model_artifact = build_reason_chain_view_model_artifact(
+                run_id=run_id,
+                scenario_pack_ref=pack["pack_id"],
+                scenario_chains=reason_chain_rows,
+            )
+            view_model_path = Path(actor_derivation_output_path).parent / "reason_chain_view_model.json"
+            saved_view_model = write_reason_chain_view_model_artifact(view_model_path, view_model_artifact)
+            artifact["reason_chain_view_model_ref"] = str(saved_view_model)
+
     return attach_strategic_freedom_summary(artifact)
 
 
@@ -181,6 +256,8 @@ def run_deterministic_compare_from_pack(
     calculation_policy_version: str,
     planned_scenarios: dict[str, dict[str, Any]] | None = None,
     actor_derivation_output_path: str | Path | None = None,
+    config_path: str | None = None,
+    workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
     payload = run_deterministic_simulate_from_pack(
         pack=pack,
@@ -188,6 +265,8 @@ def run_deterministic_compare_from_pack(
         calculation_policy_version=calculation_policy_version,
         planned_scenarios=planned_scenarios,
         actor_derivation_output_path=actor_derivation_output_path,
+        config_path=config_path,
+        workshop_ui_mode=workshop_ui_mode,
     )
     payload["comparison_type"] = "deterministic_pack"
     payload["recommendation_summary"] = "Deterministic compare completed."

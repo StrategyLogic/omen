@@ -430,7 +430,7 @@ prompts:
     [[source_text]]
 
   scenario_enhance_prompt: |
-    You are a organizational behavior analyst. Derive StrategicActor strategic_style from widely known historical similar cases.
+    You are an organizational behavior analyst. Derive StrategicActor strategic_style from widely known historical similar cases.
     Return ONE valid JSON object only.
 
     Required output keys:
@@ -456,7 +456,7 @@ prompts:
     actor_ontology_json: [[actor_ontology_json]]
 
   scenario_prior_prompt: |
-    You are a organizational behavior analyst. Score the probability of selecting scenario A/B/C based on StrategicActor style.
+    You are an organizational behavior analyst. Score the probability of selecting scenario A/B/C based on StrategicActor style.
     Return ONE valid JSON object only.
 
     Required output:

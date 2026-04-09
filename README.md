@@ -10,7 +10,7 @@
 
 [中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 
-## 💡 What Omen Does
+## ⭐ What Omen Does
 
 Unlike traditional predictive models, Omen does not promise to *predict a certain future*. Instead, it generates **interpretable, replayable, and comparable future branching paths**. Its core responsibility is to reveal faint omens, critical branching points, and evolutionary trajectories within complex systems, empowering founders, product strategists, technology leaders, and investment analysts to understand:
 
@@ -19,7 +19,7 @@ Unlike traditional predictive models, Omen does not promise to *predict a certai
 *   🏆 **Strategy Wins**: Which strategy combinations are more likely to win the market, capital, and developer ecosystem?
 *   ⏳ **Time Windows**: When is the optimal timing for in-house development, alliances, M&A, or contraction?
 
-## ⚙️ Core Features
+## ✨ Core Features
 
 | Feature Module | Description |
 | :--- | :--- |
@@ -125,7 +125,7 @@ More scenarios are under development (contributions welcome):
 *   `Open Source Models` vs `Closed Commercial APIs`
 *   `Data Governance` vs `AI-Native Knowledge Systems`
 
-## 📦 License
+## 📖 License
 
 Omen is under [AGPL-3.0-or-later](LICENSE), the project is developed and maintained by **[StrategyLogic®](https://www.strategylogic.ai)**.
 

@@ -1,181 +1,132 @@
-# 运行你的第一次战略推演
 
-欢迎使用 **Omen**。本指南将带你快速运行首个战略推演案例：**本体论之战**。
+# 快速开始
 
-这不仅仅是运行示例代码，而是体验一次完整的**战略推演工作流**：从设定战场条件，到观察演化终局，再到通过“反事实分析”追问“如果当时...会怎样”。
+欢迎使用 **Omen**。本指南以战略主体的构建与分析为例，介绍如何快速上手。
 
-> 📖 **背景知识**：在开始之前，建议先阅读案例背景文档[本体论之战：数据库 vs AI记忆](../cases/ontology.md)，了解参战双方的能力设定与核心冲突。
+## ⚙️ 准备环境
 
-## 🔄 推演工作流                      
+### 克隆源代码
 
-在输入命令之前，让我们先理解 Omen 的核心工作流。
-
-```mermaid
-flowchart LR
-  A[🏗️ Scenario Input<br/>actors + capabilities + thresholds] --> B[⚔️ Simulation Run<br/>omen simulate]
-  B --> C[📄 Result Output<br/>result.json]
-  C --> D[🔍 Explanation Report<br/>omen explain]
-  C --> E[💭 Counterfactual Compare<br/>omen compare]
-  E --> F[⚖️ Comparison Output<br/>comparison.json]
-  F --> G[💡 Decision Insight<br/>Which condition changes the outcome?]
-  
-  style A fill:#f9f,stroke:#333,stroke-width:2px
-  style B fill:#bbf,stroke:#333,stroke-width:2px
-  style G fill:#bfb,stroke:#333,stroke-width:2px
+```bash
+git clone git@github.com:StrategyLogic/omen.git
+cd omen
 ```
 
-作为一个战略家，你将通过以下五个步骤与系统交互：
+如果你已经克隆过代码，确保更新到最新版本：
 
-1.  **🏗️ 设定战场 (Scenario)**：定义市场初始条件、参与方能力与关键阈值。
-2.  **⚔️ 执行模拟 (Simulation)**：让多智能体在博弈中演化，生成可能的未来路径。
-3.  **🔍 生成解释 (Explanation)**：系统自动提取关键分叉点，解释“为什么”会发生这样的结局。
-4.  **💭 提出假设 (Counterfactual)**：注入变量（如：“如果资金增加？”或“如果用户重叠度更高？”）。
-5.  **⚖️ 对比洞察 (Comparison)**：对比基准与假设场景，识别改变结局的关键杠杆。
+```bash
+git pull origin main
+```
 
-## 🚀 运行指南
-
-**环境要求**：确保你的运行环境安装了 **Python**: 3.12+ 和 `pip` 包管理器。
-
-### 🛠️ 配置 Omen 环境
-
-下载 Omen 源代码后，在仓库根目录下执行以下命令，安装项目依赖：
+在仓库根目录下执行以下命令，安装项目依赖：
 
 ```bash
 pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
-💡 **提示**：如果你需要进行开发或测试，请安装开发依赖：
+### 配置 LLM
+
+需要配置两份文件：环境变量文件 `.env` 和模型配置文件 `config/llm.toml`。
+
+#### 环境变量
+
+管理模型 API Key 等敏感信息。运行以下命令复制示例文件：
 
 ```bash
-pip install -e ".[dev]"
+cp .env.example .env
 ```
 
-## ⚔️ 运行推演工作流
+然后编辑 `.env` 文件，填入你的 API Key（如 `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`）。
 
-我们将通过三个核心命令完成一次完整的推演循环。
+#### 模型配置
 
-### 第一步：执行模拟
-
-运行基础场景，观察默认条件下的市场演化结果。
+配置调用的模型名称和参数。运行以下命令复制模型配置示例文件：
 
 ```bash
-omen simulate --scenario data/scenarios/ontology.json
+cp config/llm.example.toml config/llm.toml
 ```
 
-**输出文件**: `output/result.json`
+然后编辑 `config/llm.toml`，确认 `provider`、`model` 以及引用的环境变量名是否正确。
 
-**💡 高级用法**
+#### 检查 LLM 连通性
 
-**复现实验**：Omen 默认使用随机种子以模拟市场扰动。若需复现特定结果，请指定 `--seed`：
+配置完成后，请测试连通性，确保大模型调用正常。
 
 ```bash
-omen simulate --scenario data/scenarios/ontology.json --seed 42
+omen check-llm
 ```
+检查完成后将自动打印 `LLM connectivity check` 状态：
 
-**保留历史**：默认会覆盖旧结果。若需保留每次运行的记录，添加 `--incremental` 参数（会自动附加时间戳）：
+- `SUCCESS` 表示通过。
+- `FAILURE` 表示失败，需要检查模型配置或密钥。
+
+## 🚀 运行示例
+
+示例文档在 `cases/actors/`，例如：`cases/actors/chen-jiaxing.md`
+
+运行 CLI 命令，生成产出物：
 
 ```bash
-omen simulate --scenario data/scenarios/ontology.json --incremental
+omen analyze actor --doc chen-jiaxing
 ```
 
-### 第二步：生成解释
+默认输出目录：`output/actors/chen-jiaxing/`
 
-模拟结束后，让 Omen 为你解读结果背后的因果链条。
+## 📦 检查生成结果
+
+先检查目录与文件是否存在：
 
 ```bash
-omen explain --input output/result.json
+ls -lah output/actors/chen-jiaxing/
 ```
 
-**输出文件**: `output/explanation.json`
+应包含以下文件：
 
-> 此步骤将黑盒数据转化为可读的战略叙事，指出关键的转折点。
+- `strategy_ontology.json`
+- `actor_ontology.json`
+- `analyze_status.json`
+- `analyze_persona.json`
+- `generation.json`
 
-### 第三步：反事实对比
-
-这是战略推演的核心。我们尝试改变一个条件，看看结局是否会发生逆转。
-
-**场景 A：调整技术参数（提高用户重叠阈值）**
+执行结构校验：
 
 ```bash
-omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
+omen validate actor --doc chen-jiaxing --output-dir output/actors
 ```
 
-**场景 B：注入外部冲击（给 AI Memory 增加预算）**
+### 校验标准
+
+- 输出 `status=pass`：可进入后续 UI 展示或下游流程
+- 输出 `status=fail`：根据 `errors` 字段逐项修复输入文档或配置后重试
+
+## 📊 可视化展示
+
+生成的 JSON 文件可通过 Omen UI 展示：
 
 ```bash
-omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200
-```
+streamlit run app/strategic_actor.py
+``` 
 
-**输出文件**: `output/comparison.json`
+访问 `http://localhost:8501`，选择对应的输出目录，即可查看生成的战略本体、角色本体等信息。
 
-💡 **提示**：同样支持 `--incremental` 参数来保存多次对比实验的历史记录。
+![](assets/images/streamlit-strategic-actor-persona.png)
 
-## 📊 推演结果解读
+![](assets/images/streamlit-strategic-actor-graph-timeline.png)
 
-运行完成后，你将得到三个核心文件。以下是如何像战略分析师一样解读它们：
+---
 
-### 📄 终局形态
-`result.json` 是模拟的原始快照。关注以下关键字段：
+## ❓ 常见问题
 
-| 字段 | 示例值 | 战略含义 |
-| :--- | :--- | :--- |
-| `outcome_class` | `"replacement"` | **终局判定**：市场是走向了“替代”、“共存”还是“僵局”？ |
-| `winner.actor_id` | `"traditional-db"` | **胜出者**：在当前条件下，哪一方占据了生态位主导权？ |
-| `winner.user_edge_count` | `609` | **生态规模**：胜出者的用户连接数，反映其护城河深度。 |
-| `seed` | `40` | **实验指纹**：记录此此模拟的随机种子，用于后续复盘。 |
+模型支持：当前版本仅支持 OpenAI 协议和 DeepSeek，确认 `config/llm.toml` 中 `provider` 字段正确设置。
 
-### 📄 因果链条
+找不到 `omen` 命令：确认虚拟环境已激活，或使用 `python -m pip install -e .` 重新安装。
 
-`explanation.json` 是模拟结果的解释报告，展示了关键的因果链条，确保没有黑盒结论，而是可追踪的逻辑路径：
+LLM 调用失败：检查 `config/llm.toml` 与环境变量是否匹配。
 
-*   **`branch_points` (关键分叉点)**: 系统识别出在 `step 1` 就触发了 `user_overlap` (用户重叠) 和 `competition_activation` (竞争激活)。
-    *   *洞察*: 这表明该战场属于**“早期高重叠竞争”**，胜负往往在初期就已埋下伏笔。
-*   **`causal_chain` (因果链)**: 描述了从“能力相似”导致“用户重叠”，进而触发“竞争边激活”，最终导致“用户迁移”的全过程。
-*   **`narrative_summary` (叙事总结)**: 自动生成的一段自然语言总结，便于快速汇报。
+`--doc` 报文件不存在：确认 `cases/actors/<doc>.md` 文件名与命令参数一致。
 
-### 📄 杠杆分析
+## 📚 相关文档
 
-`comparison.json` 是对比分析的结果文件，展示了在不同假设场景下的关键变化，这是决策价值最高的部分。它告诉你**什么改变了结局**。
-
-**示例分析**:
-*   **基准场景**: `outcome_class = replacement` (替代)
-*   **假设场景** (阈值调至 0.9): `outcome_class = coexistence` (共存)
-*   **差异 (`deltas`)**:
-    *   `competition_edge_count`: `-3` (竞争边消失)
-    *   `winner_user_edge_count`: `+32`
-
-### 🧠 战略洞察
-
-当我们将用户重叠阈值提高到 `0.9` 时，系统判定双方不再构成直接竞争（竞争边归零）。
-
-**结论**: 市场形态从“你死我活的替代”切换为“和平共处”。这意味着，**提高产品差异化（降低用户感知重叠）是避免价格战、实现共存的关键杠杆。**
-
-## 📂 工作流目录
-
-工作流所有生成的产物默认位于仓库根目录的 `output/` 文件夹中：
-
-```text
-omen/
-├── data/
-├── output/
-│   ├── result.json          # 模拟结果
-│   ├── explanation.json     # 解释报告
-│   └── comparison.json      # 对比分析
-├── ...
-```
-
-*   **覆盖策略**: 默认情况下，新运行会覆盖同名文件。
-*   **版本管理**: 使用 `--incremental` 参数可生成带时间戳的文件（如 `result_20231027_1030.json`），方便进行多轮实验对比。
-*   **Git 忽略**: `output/` 目录已预置在 `.gitignore` 中，请放心运行，无需担心提交本地数据。
-
-以上就是 Omen 的快速上手指南。通过这个流程，你可以从一个抽象的市场场景出发，逐步深入到具体的战略洞察，真正实现“模拟未来，指导决策”的目标。
-
-## 阅读更多
-
-- 术语与边界： [concepts.md](concepts.md)
-- 战场输入结构： [ontology.md](ontology.md)
-- 精度评估与门禁： [precision.md](precision.md)
-- 数据摄取工作区： [ingest.md](ingest.md)
-
-*Simulate the Signs. Reveal the Chaos.*
+- [战略主体](concepts/strategic-actor.md)
+- [构建战略主体](guides/build-strategic-actor.md)

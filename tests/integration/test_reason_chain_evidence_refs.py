@@ -102,7 +102,7 @@ def test_reason_chain_evidence_refs_link_to_reason_steps(tmp_path: Path, monkeyp
     assert rows
     for row in rows:
         evidence_refs = list(row.get("evidence_refs") or [])
-        assert evidence_refs == []
+        assert not evidence_refs
         assert str(row.get("confidence_level") or "") == "reduced-confidence"
         missing = list((row.get("derivation_trace") or {}).get("missing_evidence_reasons") or [])
         assert missing

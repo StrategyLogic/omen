@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
 from omen.ingest.processor import fetch_url_text, save_url_source_text
 from omen.ingest.synthesizer.builders.situation import (
     validate_situation_source_or_raise,
@@ -67,44 +66,23 @@ def _resolve_default_output_path(_input_path: Path, pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "situation.json"
 
 
-def _generate_actor_ref_from_situation_doc(*, situation_doc_path: Path, config_path: str) -> str:
-    from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME
-
-    _, case_dir = ensure_actor_artifacts(
-        doc=str(situation_doc_path),
-        title=None,
-        known_outcome=None,
-        config_path=config_path,
-        output_dir="output/actors",
-    )
-    actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
-    return str(actor_path)
-
-
-def _resolve_effective_actor_ref(
-    *,
-    actor_arg: str | None,
-    situation_doc_path: Path,
-    config_path: str,
-) -> str | None:
-    raw = str(actor_arg or "").strip()
+def _validate_explicit_actor_ref(actor_ref: str) -> str:
+    raw = str(actor_ref or "").strip()
     if not raw:
-        return None
+        raise ValueError("actor reference is empty")
 
-    if raw.lower() in {"auto", "generate"}:
-        return _generate_actor_ref_from_situation_doc(
-            situation_doc_path=situation_doc_path,
-            config_path=config_path,
-        )
-
-    # Explicit file/path-like references remain unchanged for backward compatibility.
-    if "/" in raw or raw.endswith(".md") or raw.endswith(".json") or Path(raw).exists():
+    candidate = Path(raw)
+    if candidate.exists():
         return raw
 
-    # Non-file actor token falls back to auto generation from current situation document.
-    return _generate_actor_ref_from_situation_doc(
-        situation_doc_path=situation_doc_path,
-        config_path=config_path,
+    # Backward compatibility: allow repo-relative actor refs like actors/*.md
+    cases_candidate = Path("cases") / raw
+    if cases_candidate.exists():
+        return str(cases_candidate)
+
+    raise ValueError(
+        "actor reference not found. Pass an existing actor artifact path with --actor, "
+        "or omit --actor for decoupled situation analysis"
     )
 
 
@@ -254,9 +232,7 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--actor",
         required=False,
-        nargs="?",
-        const="auto",
-        help="Optional actor reference path or identifier. Use --actor (without value) to auto-generate from the situation document.",
+        help="Optional existing actor artifact path used as background context. Omit --actor to run a decoupled situation analysis",
     )
     situation.add_argument(
         "--output",
@@ -370,11 +346,9 @@ def handle_situation_analyze_command(args: Any) -> int:
             return 2
 
         validate_situation_source_or_raise(input_path)
-        effective_actor_ref = _resolve_effective_actor_ref(
-            actor_arg=args.actor,
-            situation_doc_path=input_path,
-            config_path=str(args.config),
-        )
+        effective_actor_ref = None
+        if args.actor is not None:
+            effective_actor_ref = _validate_explicit_actor_ref(str(args.actor))
         pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
         output_path_arg = (
             Path(args.output)

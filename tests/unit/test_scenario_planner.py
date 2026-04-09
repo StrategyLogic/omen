@@ -6,6 +6,7 @@ import pytest
 from omen.scenario.planner import normalize_llm_scenarios_with_policy
 from omen.scenario.planner import plan_scenarios_from_situation
 from omen.scenario.space import build_planning_query
+from omen.scenario.space import _normalize_similarity_scores
 from omen.scenario.planner import load_planning_template
 
 
@@ -278,6 +279,19 @@ def test_build_planning_query_uses_actor_style_weighted_similarity_scores(tmp_pa
     assert abs(sum(float(item["score"]) for item in similarity.values()) - 1.0) < 1e-6
 
 
+def test_normalize_similarity_scores_uses_uniform_fallback_when_all_non_positive() -> None:
+    normalized = _normalize_similarity_scores(
+        {"A": 0.0, "B": -0.2, "C": 0.0},
+        source="test_source",
+    )
+
+    scores = {item["scenario_key"]: item for item in normalized}
+    assert abs(sum(float(item["score"]) for item in scores.values()) - 1.0) <= 1e-5
+    assert scores["A"]["source"] == "test_source_uniform_fallback"
+    assert scores["B"]["source"] == "test_source_uniform_fallback"
+    assert scores["C"]["source"] == "test_source_uniform_fallback"
+
+
 def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -506,3 +520,73 @@ def test_plan_scenarios_uses_llm_prior_scores_with_explanations(
     assert "rivalry" in raw["C"]["explain"]
     assert abs(sum(float(item["score"]) for item in normalized.values()) - 1.0) < 1e-6
     assert all(str(item.get("explain") or "").strip() for item in normalized.values())
+
+
+def test_plan_scenarios_falls_back_to_random_priors_without_actor_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "omen.scenario.planner.decompose_scenario_from_situation",
+        lambda **kwargs: {
+            "pack_id": kwargs["pack_id"],
+            "pack_version": kwargs["pack_version"],
+            "derived_from_situation_id": "sap_reltio_acquisition",
+            "ontology_version": "scenario_ontology_v1",
+            "scenarios": [
+                {
+                    "scenario_key": "A",
+                    "title": "A",
+                    "goal": "gA",
+                    "target": "tA",
+                    "objective": "oA",
+                    "variables": [{"name": "vA"}],
+                    "constraints": ["cA"],
+                    "tradeoff_pressure": ["tpA"],
+                },
+                {
+                    "scenario_key": "B",
+                    "title": "B",
+                    "goal": "gB",
+                    "target": "tB",
+                    "objective": "oB",
+                    "variables": [{"name": "vB"}],
+                    "constraints": ["cB"],
+                    "tradeoff_pressure": ["tpB"],
+                },
+                {
+                    "scenario_key": "C",
+                    "title": "C",
+                    "goal": "gC",
+                    "target": "tC",
+                    "objective": "oC",
+                    "variables": [{"name": "vC"}],
+                    "constraints": ["cC"],
+                    "tradeoff_pressure": ["tpC"],
+                },
+            ],
+        },
+    )
+
+    traces_dir = tmp_path / "traces"
+    ontology = plan_scenarios_from_situation(
+        situation_artifact={
+            "id": "sap_reltio_acquisition",
+            "signals": [{"name": "signal", "strength": 0.6}],
+            "context": {"hard_constraints": []},
+        },
+        pack_id="sap_v1",
+        pack_version="1.0.0",
+        actor_ref="actors/steve-jobs.md",
+        config_path="config/llm.toml",
+        traces_dir=traces_dir,
+    )
+
+    prior_snapshot = json.loads((traces_dir / "prior_snapshot.json").read_text(encoding="utf-8"))
+    normalized = {item["scenario_key"]: item for item in prior_snapshot["normalized_priors"]}
+    assert abs(sum(float(item["score"]) for item in normalized.values()) - 1.0) < 1e-6
+    assert all("Fallback random prior" in str(item.get("explain") or "") for item in normalized.values())
+
+    planner_trace = dict(ontology.get("_planner_trace") or {})
+    assert planner_trace["actor_style_enhancement"]["status"] == "skipped"
+    assert planner_trace["prior_scoring"]["scoring_source"] == "random_fallback"

@@ -1,4 +1,10 @@
 """Omen strategic reasoning engine package."""
 
+from importlib.metadata import version, PackageNotFoundError
+
 __all__ = ["__version__"]
-__version__ = "0.1.3"
+
+try:
+  __version__ = version("omenai")
+except (ImportError, PackageNotFoundError):
+  __version__ = "dev"

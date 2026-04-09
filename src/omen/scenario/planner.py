@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -274,6 +275,40 @@ def _write_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
     return output_path
 
 
+def _resolve_actor_json_ref(actor_ref: str | None) -> str | None:
+    raw = str(actor_ref or "").strip()
+    if not raw or raw in {"unknown_actor", "none"}:
+        return None
+
+    candidate = Path(raw)
+    if not candidate.exists() or candidate.suffix.lower() != ".json":
+        return None
+    return raw
+
+
+def _build_random_prior_fallback(*, scenario_ontology: dict[str, Any]) -> list[dict[str, Any]]:
+    scenarios = [
+        str(item.get("scenario_key") or "").strip().upper()
+        for item in list(scenario_ontology.get("scenarios") or [])
+        if isinstance(item, dict)
+    ]
+    keys = sorted([key for key in scenarios if key in {"A", "B", "C"}])
+    if keys != ["A", "B", "C"]:
+        keys = ["A", "B", "C"]
+
+    rng = random.SystemRandom()
+    samples = {key: rng.random() for key in keys}
+    total = sum(samples.values()) or 1.0
+    return [
+        {
+            "scenario_key": key,
+            "score": round(samples[key] / total, 6),
+            "explain": "Fallback random prior due to unavailable actor-aware LLM scoring",
+        }
+        for key in keys
+    ]
+
+
 def _validate_decomposition_json_or_raise(decomposition: dict[str, Any]) -> None:
     scenarios = decomposition.get("scenarios")
     if not isinstance(scenarios, list):
@@ -297,20 +332,29 @@ def plan_scenarios_from_situation(
     situation_artifact: dict[str, Any],
     pack_id: str,
     pack_version: str,
-    actor_ref: str,
+    actor_ref: str | None,
     config_path: str,
     traces_dir: str | Path,
 ) -> dict[str, Any]:
-    actor_enhancement_trace = ensure_strategic_actor_style(
-        actor_ref=actor_ref,
-        current_case_id_to_exclude=str(situation_artifact.get("id") or "unknown_case"),
-        config_path=config_path,
-    )
+    actor_json_ref = _resolve_actor_json_ref(actor_ref)
+    if actor_json_ref:
+        actor_enhancement_trace = ensure_strategic_actor_style(
+            actor_ref=actor_json_ref,
+            current_case_id_to_exclude=str(situation_artifact.get("id") or "unknown_case"),
+            config_path=config_path,
+        )
+    else:
+        actor_enhancement_trace = {
+            "stage": "actor_style_enhancement",
+            "status": "skipped",
+            "reason": "actor_ref missing or not a valid actor ontology .json; planning remains decoupled",
+            "actor_ref": str(actor_ref or ""),
+        }
 
     template = load_planning_template()
     planning_query = build_planning_query(
         situation_artifact=situation_artifact,
-        actor_ref=actor_ref,
+        actor_ref=str(actor_ref or "none"),
         template=template,
     )
 
@@ -338,18 +382,59 @@ def plan_scenarios_from_situation(
         pack_version=pack_version,
     )
 
-    raw_priors, prior_scoring_trace = score_prior_probabilities(
-        actor_ref=actor_ref,
-        scenario_ontology=ontology,
-        planning_query=planning_query,
-        config_path=config_path,
-    )
+    try:
+        if not actor_json_ref:
+            raise ValueError("actor-aware prior scoring skipped: actor ontology json is unavailable")
+        raw_priors, prior_scoring_trace = score_prior_probabilities(
+            actor_ref=actor_json_ref,
+            scenario_ontology=ontology,
+            planning_query=planning_query,
+            config_path=config_path,
+        )
+    except Exception:
+        if not actor_json_ref:  
+            raw_priors = _build_random_prior_fallback(scenario_ontology=ontology)  
+            prior_scoring_trace = {  
+                "stage": "scenario_prior_prompt",  
+                "status": "fallback",  
+                "reason": "actor-aware prior scoring skipped: actor ontology json is unavailable",  
+                "scoring_source": "random_fallback",  
+            }  
+        else:  
+            try:  
+                raw_priors, prior_scoring_trace = score_prior_probabilities(  
+                    actor_ref=actor_json_ref,  
+                    scenario_ontology=ontology,  
+                    planning_query=planning_query,  
+                    config_path=config_path,  
+                )  
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:  
+                raw_priors = _build_random_prior_fallback(scenario_ontology=ontology)  
+                prior_scoring_trace = {  
+                    "stage": "scenario_prior_prompt",  
+                    "status": "fallback",  
+                    "reason": str(exc),  
+                    "scoring_source": "random_fallback",  
+                }  
+            except Exception as exc:  
+                prior_scoring_trace = {  
+                    "stage": "scenario_prior_prompt",  
+                    "status": "error",  
+                    "reason": str(exc),  
+                    "error_type": type(exc).__name__,  
+                    "scoring_source": "score_prior_probabilities",  
+                }  
+                ontology["_planner_trace"] = {  
+                    "actor_style_enhancement": actor_enhancement_trace,  
+                    "prior_scoring": prior_scoring_trace,  
+                }  
+                raise
 
     prior_snapshot = build_prior_snapshot(
         pack_id=pack_id,
         pack_version=pack_version,
         situation_id=str(situation_artifact.get("id") or "unknown"),
-        actor_ref=actor_ref,
+        actor_ref=str(actor_json_ref or actor_ref or "none"),
         raw_prior_scores=raw_priors,
         planning_query_ref=str(planning_query_path),
     )

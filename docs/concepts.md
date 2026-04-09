@@ -2,11 +2,11 @@
 
 本文档阐述 Omen 的核心概念，用于统一术语、约束实现边界，并支撑场景扩展。
 
-## 1 Strategic Simulation
+## Strategic Reasoning
 
 **定义**
 
-战略推演是对“技术能力、市场主体、资源约束、外部事件”在时间维度上的联动演化建模。
+[战略推演](guides/run-strategic-reasoning-flow.md)是对“技术能力、市场主体、资源约束、外部事件”在时间维度上的联动演化建模。
 
 **目标**
 
@@ -19,7 +19,7 @@
 - 条件触发点
 - 可解释结论
 
-## 2 Capability Space
+## Capability Space
 
 **定义**
 
@@ -36,7 +36,7 @@
 - 一致性、吞吐/延迟、成本效率
 - 开发者体验、迁移摩擦、生态兼容
 
-## 3 Strategy Ontology
+## Strategy Ontology
 
 **定义**
 
@@ -60,7 +60,7 @@
 |---|---|---|---|
 | ontology-battlefield | `data/scenarios/ontology.json` | ✅ 完成 | 内嵌 `meta`/`tbox`/`abox`/`reasoning_profile` |
 
-### 3.1 Strategic Actor
+### Strategic Actor
 
 **定义**
 
@@ -80,7 +80,7 @@
 
 更多细节请参考 [战略行动者概念文档](concepts/strategic-actor.md)。
 
-## 4 State
+## State
 
 **定义**
 
@@ -99,7 +99,7 @@
 - 可比较
 - 可回放
 
-## 5 Action Space
+## Action Space
 
 **定义**
 
@@ -118,7 +118,7 @@
 - `acquire_capability`
 - `open_source_module`
 
-## 6 Simulation Kernel
+## Simulation Kernel
 
 **定义**
 
@@ -135,7 +135,7 @@
 - 先规则与计算，再策略解释
 - 避免让关键数值完全由自然语言生成
 
-## 7 Emergence (Constrained)
+## Emergence (Constrained)
 
 **定义**
 
@@ -151,7 +151,7 @@
 - 用随机叙事替代机制解释
 - 仅依赖角色对话推动关键结论
 
-## 8 Counterfactual Analysis
+## Counterfactual Analysis
 
 **定义**
 
@@ -168,7 +168,7 @@
 - 提高解释可信度
 - 识别真正关键驱动因子
 
-## 9 Explainability
+## Explainability
 
 **定义**
 
@@ -181,7 +181,7 @@
 - 关键动作影响
 - 路径分叉原因
 
-## 10 Show Case
+## Show Case
 
 **定义**
 
@@ -193,7 +193,7 @@
 - 文件名必须是场景名（如 `ontology.md`）
 - 不使用 `case.md` 这类泛名
 
-## 11 Path Types
+## Path Types
 
 Omen 默认输出多种路径类型：
 
@@ -202,7 +202,7 @@ Omen 默认输出多种路径类型：
 - **High Upside Path**：高收益路径
 - **Black Swan Path**：低概率高影响路径
 
-## 12 Decision Output
+## Decision Output
 
 推演输出应是可执行的“条件化判断”，而非绝对预测。
 
@@ -213,7 +213,7 @@ Omen 默认输出多种路径类型：
 - 哪种策略组合更优
 - 下一步动作建议是什么
 
-## 13 Non-goals
+## Non-goals
 
 当前阶段不追求：
 
@@ -221,11 +221,11 @@ Omen 默认输出多种路径类型：
 - 全行业统一模型
 - 无约束自由对话驱动模拟
 
-## 14 Terminology Policy
+## Terminology Policy
 
 项目文档统一使用以下术语：
 
-- 战略推演（Strategic Simulation）
+- 战略推演（Strategic Reasoning）
 - 条件化判断（Conditional Judgment）
 - 能力空间（Capability Space）
 - 战略主体（Strategic Actor）
@@ -233,7 +233,7 @@ Omen 默认输出多种路径类型：
 
 避免使用会误导为确定性预测的表达。
 
-## 15 Precision & Ingest Terms
+## Precision & Ingest Terms
 
 为保持外部文档一致性，新增以下统一术语：
 

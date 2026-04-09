@@ -322,9 +322,11 @@ def build_reason_chain_view_model_artifact(
         scenario_key = str(row.get("scenario_key") or "")
         reason_chain = dict(row.get("reason_chain") or {})
         steps = list(reason_chain.get("steps") or [])
+        ordered_step_node_ids: list[str] = []
         for step in steps:
             step_id = str(step.get("step_id") or "").strip()
             node_id = f"{scenario_key}:{step_id}"
+            ordered_step_node_ids.append(node_id)
             graph_nodes.append(
                 {
                     "id": node_id,
@@ -333,6 +335,16 @@ def build_reason_chain_view_model_artifact(
                     "step_id": step_id,
                     "step_type": str(step.get("step_type") or ""),
                     "label": str(step.get("summary") or ""),
+                }
+            )
+
+        # Keep DAG connected in workshop mode even when conclusions are empty.
+        for index in range(1, len(ordered_step_node_ids)):
+            graph_edges.append(
+                {
+                    "from": ordered_step_node_ids[index - 1],
+                    "to": ordered_step_node_ids[index],
+                    "edge_type": "next",
                 }
             )
 

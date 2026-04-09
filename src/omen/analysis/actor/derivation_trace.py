@@ -52,8 +52,52 @@ def blocking_has_activation_links(blocking_item: dict[str, Any]) -> bool:
     return bool(activation_refs and reason_refs)
 
 
+def extract_conclusion_buckets(conclusions: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    raw = dict(conclusions or {})
+    source = dict(raw.get("strategic_freedom") or raw)
+
+    def _normalize_items(items: list[Any], *, bucket: str) -> list[dict[str, Any]]:
+        normalized: list[dict[str, Any]] = []
+        for item in items:
+            if isinstance(item, str):
+                text = item.strip()
+                if not text:
+                    continue
+                row: dict[str, Any] = {"text": text, "reason_step_ids": []}
+                if bucket == "blocking":
+                    row["activation_step_ids"] = []
+                normalized.append(row)
+                continue
+            if isinstance(item, dict):
+                text = str(item.get("text") or item.get("summary") or "").strip()
+                if not text:
+                    continue
+                row = {
+                    "text": text,
+                    "reason_step_ids": [
+                        str(x).strip()
+                        for x in (item.get("reason_step_ids") or [])
+                        if str(x).strip()
+                    ],
+                }
+                if bucket == "blocking":
+                    row["activation_step_ids"] = [
+                        str(x).strip()
+                        for x in (item.get("activation_step_ids") or [])
+                        if str(x).strip()
+                    ]
+                normalized.append(row)
+        return normalized
+
+    return {
+        "required": _normalize_items(list(source.get("required") or []), bucket="required"),
+        "warning": _normalize_items(list(source.get("warning") or []), bucket="warning"),
+        "blocking": _normalize_items(list(source.get("blocking") or []), bucket="blocking"),
+    }
+
+
 def build_linked_evidence_refs(reason_chain: dict[str, Any]) -> list[dict[str, Any]]:
-    conclusions = dict(reason_chain.get("conclusions") or {})
+    conclusions = extract_conclusion_buckets(dict(reason_chain.get("conclusions") or {}))
     refs: list[dict[str, Any]] = []
     for bucket in ("required", "warning", "blocking"):
         for index, item in enumerate(list(conclusions.get(bucket) or []), start=1):

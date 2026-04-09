@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 from typing import Any
+import yaml
 
 from omen.ingest.synthesizer.clients import create_chat_client
 from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
@@ -95,6 +96,14 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
         try:
             return _try_decode(_sanitize(candidate))
+        except Exception as exc:
+            errors.append(exc.__class__.__name__)
+
+        try:
+            loaded = yaml.safe_load(_sanitize(candidate))
+            if isinstance(loaded, dict):
+                return loaded
+            errors.append("YAMLSafeLoadNotObject")
         except Exception as exc:
             errors.append(exc.__class__.__name__)
 
@@ -317,12 +326,14 @@ def render_scenario_reason_chain_prompt(
     actor_profile_json: dict[str, Any],
     planning_query_json: dict[str, Any],
     situation_markdown: str,
+    scenario_key: str,
 ) -> str:
     template = get_prompt_template("scenario_reason_chain_prompt", tier="base")
     return render_prompt_template(
         template,
         {
             "scenario_json": json.dumps(scenario_json, ensure_ascii=False),
+            "scenario_key": str(scenario_key or ""),
             "actor_profile_json": json.dumps(actor_profile_json, ensure_ascii=False),
             "planning_query_json": json.dumps(planning_query_json, ensure_ascii=False),
             "situation_markdown": str(situation_markdown or ""),
@@ -382,6 +393,7 @@ def try_generate_scenario_reason_chain_via_llm(
 
     prompt = render_scenario_reason_chain_prompt(
         scenario_json=scenario_json,
+        scenario_key=str(scenario_key or scenario_json.get("scenario_key") or ""),
         actor_profile_json=actor_profile_json,
         planning_query_json=planning_query_json,
         situation_markdown=situation_markdown,

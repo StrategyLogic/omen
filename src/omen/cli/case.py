@@ -13,6 +13,7 @@ from omen.analysis.actor.derivation import (
     derive_strategic_freedom_conditions,
 )
 from omen.analysis.actor.derivation_trace import (
+    extract_conclusion_buckets,
     build_linked_evidence_refs,
     build_actor_derivation_artifact,
     build_actor_derivation_trace,
@@ -54,6 +55,49 @@ from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_
 def _load_json_file(path: str | Path) -> dict[str, Any]:
     file_path = Path(path)
     return json.loads(file_path.read_text(encoding="utf-8"))
+
+
+def _normalize_llm_reason_chain(llm_chain: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(llm_chain, dict):
+        return None
+    steps = list(llm_chain.get("steps") or [])
+    if not steps:
+        return None
+
+    normalized_steps: list[dict[str, Any]] = []
+    for index, raw in enumerate(steps, start=1):
+        if not isinstance(raw, dict):
+            continue
+        step_id = str(raw.get("step_id") or "").strip() or f"step_{index}"
+        step_type = str(raw.get("step_type") or "unknown").strip() or "unknown"
+        summary = str(raw.get("summary") or raw.get("description") or step_type).strip() or step_type
+        input_refs = list(raw.get("input_refs") or raw.get("inputs") or [])
+        normalized_steps.append(
+            {
+                **raw,
+                "step_id": step_id,
+                "step_type": step_type,
+                "summary": summary,
+                "input_refs": input_refs,
+            }
+        )
+
+    if not normalized_steps:
+        return None
+
+    normalized_conclusions = dict(llm_chain.get("conclusions") or {})
+    if not normalized_conclusions:
+        normalized_conclusions = {
+            "required": [],
+            "warning": [],
+            "blocking": [],
+        }
+
+    return {
+        "steps": normalized_steps,
+        "intermediate": dict(llm_chain.get("intermediate") or {}),
+        "conclusions": normalized_conclusions,
+    }
 
 
 def run_deterministic_simulate_from_pack(
@@ -179,33 +223,29 @@ def run_deterministic_simulate_from_pack(
         generation_output_path = traces_dir.parent / "generation" / "output.txt"
         debug_output_path = str(generation_output_path) if debug else None
 
-        derivation_artifact = build_actor_derivation_artifact(
-            run_id=run_id,
-            actor_profile_ref=actor_profile_ref,
-            scenario_pack_ref=pack["pack_id"],
-            scenario_derivations=scenario_derivations,
-        )
-        saved = write_actor_derivation_artifact(actor_derivation_output_path, derivation_artifact)
-        artifact["actor_derivation_ref"] = str(saved)
+        reason_chain_rows: list[dict[str, Any]] = []
 
-        reason_chain_rows = [
-            build_scenario_reason_chain(
+        for scenario_key, scene, result in raw_reason_chain_inputs:
+            deterministic_row = build_scenario_reason_chain(
                 run_id=run_id,
                 scenario_key=scenario_key,
                 scenario_ontology=scene,
                 scenario_result=result,
             )
-            for scenario_key, scene, result in raw_reason_chain_inputs
-        ]
-
-        # Optional LLM override path for intermediate reasoning detail only.
-        # Deterministic core chain remains generated locally for replay stability.
-        for item in reason_chain_rows:
-            scenario_key = str(item.get("scenario_key") or "")
-            chain = item.get("reason_chain") or {}
-            deterministic_intermediate = dict(chain.get("intermediate") or {})
+            chain = dict(deterministic_row.get("reason_chain") or {})
+            llm_scenario_input = {
+                "scenario_key": scenario_key,
+                "title": scene.get("title"),
+                "goal": scene.get("goal"),
+                "target": scene.get("target"),
+                "objective": scene.get("objective"),
+                "variables": list(scene.get("variables") or []),
+                "constraints": list(scene.get("constraints") or []),
+                "tradeoff_pressure": list(scene.get("tradeoff_pressure") or []),
+                "resistance_assumptions": dict(scene.get("resistance_assumptions") or {}),
+            }
             llm_payload = try_generate_scenario_reason_chain_via_llm(
-                scenario_json=(planned_scenarios or {}).get(scenario_key) or {},
+                scenario_json=llm_scenario_input,
                 actor_profile_json={"actor_profile_ref": actor_profile_ref},
                 planning_query_json={},
                 situation_markdown="",
@@ -213,16 +253,51 @@ def run_deterministic_simulate_from_pack(
                 debug_output_path=debug_output_path,
                 scenario_key=scenario_key,
             )
-            if isinstance(llm_payload, dict):
-                llm_chain = llm_payload.get("reason_chain") if isinstance(llm_payload.get("reason_chain"), dict) else {}
-                if isinstance(llm_chain.get("steps"), list) and llm_chain.get("steps"):
-                    chain["steps"] = llm_chain.get("steps")
-                if isinstance(llm_chain.get("conclusions"), dict) and llm_chain.get("conclusions"):
-                    chain["conclusions"] = llm_chain.get("conclusions")
-                llm_intermediate = llm_chain.get("intermediate") if isinstance(llm_chain.get("intermediate"), dict) else {}
-                chain["intermediate"] = llm_intermediate or deterministic_intermediate
+            llm_chain = llm_payload.get("reason_chain") if isinstance(llm_payload, dict) and isinstance(llm_payload.get("reason_chain"), dict) else None
+            normalized_llm = _normalize_llm_reason_chain(llm_chain or {})
+
+            if normalized_llm is not None:
+                chain = normalized_llm
+                llm_status = "ok"
             else:
-                chain["intermediate"] = deterministic_intermediate
+                if config_path:
+                    chain = {
+                        "steps": [
+                            {
+                                "step_id": "llm_failed",
+                                "step_type": "llm_error",
+                                "input_refs": [f"scenario::{scenario_key}"],
+                                "summary": "LLM reason chain generation failed; no deterministic fallback applied.",
+                            }
+                        ],
+                        "intermediate": {},
+                        "conclusions": {
+                            "required": [],
+                            "warning": [],
+                            "blocking": [],
+                        },
+                    }
+                    llm_status = "llm_failed"
+                else:
+                    llm_status = "deterministic_no_config"
+
+            row = {
+                "run_id": run_id,
+                "scenario_key": scenario_key,
+                "reason_chain": chain,
+                "llm_status": llm_status,
+            }
+            reason_chain_rows.append(row)
+
+            # Persist per-scenario artifact for easier debugging and targeted retries.
+            single_artifact = build_reason_chain_artifact(
+                run_id=run_id,
+                scenario_pack_ref=pack["pack_id"],
+                scenario_chains=[row],
+            )
+            single_artifact["prompt_token"] = get_scenario_reason_chain_prompt_version_token()
+            single_path = traces_dir / f"reason_chain_{scenario_key.lower()}.json"
+            write_reason_chain_artifact(single_path, single_artifact)
 
         reason_chain_artifact = build_reason_chain_artifact(
             run_id=run_id,
@@ -242,7 +317,33 @@ def run_deterministic_simulate_from_pack(
         for result in scenario_results:
             key = str(result.get("scenario_key") or "")
             reason_chain = chain_by_key.get(key, {})
+            buckets = extract_conclusion_buckets(dict(reason_chain.get("conclusions") or {}))
+            if any(buckets[name] for name in ("required", "warning", "blocking")):
+                freedom = dict(result.get("strategic_freedom") or {})
+                freedom["required"] = [str(item.get("text") or "").strip() for item in buckets["required"] if str(item.get("text") or "").strip()]
+                freedom["warning"] = [str(item.get("text") or "").strip() for item in buckets["warning"] if str(item.get("text") or "").strip()]
+                freedom["blocking"] = [str(item.get("text") or "").strip() for item in buckets["blocking"] if str(item.get("text") or "").strip()]
+                result["strategic_freedom"] = freedom
             result["evidence_refs"] = build_linked_evidence_refs(reason_chain)
+
+            if result["evidence_refs"]:
+                result["confidence_level"] = "full-confidence"
+                derivation_trace = dict(result.get("derivation_trace") or {})
+                derivation_trace["missing_evidence_reasons"] = []
+                result["derivation_trace"] = derivation_trace
+
+        for row in scenario_derivations:
+            key = str(row.get("scenario_key") or "").strip().lower()
+            row["reason_chain_ref"] = f"traces/reason_chain_{key}.json"
+
+        derivation_artifact = build_actor_derivation_artifact(
+            run_id=run_id,
+            actor_profile_ref=actor_profile_ref,
+            scenario_pack_ref=pack["pack_id"],
+            scenario_derivations=scenario_derivations,
+        )
+        saved = write_actor_derivation_artifact(actor_derivation_output_path, derivation_artifact)
+        artifact["actor_derivation_ref"] = str(saved)
 
         if workshop_ui_mode:
             view_model_artifact = build_reason_chain_view_model_artifact(

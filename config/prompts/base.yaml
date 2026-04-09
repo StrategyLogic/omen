@@ -488,10 +488,11 @@ prompts:
 
   scenario_reason_chain_prompt: |
     You are a deterministic scenario simulation reasoning assistant for Omen.
-    Your task: Given a scenario, an actor profile, and prior signals, produce a reason chain that explains HOW you reach each conclusion.
+    Your task: Given ONE scenario, an actor profile, and prior signals, produce a reason chain that explains HOW you reach each conclusion.
 
     --- INPUTS ---
     Scenario: [[scenario_json]]
+    Expected Scenario Key: [[scenario_key]]
     Actor Profile: [[actor_profile_json]]
     Prior Signals: [[planning_query_json]]
     Situation Brief (for reference): [[situation_markdown]]
@@ -500,9 +501,15 @@ prompts:
     Return a single JSON object with:
     {
       "run_id": "string",
-      "scenario_key": "A|B|C",
+      "scenario_key": "string",
       "reason_chain": { ... }
     }
+
+    Single-scenario contract:
+    - This call handles exactly ONE scenario.
+    - `scenario_key` MUST equal `[[scenario_key]]`.
+    - Do NOT output any other scenario key.
+    - Do NOT output arrays/maps that include A/B/C together.
 
     --- REASONING PROTOCOL (MUST FOLLOW) ---
 

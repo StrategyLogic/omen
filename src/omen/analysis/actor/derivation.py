@@ -10,6 +10,16 @@ from omen.analysis.actor.strategy import (
 )
 
 
+def get_simulate_reasoning_order() -> tuple[str, ...]:
+    return (
+        "seed",
+        "constraint_activation",
+        "target_or_objective",
+        "gap",
+        "required_or_warning_or_blocking",
+    )
+
+
 def derive_actor_path(
     *,
     scenario_key: str,
@@ -72,4 +82,5 @@ def derive_strategic_freedom_conditions(
             f"围绕关键能力维度执行: {', '.join(selected[:2])}"
         )
     conditions["required"].append(f"执行决策风格: {style}")
+    conditions["reasoning_order"] = list(get_simulate_reasoning_order())
     return conditions

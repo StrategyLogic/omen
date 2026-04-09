@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import datetime
 import json
+from pathlib import Path
+import re
 from typing import Any
+import yaml
 
 from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.synthesizer.config import load_llm_config
 from omen.ingest.synthesizer.prompts.registry import get_analyze_prompt_version_token
+from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt, build_persona_insight_prompt
 
 
@@ -56,14 +61,53 @@ def _events_for_actor(actor_ontology: dict[str, Any], actor_id: str) -> list[dic
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
-    decoder = json.JSONDecoder()
-    start = text.find("{")
-    if start == -1:
-        raise ValueError("LLM response does not contain a JSON object")
-    payload, _ = decoder.raw_decode(text[start:])
-    if not isinstance(payload, dict):
-        raise ValueError("LLM response JSON payload is not an object")
-    return payload
+    def _try_decode(candidate: str) -> dict[str, Any]:
+        decoder = json.JSONDecoder()
+        start = candidate.find("{")
+        if start == -1:
+            raise ValueError("LLM response does not contain a JSON object")
+        payload, _ = decoder.raw_decode(candidate[start:])
+        if not isinstance(payload, dict):
+            raise ValueError("LLM response JSON payload is not an object")
+        return payload
+
+    def _sanitize(candidate: str) -> str:
+        cleaned = str(candidate or "").replace("\ufeff", "").strip()
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+        cleaned = re.sub(r"```(?:json)?", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"/\*.*?\*/", "", cleaned, flags=re.DOTALL)
+        cleaned = re.sub(r"(^|\s)//.*?$", "", cleaned, flags=re.MULTILINE)
+        cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+        return cleaned.strip()
+
+    raw = str(text or "")
+    candidates: list[str] = [raw]
+
+    fenced = re.findall(r"```(?:json)?\s*(.*?)\s*```", raw, flags=re.IGNORECASE | re.DOTALL)
+    candidates.extend(fenced)
+
+    errors: list[str] = []
+    for candidate in candidates:
+        try:
+            return _try_decode(candidate)
+        except Exception as exc:
+            errors.append(exc.__class__.__name__)
+
+        try:
+            return _try_decode(_sanitize(candidate))
+        except Exception as exc:
+            errors.append(exc.__class__.__name__)
+
+        try:
+            loaded = yaml.safe_load(_sanitize(candidate))
+            if isinstance(loaded, dict):
+                return loaded
+            errors.append("YAMLSafeLoadNotObject")
+        except Exception as exc:
+            errors.append(exc.__class__.__name__)
+
+    raise ValueError(f"Unable to parse JSON object from LLM response ({'/'.join(errors[-4:])})")
 
 
 def _invoke_json_prompt(llm_client: Any, prompt: str) -> dict[str, Any]:
@@ -274,3 +318,139 @@ def apply_partial_evidence_confidence_policy(
         "reduced-confidence",
         [f"Scenario {key}: no evidence refs linked in current iteration"],
     )
+
+
+def render_scenario_reason_chain_prompt(
+    *,
+    scenario_json: dict[str, Any],
+    actor_profile_json: dict[str, Any],
+    planning_query_json: dict[str, Any],
+    situation_markdown: str,
+    scenario_key: str,
+) -> str:
+    template = get_prompt_template("scenario_reason_chain_prompt", tier="base")
+    return render_prompt_template(
+        template,
+        {
+            "scenario_json": json.dumps(scenario_json, ensure_ascii=False),
+            "scenario_key": str(scenario_key or ""),
+            "actor_profile_json": json.dumps(actor_profile_json, ensure_ascii=False),
+            "planning_query_json": json.dumps(planning_query_json, ensure_ascii=False),
+            "situation_markdown": str(situation_markdown or ""),
+        },
+    )
+
+
+def try_generate_scenario_reason_chain_via_llm(
+    *,
+    scenario_json: dict[str, Any],
+    actor_profile_json: dict[str, Any],
+    planning_query_json: dict[str, Any],
+    situation_markdown: str,
+    config_path: str | None,
+    debug_output_path: str | None = None,
+    scenario_key: str | None = None,
+) -> dict[str, Any] | None:
+    def _append_debug(
+        *,
+        status: str,
+        prompt_text: str,
+        raw_response: str,
+        parsed_payload: dict[str, Any] | None,
+    ) -> None:
+        if not debug_output_path:
+            return
+        try:
+            path = Path(debug_output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload_text = json.dumps(parsed_payload, ensure_ascii=False, indent=2) if isinstance(parsed_payload, dict) else "null"
+            entry = (
+                "\n"
+                "===== scenario_reason_chain_llm_debug =====\n"
+                f"timestamp: {datetime.datetime.now().isoformat()}\n"
+                f"scenario_key: {str(scenario_key or '')}\n"
+                f"status: {status}\n"
+                "--- prompt ---\n"
+                f"{prompt_text}\n"
+                "--- raw_response ---\n"
+                f"{raw_response}\n"
+                "--- parsed_payload ---\n"
+                f"{payload_text}\n"
+            )
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(entry)
+        except Exception:
+            return
+
+    if not config_path:
+        _append_debug(
+            status="skipped_no_config",
+            prompt_text="",
+            raw_response="",
+            parsed_payload=None,
+        )
+        return None
+
+    prompt = render_scenario_reason_chain_prompt(
+        scenario_json=scenario_json,
+        scenario_key=str(scenario_key or scenario_json.get("scenario_key") or ""),
+        actor_profile_json=actor_profile_json,
+        planning_query_json=planning_query_json,
+        situation_markdown=situation_markdown,
+    )
+    try:
+        content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
+        payload = _extract_json_object(content)
+        _append_debug(
+            status="ok",
+            prompt_text=prompt,
+            raw_response=content,
+            parsed_payload=payload if isinstance(payload, dict) else None,
+        )
+        return payload if isinstance(payload, dict) else None
+    except Exception as exc:
+        retry_payload: dict[str, Any] | None = None
+        retry_raw = ""
+        try:
+            retry_prompt = build_json_retry_prompt(prompt)
+            retry_raw = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
+            parsed_retry = _extract_json_object(retry_raw)
+            retry_payload = parsed_retry if isinstance(parsed_retry, dict) else None
+        except Exception:
+            retry_payload = None
+
+        _append_debug(
+            status=(
+                "ok_after_retry"
+                if isinstance(retry_payload, dict)
+                else f"parse_or_invoke_error:{exc.__class__.__name__}"
+            ),
+            prompt_text=prompt,
+            raw_response=(
+                f"{content if isinstance(locals().get('content'), str) else ''}"
+                + ("\n\n--- retry_raw_response ---\n" + retry_raw if retry_raw else "")
+            ),
+            parsed_payload=retry_payload,
+        )
+        return retry_payload
+
+
+def link_blocking_to_reason_steps(
+    blocking_texts: list[str],
+    *,
+    activation_step_id: str,
+    reason_step_id: str,
+) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for text in blocking_texts:
+        normalized = str(text).strip()
+        if not normalized:
+            continue
+        output.append(
+            {
+                "text": normalized,
+                "activation_step_ids": [activation_step_id],
+                "reason_step_ids": [reason_step_id],
+            }
+        )
+    return output

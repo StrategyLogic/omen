@@ -125,6 +125,22 @@ def main() -> None:
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
     )
+    simulate.add_argument(
+        "--workshop-ui-mode",
+        action="store_true",
+        help="Emit reason-chain view model artifact for workshop DAG rendering",
+    )
+    simulate.add_argument(
+        "--config",
+        required=False,
+        default=None,
+        help="Optional path to local LLM config TOML for reason-chain enrichment",
+    )
+    simulate.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logs for reason-chain LLM output under generation/output.txt",
+    )
 
     explain = sub.add_parser("explain", help="generate explanation from a saved run result")
     explain.add_argument("--input", required=True, help="Path to saved run result JSON")
@@ -178,6 +194,22 @@ def main() -> None:
         "--incremental",
         action="store_true",
         help="Add timestamp suffix to output filename to avoid overwrite",
+    )
+    compare.add_argument(
+        "--workshop-ui-mode",
+        action="store_true",
+        help="Emit reason-chain view model artifact for workshop DAG rendering",
+    )
+    compare.add_argument(
+        "--config",
+        required=False,
+        default=None,
+        help="Optional path to local LLM config TOML for reason-chain enrichment",
+    )
+    compare.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logs for reason-chain LLM output under generation/output.txt",
     )
 
     precision_eval = sub.add_parser(
@@ -430,6 +462,9 @@ def main() -> None:
                     calculation_policy_version=args.calc_policy_version,
                     planned_scenarios=planned_scenarios,
                     actor_derivation_output_path=actor_derivation_output_path,
+                    config_path=args.config,
+                    debug=bool(args.debug),
+                    workshop_ui_mode=bool(args.workshop_ui_mode),
                 )
                 rendered = json.dumps(payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(
@@ -479,6 +514,9 @@ def main() -> None:
                     calculation_policy_version=args.calc_policy_version,
                     planned_scenarios=planned_scenarios,
                     actor_derivation_output_path=actor_derivation_output_path,
+                    config_path=args.config,
+                    debug=bool(args.debug),
+                    workshop_ui_mode=bool(args.workshop_ui_mode),
                 )
                 rendered = json.dumps(payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(

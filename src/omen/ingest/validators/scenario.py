@@ -300,3 +300,57 @@ def validate_scenario_ontology_slice_or_raise(
     return ontology
 
 
+def validate_reason_chain_artifact_or_raise(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        raise ValueError("reason_chain artifact must be an object")
+    if str(payload.get("artifact_type") or "") != "reason_chain":
+        raise ValueError("reason_chain artifact_type must be `reason_chain`")
+
+    rows = list(payload.get("scenario_chains") or [])
+    if not rows:
+        raise ValueError("reason_chain must contain non-empty scenario_chains")
+
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("scenario_chain row must be an object")
+        scenario_key = str(row.get("scenario_key") or "").strip()
+        if scenario_key not in {"A", "B", "C"}:
+            raise ValueError(f"invalid scenario_key in reason_chain row: {scenario_key}")
+
+        reason_chain = row.get("reason_chain") or {}
+        steps = list(reason_chain.get("steps") or [])
+        if not steps:
+            raise ValueError(f"reason_chain steps missing for scenario {scenario_key}")
+        for step in steps:
+            step_id = str((step or {}).get("step_id") or "").strip()
+            if not step_id:
+                raise ValueError(f"invalid step_id in scenario {scenario_key}: {step_id}")
+
+        conclusions = reason_chain.get("conclusions") or {}
+        for item in list(conclusions.get("blocking") or []):
+            if not isinstance(item, dict):
+                raise ValueError("blocking conclusion must be an object")
+            if not list(item.get("activation_step_ids") or []):
+                raise ValueError("blocking conclusion missing activation_step_ids")
+            if not list(item.get("reason_step_ids") or []):
+                raise ValueError("blocking conclusion missing reason_step_ids")
+
+    return payload
+
+
+def validate_reason_chain_view_model_artifact_or_raise(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        raise ValueError("reason_chain_view_model artifact must be an object")
+    if str(payload.get("artifact_type") or "") != "reason_chain_view_model":
+        raise ValueError("reason_chain_view_model artifact_type must be `reason_chain_view_model`")
+
+    graph = payload.get("graph") or {}
+    nodes = list(graph.get("nodes") or [])
+    edges = list(graph.get("edges") or [])
+    if not nodes:
+        raise ValueError("reason_chain_view_model must contain graph.nodes")
+    if not edges:
+        raise ValueError("reason_chain_view_model must contain graph.edges")
+    return payload
+
+

@@ -60,3 +60,16 @@ class ScenarioPriorProbabilitySnapshotModel(BaseModel):
             if keys != ["A", "B", "C"]:
                 raise ValueError(f"{field_name} must include A/B/C exactly once")
         return self
+
+
+class ReasonChainStepModel(BaseModel):
+    step_id: str = Field(min_length=1)
+    step_type: str = Field(min_length=1)
+    input_refs: list[str] = Field(default_factory=list)
+    summary: str = Field(min_length=1)
+
+
+class ReasonChainBlockingModel(BaseModel):
+    text: str = Field(min_length=1)
+    activation_step_ids: list[str] = Field(min_length=1)
+    reason_step_ids: list[str] = Field(min_length=1)

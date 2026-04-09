@@ -1,18 +1,20 @@
-# OmenAI
+<div align="center">
+<h1>OmenAI</h1>
+<strong><p>Strategic Reasoning Engine - Analyze, Simulate, Explain.</p></strong>
+<p>English | <a href="README.zh.md">中文</a></p>
 
-**The AI-Powered Strategic Reasoning Engine.**
+![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
+</div>
 
-![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai) ![GitHub Stars](https://img.shields.io/github/stars/StrategyLogic/omen?style=social) 
+[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is a strategic reasoning engine based on **Explainable AI**. It leverages **ontological modeling** to understand the phenomena and essence of the strategic world, and **counterfactual analysis** to simulate the known and unknown in decision-making scenarios, generating verifiable, comparable, and explainable decision support for decision-makers.
 
-> **Simulate the Signs. Reveal the Chaos.**
-
-[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source strategic reasoning engine. It leverages multi-agent game theory, capability space modeling to simulate phenomena, and counterfactual analysis to reason how technological evolution impacts market landscapes.
-
-[中文版](README.zh.md) | [Official Repo](https://github.com/StrategyLogic/omen) | [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
+[Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 
 ## ⭐ What Omen Does
 
-Unlike traditional predictive models, Omen does not promise to *predict a certain future*. Instead, it generates **interpretable, replayable, and comparable future branching paths**. Its core responsibility is to reveal faint omens, critical branching points, and evolutionary trajectories within complex systems, empowering founders, product strategists, technology leaders, and investment analysts to understand:
+> **Simulate the Signs. Reveal the Chaos.**
+
+Unlike traditional predictive models, Omen is designed for complex strategic reasoning and does not promise to *predict a certain future*. Instead, it generates **interpretable, replayable, and comparable future branching paths**. Its core responsibility is to reveal faint omens, critical branching points, and evolutionary trajectories within complex systems, empowering founders, product strategists, technology leaders, and investment analysts to understand:
 
 *   🔄 **Substitution Logic**: Which technology will replace another under what critical conditions?
 *   🛡️ **Capability Evolution**: Which core capabilities will be enhanced first, and which will coexist long-term?
@@ -47,12 +49,6 @@ A complete reasoning session typically answers the following questions:
 Environment requirements: Python 3.12+ with `pip` package manager.
 
 ```bash
-pip install omenai
-```
-
-From source:
-
-```bash
 git clone https://github.com/StrategyLogic/omen.git
 cd omen
 pip install --upgrade pip setuptools wheel
@@ -61,45 +57,29 @@ pip install -e .
 
 ### Run Example
 ```bash
-# run simulate
-omen simulate --scenario data/scenarios/ontology.json
-
-# run simulate with stable seed (reproducible)
-omen simulate --scenario data/scenarios/ontology.json --seed 42
-
-# explain results
-omen explain --input output/result.json
-
-# compare scenarios with generic overrides
-omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap_threshold": 0.9}'
-
-# compare with business parameter entrypoint (budget shock)
-omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200
-
-# keep historical outputs
-omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --incremental
+# Step 1. analyze situation from a built-in case
+omen analyze situation --doc sap_reltio_acquisition --pack-id sap
+# Step 2. generate scenario planning artifact from situation
+omen scenario --situation sap
 ```
 
 ### View Results
 
-**Local File Protection**: Output files are written to the root-level `output/` directory, which is excluded in `.gitignore` to avoid being tracked or accidentally uploaded, protecting your data from leakage.
-
-Example: `output/result.json`, `output/explanation.json`, `output/comparison.json`
-
-By default, each run of the simulation will overwrite the previous results; you can add the `--incremental` to generate new files with a timestamp suffix, which applies to all `omen CLI` commands.
+**Strategic Actor Persona UI**
 
 ```bash
-# This will not overwrite the previous output (output file will automatically have a timestamp suffix)
-omen simulate --scenario data/scenarios/ontology.json --incremental
+streamlit run app/strategic_actor.py
 ```
 
-By default, `simulate` use random seed to generate non-deterministic results; you can set a fixed `--seed` for reproducibility, it is recommended to compare different scenarios with the same seed to see the pure impact of parameter changes without random noise.
+Then open `http://localhost:8501` and select a case from `cases/actors/` to view persona narrative, graph, and timeline.
+
+**Strategic Situation Brief**
+
+After `omen analyze situation`, read the generated brief:
 
 ```bash
-# Run simulate with a fixed seed (results will be reproducible)
-omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 200 --seed 42
-# Run another scenario with the same seed to compare results
-omen compare --scenario data/scenarios/ontology.json --budget-actor ai-memory --budget-delta 300 --seed 42
+# Example brief path
+data/scenarios/sap/situation.md
 ```
 
 Want to learn more? Read the [precision evaluation](docs/precision.md) document.

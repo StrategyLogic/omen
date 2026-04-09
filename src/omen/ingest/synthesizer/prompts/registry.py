@@ -82,3 +82,8 @@ def get_analyze_prompt_version_token(command: str) -> str:
     binding = resolve_analyze_prompt_binding(command)
     metadata = get_prompt_metadata(binding.template_key, tier=binding.tier)
     return metadata.token
+
+
+def get_scenario_reason_chain_prompt_version_token() -> str:
+    metadata = get_prompt_metadata("scenario_reason_chain_prompt", tier="base")
+    return metadata.token

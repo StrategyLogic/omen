@@ -48,7 +48,7 @@ Omen 将在 `output/actors/<actor_name>/` 下生成以下文件：
 
 ## 🔄 使用流程
 
-如果你尚未安装 Omen，请先阅读 [快速指南（LLM）](../quick-start-llm.md)，完成环境配置和模型接入。
+如果你尚未安装 Omen，请先阅读 [快速指南](../quick-start.md)，完成环境配置和模型接入。
 
 ### 1. 准备输入文档
 

@@ -232,7 +232,7 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--actor",
         required=False,
-        help="Optional actor reference path or identifier used as background context",
+        help="Optional existing actor artifact path used as background context. Omit --actor to run a decoupled situation analysis",
     )
     situation.add_argument(
         "--output",

@@ -392,13 +392,43 @@ def plan_scenarios_from_situation(
             config_path=config_path,
         )
     except Exception as exc:
-        raw_priors = _build_random_prior_fallback(scenario_ontology=ontology)
-        prior_scoring_trace = {
-            "stage": "scenario_prior_prompt",
-            "status": "fallback",
-            "reason": str(exc),
-            "scoring_source": "random_fallback",
-        }
+        if not actor_json_ref:  
+            raw_priors = _build_random_prior_fallback(scenario_ontology=ontology)  
+            prior_scoring_trace = {  
+                "stage": "scenario_prior_prompt",  
+                "status": "fallback",  
+                "reason": "actor-aware prior scoring skipped: actor ontology json is unavailable",  
+                "scoring_source": "random_fallback",  
+            }  
+    else:  
+        try:  
+            raw_priors, prior_scoring_trace = score_prior_probabilities(  
+                actor_ref=actor_json_ref,  
+                scenario_ontology=ontology,  
+                planning_query=planning_query,  
+                config_path=config_path,  
+            )  
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:  
+            raw_priors = _build_random_prior_fallback(scenario_ontology=ontology)  
+            prior_scoring_trace = {  
+                "stage": "scenario_prior_prompt",  
+                "status": "fallback",  
+                "reason": str(exc),  
+                "scoring_source": "random_fallback",  
+            }  
+        except Exception as exc:  
+            prior_scoring_trace = {  
+                "stage": "scenario_prior_prompt",  
+                "status": "error",  
+                "reason": str(exc),  
+                "error_type": type(exc).__name__,  
+                "scoring_source": "score_prior_probabilities",  
+            }  
+            ontology["_planner_trace"] = {  
+                "actor_style_enhancement": actor_enhancement_trace,  
+                "prior_scoring": prior_scoring_trace,  
+            }  
+            raise 
 
     prior_snapshot = build_prior_snapshot(
         pack_id=pack_id,

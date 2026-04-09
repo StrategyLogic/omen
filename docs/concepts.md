@@ -6,7 +6,7 @@
 
 **定义**
 
-[战略推演](guides/strategic-reasoning.md)是对“技术能力、市场主体、资源约束、外部事件”在时间维度上的联动演化建模。
+[战略推演](guides/run-strategic-reasoning-flow.md)是对“技术能力、市场主体、资源约束、外部事件”在时间维度上的联动演化建模。
 
 **目标**
 

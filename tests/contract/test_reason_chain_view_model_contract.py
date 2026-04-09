@@ -114,4 +114,3 @@ def test_reason_chain_view_model_contract_in_workshop_mode(tmp_path: Path, monke
     assert nodes
     assert edges
     assert any(str(node.get("node_type") or "") == "reason_step" for node in nodes)
-    assert any(str(node.get("node_type") or "") == "claim" for node in nodes)

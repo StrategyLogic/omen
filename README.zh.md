@@ -7,7 +7,7 @@
 
 </div>
 
-[**Omen**](https://github.com/StrategyLogic/omen) （中文：爻）是基于**可解释AI**的战略推演引擎。它以**本体论建模**理解战略世界中的现象与本质，以**反事实分析**模拟决策情景中的已知与未知，为决策者生成可验证、可比较和可解释的决策依据。
+[**Omen**](https://github.com/StrategyLogic/omen) （中文：爻）是基于**可解释AI**的战略推演引擎。它以**本体论建模**理解战略世界中的现象与本质，以**反事实分析**模拟决策情景中的已知与未知，为决策者生成可验证、可追溯和可解释的战略洞察。
 
 [核心概念](docs/concepts.md) | [快速开始](docs/quick-start.md) | [案例模板](docs/case-template.md) | [项目路线图](docs/roadmap.md)
 

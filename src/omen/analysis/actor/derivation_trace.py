@@ -98,6 +98,26 @@ def extract_conclusion_buckets(conclusions: dict[str, Any]) -> dict[str, list[di
 
 def build_linked_evidence_refs(reason_chain: dict[str, Any]) -> list[dict[str, Any]]:
     conclusions = extract_conclusion_buckets(dict(reason_chain.get("conclusions") or {}))
+    steps = [item for item in (reason_chain.get("steps") or []) if isinstance(item, dict)]
+    default_reason_step_ids = [
+        str(item.get("step_id") or "").strip()
+        for item in steps
+        if str(item.get("step_type") or "").strip()
+        in {"required_or_warning_or_blocking", "strategic_conditions"}
+        and str(item.get("step_id") or "").strip()
+    ]
+    default_activation_step_ids = [
+        str(item.get("step_id") or "").strip()
+        for item in steps
+        if str(item.get("step_type") or "").strip() == "constraint_activation"
+        and str(item.get("step_id") or "").strip()
+    ]
+
+    if not default_reason_step_ids:
+        fallback = str(steps[-1].get("step_id") or "").strip() if steps else ""
+        if fallback:
+            default_reason_step_ids = [fallback]
+
     refs: list[dict[str, Any]] = []
     for bucket in ("required", "warning", "blocking"):
         for index, item in enumerate(list(conclusions.get(bucket) or []), start=1):
@@ -105,6 +125,10 @@ def build_linked_evidence_refs(reason_chain: dict[str, Any]) -> list[dict[str, A
                 continue
             reason_ids = [str(x).strip() for x in (item.get("reason_step_ids") or []) if str(x).strip()]
             activation_ids = [str(x).strip() for x in (item.get("activation_step_ids") or []) if str(x).strip()]
+            if not reason_ids:
+                reason_ids = list(default_reason_step_ids)
+            if bucket == "blocking" and not activation_ids:
+                activation_ids = list(default_activation_step_ids)
             refs.append(
                 {
                     "evidence_id": f"{bucket}_{index}",
@@ -298,9 +322,11 @@ def build_reason_chain_view_model_artifact(
         scenario_key = str(row.get("scenario_key") or "")
         reason_chain = dict(row.get("reason_chain") or {})
         steps = list(reason_chain.get("steps") or [])
+        ordered_step_node_ids: list[str] = []
         for step in steps:
             step_id = str(step.get("step_id") or "").strip()
             node_id = f"{scenario_key}:{step_id}"
+            ordered_step_node_ids.append(node_id)
             graph_nodes.append(
                 {
                     "id": node_id,
@@ -309,6 +335,16 @@ def build_reason_chain_view_model_artifact(
                     "step_id": step_id,
                     "step_type": str(step.get("step_type") or ""),
                     "label": str(step.get("summary") or ""),
+                }
+            )
+
+        # Keep DAG connected in workshop mode even when conclusions are empty.
+        for index in range(1, len(ordered_step_node_ids)):
+            graph_edges.append(
+                {
+                    "from": ordered_step_node_ids[index - 1],
+                    "to": ordered_step_node_ids[index],
+                    "edge_type": "next",
                 }
             )
 

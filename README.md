@@ -6,7 +6,7 @@
 ![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
 </div>
 
-[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is a strategic reasoning engine based on **Explainable AI**. It leverages **ontological modeling** to understand the phenomena and essence of the strategic world, and **counterfactual analysis** to simulate the known and unknown in decision-making scenarios, generating verifiable, comparable, and explainable decision support for decision-makers.
+[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is a strategic reasoning engine based on **Explainable AI**. It leverages **ontological modeling** to understand the phenomena and essence of the strategic world, and **counterfactual analysis** to simulate the known and unknown in decision-making scenarios, generating verifiable, traceable, and explainable strategic insights for decision-makers.
 
 [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 

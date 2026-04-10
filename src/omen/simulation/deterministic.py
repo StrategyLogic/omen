@@ -22,6 +22,7 @@ from omen.analysis.actor.report_writer import (
 from omen.analysis.actor.strategy import calculate_strategic_freedom_factor
 from omen.ingest.synthesizer.services.scenario import prepare_deterministic_inputs_from_scenario
 from omen.ingest.synthesizer.prompts.registry import get_scenario_reason_chain_prompt_version_token
+from omen.ingest.validators.scenario import is_scenario_ontology_input_path
 from omen.simulation.actor import (
     build_actor_derivation_artifact,
     build_actor_derivation_trace,
@@ -324,6 +325,54 @@ def run_deterministic_compare_from_scenario_ontology(
         actor_profile_ref=actor_profile_ref,
         calculation_policy_version=calculation_policy_version,
         planned_scenarios=planned_scenarios,
+        actor_derivation_output_path=actor_derivation_output_path,
+        config_path=config_path,
+        debug=debug,
+        workshop_ui_mode=workshop_ui_mode,
+    )
+
+
+def try_run_deterministic_simulate_from_scenario_input(
+    *,
+    scenario_path: str | Path,
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+    config_path: str | None = None,
+    debug: bool = False,
+    workshop_ui_mode: bool = False,
+) -> dict[str, Any] | None:
+    if not is_scenario_ontology_input_path(scenario_path):
+        return None
+
+    actor_derivation_output_path = Path(scenario_path).parent / "traces" / "actor_derivation.json"
+    return run_deterministic_simulate_from_scenario_ontology(
+        scenario_path=scenario_path,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
+        actor_derivation_output_path=actor_derivation_output_path,
+        config_path=config_path,
+        debug=debug,
+        workshop_ui_mode=workshop_ui_mode,
+    )
+
+
+def try_run_deterministic_compare_from_scenario_input(
+    *,
+    scenario_path: str | Path,
+    actor_profile_ref: str,
+    calculation_policy_version: str,
+    config_path: str | None = None,
+    debug: bool = False,
+    workshop_ui_mode: bool = False,
+) -> dict[str, Any] | None:
+    if not is_scenario_ontology_input_path(scenario_path):
+        return None
+
+    actor_derivation_output_path = Path(scenario_path).parent / "traces" / "actor_derivation.json"
+    return run_deterministic_compare_from_scenario_ontology(
+        scenario_path=scenario_path,
+        actor_profile_ref=actor_profile_ref,
+        calculation_policy_version=calculation_policy_version,
         actor_derivation_output_path=actor_derivation_output_path,
         config_path=config_path,
         debug=debug,

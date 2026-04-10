@@ -42,7 +42,7 @@ from omen.simulation.replay import (
     run_counterfactual,
 )
 from omen.simulation.engine import run_simulation
-from omen.simulation.actor import (
+from omen.simulation.deterministic import (
     try_run_deterministic_compare_from_scenario_input,
     try_run_deterministic_simulate_from_scenario_input,
 )

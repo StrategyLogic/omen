@@ -274,7 +274,7 @@ def register_scenario_command(subparsers: Any) -> None:
 def handle_situation_analyze_command(args: Any) -> int:
     print("Situation analysis started")
     try:
-        result = run_situation_analysis(
+        run_situation_analysis(
             doc=args.doc,
             input_alias=args.input,
             url=args.url,
@@ -283,13 +283,7 @@ def handle_situation_analyze_command(args: Any) -> int:
             pack_id=str(args.pack_id) if args.pack_id else None,
             pack_version=str(args.pack_version),
         )
-        output_path = Path(result["artifact_path"])
-        markdown_path = Path(result["markdown_path"])
-        generation_trace_path = Path(result["generation_trace_path"])
-        print(
-            "Situation analysis completed: "
-            f"artifact={output_path}, summary={markdown_path}, trace={generation_trace_path}"
-        )
+        print("Situation analysis completed")
         return 0
     except DeferredScopeFeatureError as exc:
         print(f"Deferred scope: {exc}")

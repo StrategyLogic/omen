@@ -102,17 +102,14 @@ def save_situation_artifact(path: str | Path, payload: dict[str, Any]) -> Path:
     return output_path
 
 
-def analyze_and_save_situation(
+def _analyze_and_save_situation(
     *,
     situation_file: str | Path,
     actor_ref: str | None,
     pack_id: str,
     pack_version: str,
     output_path: str | Path,
-) -> dict[str, Any]:
-    print(f"Situation source validation: {situation_file}")
-    validate_situation_source_or_raise(situation_file)
-
+) -> None:
     if actor_ref:
         print(f"Actor context enabled: {actor_ref}")
 
@@ -143,13 +140,6 @@ def analyze_and_save_situation(
     print(f"Situation brief saved: {markdown_path}")
     print(f"Situation trace saved: {generation_trace_path}")
 
-    return {
-        "situation_artifact": artifact,
-        "artifact_path": artifact_path,
-        "markdown_path": markdown_path,
-        "generation_trace_path": generation_trace_path,
-    }
-
 
 def run_situation_analysis(
     *,
@@ -160,13 +150,11 @@ def run_situation_analysis(
     output: str | None,
     pack_id: str | None,
     pack_version: str,
-) -> dict[str, Any]:
+) -> None:
     if url and (doc or input_alias):
         raise ValueError("use either --doc or --url, not both")
 
     effective_actor_ref = _validate_explicit_actor_ref(actor) if actor is not None else None
-    source_text_path: Path | None = None
-    generated_case_path: Path | None = None
 
     if url:
         print(f"URL fetch started: {url}")
@@ -189,26 +177,18 @@ def run_situation_analysis(
         input_path = _resolve_situation_doc_path(str(raw_doc))
         if not input_path.exists():
             raise ValueError(f"input not found: {input_path}")
+        validate_situation_source_or_raise(input_path)
 
     effective_pack_id = str(pack_id) if pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
     output_path = Path(output) if output else _resolve_default_output_path(effective_pack_id)
 
-    result = analyze_and_save_situation(
+    _analyze_and_save_situation(
         situation_file=input_path,
         actor_ref=effective_actor_ref,
         pack_id=effective_pack_id,
         pack_version=pack_version,
         output_path=output_path,
     )
-    if source_text_path is not None and generated_case_path is not None:
-        result.update(
-            {
-                "source_text_path": source_text_path,
-                "generated_case_path": generated_case_path,
-                "pack_id": effective_pack_id,
-            }
-        )
-    return result
 
 
 def save_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:

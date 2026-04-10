@@ -74,7 +74,7 @@ def _validate_explicit_actor_ref(actor_ref: str) -> str:
 
     raise ValueError(
         "actor reference not found. Pass an existing actor artifact path with --actor, "
-        "or omit --actor for decoupled situation analysis"
+        "or omit --actor to auto-build and link a strategic actor from the situation case"
     )
 
 
@@ -107,6 +107,45 @@ def _resolve_scenario_failure_output_path(*, args: Any, output_path_arg: Path | 
     return Path("data/scenarios") / "unknown" / "generation" / "output.txt"
 
 
+def _load_generation_trace_payload(trace_path: Path) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    if trace_path.exists():
+        try:
+            loaded = json.loads(trace_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                payload = loaded
+        except Exception:
+            payload = {}
+
+    payload.setdefault("artifact_type", "situation_generation_trace")
+    history = payload.get("trace_history")
+    if not isinstance(history, list):
+        payload["trace_history"] = []
+    return payload
+
+
+def _append_trace_history_event(
+    payload: dict[str, Any],
+    *,
+    stage: str,
+    status: str,
+    details: dict[str, Any],
+) -> None:
+    history = payload.get("trace_history")
+    if not isinstance(history, list):
+        history = []
+
+    history.append(
+        {
+            "stage": stage,
+            "status": status,
+            "generated_at": datetime.now().isoformat(),
+            **details,
+        }
+    )
+    payload["trace_history"] = history
+
+
 def _append_scenario_decomposition_trace(
     *,
     trace_path: Path,
@@ -115,17 +154,8 @@ def _append_scenario_decomposition_trace(
     decomposition_quality: dict[str, Any] | None,
     planner_trace: dict[str, Any] | None = None,
 ) -> None:
-    payload: dict[str, Any] = {}
-    if trace_path.exists():
-        try:
-            payload = json.loads(trace_path.read_text(encoding="utf-8"))
-            if not isinstance(payload, dict):
-                payload = {}
-        except Exception:
-            payload = {}
-
-    payload.setdefault("artifact_type", "situation_generation_trace")
-    payload["scenario_decomposition"] = {
+    payload = _load_generation_trace_payload(trace_path)
+    decomposition_entry = {
         "scenario_artifact_path": str(scenario_artifact_path),
         "situation_ref": str(situation_ref),
         "generated_at": datetime.now().isoformat(),
@@ -135,11 +165,25 @@ def _append_scenario_decomposition_trace(
         "validation_issues": list((decomposition_quality or {}).get("validation_issues") or []),
         "logic_issues": list((decomposition_quality or {}).get("logic_issues") or []),
     }
+    payload["scenario_decomposition"] = decomposition_entry
     if isinstance(planner_trace, dict):
         payload["scenario_planner"] = {
             "actor_style_enhancement": dict(planner_trace.get("actor_style_enhancement") or {}),
             "prior_scoring": dict(planner_trace.get("prior_scoring") or {}),
         }
+
+    _append_trace_history_event(
+        payload,
+        stage="scenario_decomposition",
+        status="ok",
+        details={
+            "scenario_artifact_path": str(scenario_artifact_path),
+            "situation_ref": str(situation_ref),
+            "schema_completeness_percent": decomposition_entry["schema_completeness_percent"],
+            "logic_usable": decomposition_entry["logic_usable"],
+            "retries": decomposition_entry["retries"],
+        },
+    )
     save_auxiliary_json(trace_path, payload)
 
 
@@ -166,21 +210,28 @@ def _write_scenario_failure_trace(
     stage: str,
     reason: str,
 ) -> Path:
-    payload: dict[str, Any] = {
-        "artifact_type": "situation_generation_trace",
-        "scenario_decomposition": {
-            "scenario_artifact_path": "",
-            "situation_ref": str(situation_ref) if situation_ref else "",
-            "generated_at": datetime.now().isoformat(),
-            "schema_completeness_percent": 0.0,
-            "logic_usable": False,
-            "retries": 0,
-            "validation_issues": [reason],
-            "logic_issues": [],
-            "stage": stage,
-            "status": "failed",
-        },
+    payload = _load_generation_trace_payload(trace_path)
+    payload["scenario_decomposition"] = {
+        "scenario_artifact_path": "",
+        "situation_ref": str(situation_ref) if situation_ref else "",
+        "generated_at": datetime.now().isoformat(),
+        "schema_completeness_percent": 0.0,
+        "logic_usable": False,
+        "retries": 0,
+        "validation_issues": [reason],
+        "logic_issues": [],
+        "stage": stage,
+        "status": "failed",
     }
+    _append_trace_history_event(
+        payload,
+        stage=stage,
+        status="failed",
+        details={
+            "situation_ref": str(situation_ref) if situation_ref else "",
+            "reason": reason,
+        },
+    )
     save_auxiliary_json(trace_path, payload)
     return trace_path
 
@@ -216,7 +267,7 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--actor",
         required=False,
-        help="Optional existing actor artifact path used as background context. Omit --actor to run a decoupled situation analysis",
+        help="Optional existing actor artifact path used as background context. Omit --actor to auto-build and link a strategic actor from the situation case",
     )
     situation.add_argument(
         "--output",

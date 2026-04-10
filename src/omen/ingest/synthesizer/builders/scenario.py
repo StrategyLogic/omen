@@ -104,6 +104,22 @@ def normalize_scenario_ontology_scenarios(llm_scenarios: list[Any]) -> list[dict
                 f"LLM scenario decomposition slot {key} missing resistance_assumptions.assumption_rationale"
             )
 
+        required_resistance_fields = (
+            "structural_conflict",
+            "resource_reallocation_drag",
+            "cultural_misalignment",
+            "veto_node_intensity",
+            "aggregate_resistance",
+        )
+        missing_resistance_fields = [
+            field_name for field_name in required_resistance_fields if field_name not in resistance_raw
+        ]
+        if missing_resistance_fields:
+            raise ValueError(
+                "LLM scenario decomposition slot "
+                f"{key} missing resistance_assumptions fields: {missing_resistance_fields}"
+            )
+
         normalized.append(
             {
                 "scenario_key": key,

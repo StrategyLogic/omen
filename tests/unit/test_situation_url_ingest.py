@@ -1,4 +1,5 @@
 from argparse import Namespace
+import json
 from pathlib import Path
 
 import omen.cli.situation as situation_cli
@@ -254,3 +255,81 @@ def test_handle_scenario_command_writes_output_for_generic_validation_failure(
     assert "[raw_output]" in written
     assert '"scenarios": "invalid"' in written
     assert "Scenario debug output saved to" in output
+
+
+def test_append_scenario_trace_preserves_existing_fields_and_appends_history(tmp_path: Path) -> None:
+    trace_path = tmp_path / "generation" / "log.json"
+    trace_path.parent.mkdir(parents=True, exist_ok=True)
+    trace_path.write_text(
+        json.dumps(
+            {
+                "artifact_type": "situation_generation_trace",
+                "situation_id": "sap_reltio_acquisition",
+                "confidence": {"overall_confidence": 0.7},
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    situation_cli._append_scenario_decomposition_trace(  # pylint: disable=protected-access
+        trace_path=trace_path,
+        scenario_artifact_path=Path("data/scenarios/sap_v1/scenario_pack.json"),
+        situation_ref=Path("data/scenarios/sap_v1/situation.json"),
+        decomposition_quality={
+            "schema_completeness_percent": 100.0,
+            "logic_usable": True,
+            "retries": 0,
+            "validation_issues": [],
+            "logic_issues": [],
+        },
+        planner_trace={
+            "actor_style_enhancement": {"status": "noop"},
+            "prior_scoring": {"status": "ok", "scoring_source": "llm"},
+        },
+    )
+
+    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    assert payload["situation_id"] == "sap_reltio_acquisition"
+    assert payload["confidence"]["overall_confidence"] == 0.7
+    assert payload["scenario_decomposition"]["logic_usable"] is True
+    assert payload["scenario_planner"]["prior_scoring"]["scoring_source"] == "llm"
+    assert isinstance(payload.get("trace_history"), list)
+    assert len(payload["trace_history"]) == 1
+    assert payload["trace_history"][0]["stage"] == "scenario_decomposition"
+    assert payload["trace_history"][0]["status"] == "ok"
+
+
+def test_failure_trace_preserves_existing_fields_and_appends_history(tmp_path: Path) -> None:
+    trace_path = tmp_path / "generation" / "log.json"
+    trace_path.parent.mkdir(parents=True, exist_ok=True)
+    trace_path.write_text(
+        json.dumps(
+            {
+                "artifact_type": "situation_generation_trace",
+                "situation_id": "sap_reltio_acquisition",
+                "validation_passed": True,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    situation_cli._write_scenario_failure_trace(  # pylint: disable=protected-access
+        trace_path=trace_path,
+        situation_ref=Path("data/scenarios/sap_v1/situation.json"),
+        stage="scenario_planning",
+        reason="validation failed",
+    )
+
+    payload = json.loads(trace_path.read_text(encoding="utf-8"))
+    assert payload["situation_id"] == "sap_reltio_acquisition"
+    assert payload["validation_passed"] is True
+    assert payload["scenario_decomposition"]["status"] == "failed"
+    assert payload["scenario_decomposition"]["validation_issues"] == ["validation failed"]
+    assert isinstance(payload.get("trace_history"), list)
+    assert len(payload["trace_history"]) == 1
+    assert payload["trace_history"][0]["stage"] == "scenario_planning"
+    assert payload["trace_history"][0]["status"] == "failed"

@@ -5,6 +5,26 @@ from pathlib import Path
 from omen.cli.main import main
 
 
+def _mock_reason_chain_llm(*, config_path: str | None = None, user_prompt: str, system_prompt: str | None = None) -> str:
+    _ = (config_path, user_prompt, system_prompt)
+    return json.dumps(
+        {
+            "reason_chain": {
+                "steps": [
+                    {"step_id": "step_1.1", "step_type": "seed", "summary": "mock", "input_refs": ["scenario::A"]},
+                    {"step_id": "step_2.1", "step_type": "constraint_activation", "summary": "mock", "input_refs": ["constraint::x"]},
+                    {"step_id": "step_3.1", "step_type": "target_or_objective", "summary": "mock", "input_refs": ["objective::x"]},
+                    {"step_id": "step_4.1", "step_type": "gap", "summary": "mock", "input_refs": ["scenario_conditions::warning"]},
+                    {"step_id": "step_5.1", "step_type": "required_or_warning_or_blocking", "summary": "mock", "input_refs": ["scenario_conditions::required"]},
+                ],
+                "intermediate": {"dimension_mapping": [], "value_calculation": []},
+                "conclusions": {"required": [], "warning": [], "blocking": []},
+            }
+        },
+        ensure_ascii=False,
+    )
+
+
 def _write_ontology(path: Path) -> None:
     payload = {
         "pack_id": "strategic_actor_nokia_v1",
@@ -81,6 +101,7 @@ def test_reason_chain_evidence_refs_link_to_reason_steps(tmp_path: Path, monkeyp
     scenario_path = tmp_path / "scenario_pack.json"
     output_path = tmp_path / "deterministic_result.json"
     _write_ontology(scenario_path)
+    monkeypatch.setattr("omen.ingest.synthesizer.clients.invoke_text_prompt", _mock_reason_chain_llm)
 
     monkeypatch.setattr(
         sys,

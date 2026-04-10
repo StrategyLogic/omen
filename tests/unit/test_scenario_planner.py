@@ -533,3 +533,62 @@ def test_plan_scenarios_falls_back_to_random_priors_without_actor_json(
     planner_trace = dict(ontology.get("_planner_trace") or {})
     assert planner_trace["actor_style_enhancement"]["status"] == "skipped"
     assert planner_trace["prior_scoring"]["scoring_source"] == "random_fallback"
+
+
+def test_plan_scenarios_reports_missing_resistance_fields_with_payload_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    actor_path = tmp_path / "actor_ontology.json"
+    actor_path.write_text(
+        json.dumps(
+            {
+                "actors": [
+                    {
+                        "type": "StrategicActor",
+                        "profile": {
+                            "strategic_style": {
+                                "decision_style": "platform expansion",
+                                "value_proposition": "integrated enterprise stack",
+                                "decision_preferences": ["ecosystem leverage"],
+                                "non_negotiables": ["portfolio coherence"],
+                            }
+                        },
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    def _bad_planning(**kwargs: object) -> dict[str, object]:
+        scenarios = _mock_planning_scenarios()
+        resistance: dict[str, object] = dict(scenarios[0]["resistance_assumptions"])  # type: ignore[index]
+        if "structural_conflict" in resistance:
+            del resistance["structural_conflict"]
+        scenarios[0]["resistance_assumptions"] = resistance
+        return {
+            "pack_id": kwargs["pack_id"],
+            "pack_version": kwargs["pack_version"],
+            "derived_from_situation_id": "sap_reltio_acquisition",
+            "ontology_version": "scenario_ontology_v1",
+            "scenarios": scenarios,
+        }
+
+    monkeypatch.setattr("omen.scenario.planner.planning", _bad_planning)
+
+    with pytest.raises(ValueError, match="missing resistance_assumptions fields"):
+        from_situation(
+            situation_artifact={
+                "id": "sap_reltio_acquisition",
+                "signals": [{"name": "signal", "strength": 0.6}],
+                "context": {"hard_constraints": []},
+            },
+            pack_id="sap_v1",
+            pack_version="1.0.0",
+            actor_ref=str(actor_path),
+            config_path="config/llm.toml",
+            traces_dir=tmp_path / "traces",
+        )

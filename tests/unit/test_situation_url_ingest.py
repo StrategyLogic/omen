@@ -19,7 +19,7 @@ def test_save_url_source_text_writes_under_ingest_source(tmp_path: Path) -> None
     assert output_path.read_text(encoding="utf-8") == "Nokia article body"
 
 
-def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, capsys) -> None:
+def test_handle_situation_analyze_command_url_flow(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         situation_cli,
         "run_situation_analysis",

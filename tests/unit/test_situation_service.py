@@ -14,10 +14,13 @@ class _DummyValidated:
 
 
 def test_save_and_load_situation_artifact_roundtrip(monkeypatch, tmp_path: Path) -> None:
+    def _validate(payload: dict) -> _DummyValidated:
+        return _DummyValidated(payload)
+
     monkeypatch.setattr(
         situation_service,
         "validate_situation_artifact_or_raise",
-        lambda payload: _DummyValidated(payload),
+        _validate,
     )
 
     payload = {"id": "case", "version": "0.1.0", "context": {"title": "Case"}}

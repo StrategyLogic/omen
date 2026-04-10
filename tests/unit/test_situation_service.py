@@ -212,6 +212,16 @@ def test_resolve_situation_artifact_ref_prefers_existing_paths(tmp_path: Path) -
     assert situation_service.resolve_situation_artifact_ref(direct) == direct
 
 
+def test_resolve_situation_artifact_ref_pack_id_maps_to_pack_root() -> None:
+    resolved = situation_service.resolve_situation_artifact_ref("sap_v1")
+    assert resolved == Path("data/scenarios/sap_v1/situation.json")
+
+
+def test_resolve_situation_artifact_ref_keeps_explicit_json_path() -> None:
+    resolved = situation_service.resolve_situation_artifact_ref("data/scenarios/sap_v1/situation.json")
+    assert resolved == Path("data/scenarios/sap_v1/situation.json")
+
+
 def test_save_auxiliary_json_writes_parent_dirs(tmp_path: Path) -> None:
     output = tmp_path / "x" / "y" / "log.json"
     written = situation_service.save_auxiliary_json(output, {"ok": True})

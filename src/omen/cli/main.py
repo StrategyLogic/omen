@@ -129,12 +129,6 @@ def main() -> None:
         help="Emit reason-chain view model artifact for workshop DAG rendering",
     )
     simulate.add_argument(
-        "--config",
-        required=False,
-        default=None,
-        help="Optional path to local LLM config TOML for reason-chain enrichment",
-    )
-    simulate.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug logs for reason-chain LLM output under generation/output.txt",
@@ -197,12 +191,6 @@ def main() -> None:
         "--workshop-ui-mode",
         action="store_true",
         help="Emit reason-chain view model artifact for workshop DAG rendering",
-    )
-    compare.add_argument(
-        "--config",
-        required=False,
-        default=None,
-        help="Optional path to local LLM config TOML for reason-chain enrichment",
     )
     compare.add_argument(
         "--debug",
@@ -401,7 +389,6 @@ def main() -> None:
                 scenario_path=args.scenario,
                 actor_profile_ref=args.actor_profile_ref,
                 calculation_policy_version=args.calc_policy_version,
-                config_path=args.config,
                 debug=bool(args.debug),
                 workshop_ui_mode=bool(args.workshop_ui_mode),
             )
@@ -444,7 +431,6 @@ def main() -> None:
                 scenario_path=args.scenario,
                 actor_profile_ref=args.actor_profile_ref,
                 calculation_policy_version=args.calc_policy_version,
-                config_path=args.config,
                 debug=bool(args.debug),
                 workshop_ui_mode=bool(args.workshop_ui_mode),
             )

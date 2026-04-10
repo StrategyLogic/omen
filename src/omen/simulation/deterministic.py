@@ -34,7 +34,6 @@ from omen.simulation.reason import (
     build_reason_chain_artifact,
     build_reason_chain_view_model_artifact,
     build_recommendation_from_condition_sets,
-    build_scenario_reason_chain,
     extract_conclusion_buckets,
     resolve_reason_chain_with_llm,
 )
@@ -48,7 +47,6 @@ def run_deterministic_simulate_from_pack(
     calculation_policy_version: str,
     planned_scenarios: dict[str, dict[str, Any]] | None = None,
     actor_derivation_output_path: str | Path | None = None,
-    config_path: str | None = None,
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
@@ -160,20 +158,11 @@ def run_deterministic_simulate_from_pack(
         reason_chain_rows: list[dict[str, Any]] = []
 
         for scenario_key, scene, result in raw_reason_chain_inputs:
-            deterministic_row = build_scenario_reason_chain(
-                run_id=run_id,
-                scenario_key=scenario_key,
-                scenario_ontology=scene,
-                scenario_result=result,
-            )
-            deterministic_chain = dict(deterministic_row.get("reason_chain") or {})
             chain, llm_status = resolve_reason_chain_with_llm(
-                deterministic_reason_chain=deterministic_chain,
                 scenario_key=scenario_key,
                 scenario_ontology=scene,
                 scenario_result=result,
                 actor_profile_ref=actor_profile_ref,
-                config_path=config_path,
                 debug_output_path=debug_output_path,
             )
 
@@ -259,7 +248,6 @@ def run_deterministic_compare_from_pack(
     calculation_policy_version: str,
     planned_scenarios: dict[str, dict[str, Any]] | None = None,
     actor_derivation_output_path: str | Path | None = None,
-    config_path: str | None = None,
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
@@ -269,7 +257,6 @@ def run_deterministic_compare_from_pack(
         calculation_policy_version=calculation_policy_version,
         planned_scenarios=planned_scenarios,
         actor_derivation_output_path=actor_derivation_output_path,
-        config_path=config_path,
         debug=debug,
         workshop_ui_mode=workshop_ui_mode,
     )
@@ -284,7 +271,6 @@ def run_simulate(
     actor_profile_ref: str,
     calculation_policy_version: str,
     actor_derivation_output_path: str | Path | None = None,
-    config_path: str | None = None,
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
@@ -295,7 +281,6 @@ def run_simulate(
         calculation_policy_version=calculation_policy_version,
         planned_scenarios=planned_scenarios,
         actor_derivation_output_path=actor_derivation_output_path,
-        config_path=config_path,
         debug=debug,
         workshop_ui_mode=workshop_ui_mode,
     )
@@ -307,7 +292,6 @@ def run_deterministic_compare_from_scenario_ontology(
     actor_profile_ref: str,
     calculation_policy_version: str,
     actor_derivation_output_path: str | Path | None = None,
-    config_path: str | None = None,
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
@@ -318,7 +302,6 @@ def run_deterministic_compare_from_scenario_ontology(
         calculation_policy_version=calculation_policy_version,
         planned_scenarios=planned_scenarios,
         actor_derivation_output_path=actor_derivation_output_path,
-        config_path=config_path,
         debug=debug,
         workshop_ui_mode=workshop_ui_mode,
     )
@@ -329,7 +312,6 @@ def run_simulate_with_actor(
     scenario_path: str | Path,
     actor_profile_ref: str,
     calculation_policy_version: str,
-    config_path: str | None = None,
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any] | None:
@@ -341,7 +323,6 @@ def run_simulate_with_actor(
         calculation_policy_version=calculation_policy_version,
         planned_scenarios=planned_scenarios,
         actor_derivation_output_path=actor_derivation_output_path,
-        config_path=config_path,
         debug=debug,
         workshop_ui_mode=workshop_ui_mode,
     )
@@ -352,7 +333,6 @@ def run_compare(
     scenario_path: str | Path,
     actor_profile_ref: str,
     calculation_policy_version: str,
-    config_path: str | None = None,
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any] | None:
@@ -365,7 +345,6 @@ def run_compare(
         actor_profile_ref=actor_profile_ref,
         calculation_policy_version=calculation_policy_version,
         actor_derivation_output_path=actor_derivation_output_path,
-        config_path=config_path,
         debug=debug,
         workshop_ui_mode=workshop_ui_mode,
     )

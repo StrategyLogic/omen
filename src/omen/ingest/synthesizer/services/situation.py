@@ -227,12 +227,9 @@ def resolve_situation_artifact_ref(ref: str | Path) -> Path:
     if not raw:
         raise ValueError("empty situation reference")
 
-    candidate = Path(raw)
-    if candidate.exists():
-        return candidate
+    # Explicit path input: path-like string or direct json filename.
+    if "/" in raw or raw.endswith(".json"):
+        return Path(raw)
 
-    root_candidate = Path("data/scenarios") / raw / "situation.json"
-    if root_candidate.exists():
-        return root_candidate
-
-    return Path("data/scenarios") / raw / "generation" / "situation.json"
+    # Pack-id input: resolve to pack root situation artifact.
+    return Path("data/scenarios") / raw / "situation.json"

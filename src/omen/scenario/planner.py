@@ -183,12 +183,18 @@ def from_situation(
     planning_query_path = traces_path / "planning_query.json"
     _write_auxiliary_json(planning_query_path, planning_query)
 
-    ontology = build_ontology(
-        situation_artifact=situation_artifact,
-        llm_decomposition=decomposition,
-        pack_id=pack_id,
-        pack_version=pack_version,
-    )
+    try:
+        ontology = build_ontology(
+            situation_artifact=situation_artifact,
+            llm_decomposition=decomposition,
+            pack_id=pack_id,
+            pack_version=pack_version,
+        )
+    except Exception as exc:
+        raise ScenarioDecompositionValidationError(
+            f"Scenario decomposition validation failed: {exc}",
+            decomposition_payload=decomposition,
+        ) from exc
 
     try:
         if not actor_json_ref:

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import omen.cli.situation as situation_cli
 from omen.ingest.processor.url import save_url_source_text
-from omen.ingest.synthesizer.services.situation import LLMJsonValidationAbort
+from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 from omen.scenario.planner import ScenarioDecompositionValidationError
 
 
@@ -19,51 +19,12 @@ def test_save_url_source_text_writes_under_ingest_source(tmp_path: Path) -> None
     assert output_path.read_text(encoding="utf-8") == "Nokia article body"
 
 
-def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, capsys) -> None:
-    generated_case_path = tmp_path / "cases" / "situations" / "nokia_case.md"
-    situation_output_path = tmp_path / "data" / "scenarios" / "nokia_v1" / "nokia_case_situation.json"
-
-    monkeypatch.setattr(situation_cli, "fetch_url_text", lambda url: "Fetched article text")
+def test_handle_situation_analyze_command_url_flow(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         situation_cli,
-        "save_url_source_text",
-        lambda *, url, text: tmp_path / "data" / "ingest" / "source" / "example.txt",
+        "run_situation_analysis",
+        lambda **kwargs: None,
     )
-    monkeypatch.setattr(
-        situation_cli,
-        "generate_situation_case_document",
-        lambda *, source_text, source_ref, source_text_path, config_path: ("nokia_case", "# Nokia Case\n\nBody\n"),
-    )
-    monkeypatch.setattr(situation_cli, "_resolve_generated_case_path", lambda case_name: generated_case_path)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
-    monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "nokia_v1")
-    monkeypatch.setattr(situation_cli, "_resolve_default_output_path", lambda input_path, pack_id: situation_output_path)
-    monkeypatch.setattr(
-        situation_cli,
-        "analyze_situation_document",
-        lambda **kwargs: {
-            "version": "0.1.0",
-            "id": "nokia_case",
-            "context": {
-                "title": "Nokia Case",
-                "core_question": "What next?",
-                "current_state": "State",
-                "core_dilemma": "Dilemma",
-                "key_decision_point": "Decision",
-                "target_outcomes": ["Outcome"],
-                "hard_constraints": ["Constraint"],
-                "known_unknowns": ["Unknown"],
-            },
-            "signals": [{"name": "Signal"}],
-            "uncertainty_space": {"confidence_risk": 0.4, "confidence_overall": 0.7, "metrics": {"cognitive_coverage": 0.5}},
-            "source_meta": {"source_path": str(generated_case_path), "generated_at": "2026-04-05T12:00:00", "pack_id": "nokia_v1", "pack_version": "1.0.0"},
-            "source_trace": [{"source_path": str(generated_case_path), "situation_id": "nokia_case"}],
-        },
-    )
-    monkeypatch.setattr(situation_cli, "save_situation_artifact", lambda path, payload: situation_output_path)
-    monkeypatch.setattr(situation_cli, "save_situation_markdown", lambda path, payload, config_path=None: path)
-    monkeypatch.setattr(situation_cli, "build_situation_confidence_trace", lambda **kwargs: {"artifact_type": "situation_generation_trace"})
-    monkeypatch.setattr(situation_cli, "save_auxiliary_json", lambda path, payload: path)
 
     args = Namespace(
         doc=None,
@@ -73,18 +34,14 @@ def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, 
         output=None,
         pack_id=None,
         pack_version="1.0.0",
-        config="config/llm.toml",
     )
 
     result = situation_cli.handle_situation_analyze_command(args)
     output = capsys.readouterr().out
 
     assert result == 0
-    assert generated_case_path.exists()
-    assert "Using URL source for situation analysis..." in output
-    assert "URL fetch: SUCCESS" in output
-    assert "Generated situation case: SUCCESS" in output
-    assert "Saved situation artifact to" in output
+    assert "Situation analysis started" in output
+    assert "Situation analysis completed" in output
 
 
 def test_handle_situation_analyze_command_rejects_doc_and_url_together(capsys) -> None:
@@ -96,96 +53,25 @@ def test_handle_situation_analyze_command_rejects_doc_and_url_together(capsys) -
         output=None,
         pack_id=None,
         pack_version="1.0.0",
-        config="config/llm.toml",
     )
 
     result = situation_cli.handle_situation_analyze_command(args)
     output = capsys.readouterr().out
 
     assert result == 2
-    assert "use either --doc or --url, not both" in output
+    assert "Situation analysis started" in output
+    assert "Situation analysis failed:" in output
 
 
 def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, tmp_path: Path) -> None:
-    input_doc = tmp_path / "case.md"
-    input_doc.write_text("example", encoding="utf-8")
-
     captured: dict[str, object] = {}
-
-    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
-    monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "strategic_actor_case_v1")
     actor_json = tmp_path / "actor_ontology.json"
     actor_json.write_text("{}", encoding="utf-8")
 
-    def _fake_analyze(**kwargs: object) -> dict[str, object]:
-        captured["actor_ref"] = kwargs.get("actor_ref")
-        return {
-            "version": "0.1.0",
-            "id": "case",
-            "context": {
-                "title": "Case",
-                "core_question": "Q",
-                "current_state": "S",
-                "core_dilemma": "D",
-                "key_decision_point": "K",
-                "target_outcomes": ["T"],
-                "hard_constraints": ["H"],
-                "known_unknowns": [],
-            },
-            "signals": [
-                {
-                    "id": "sig_market_001",
-                    "name": "Signal",
-                    "domain": "market",
-                    "strength": 0.6,
-                    "direction": "up",
-                    "mapped_targets": [
-                        {
-                            "space": "MarketSpace",
-                            "element_key": "x",
-                            "impact_type": "driver",
-                            "impact_strength": 0.6,
-                            "mechanism_conditions": {
-                                "activation_condition": "a",
-                                "expected_effect": "e",
-                            },
-                        }
-                    ],
-                    "cascade_rules": [],
-                    "market_constraints": [
-                        {
-                            "constraint_key": "c",
-                            "binding_strength": 0.5,
-                        }
-                    ],
-                    "mechanism_note": "m",
-                    "no_cascade_reason": "direct local effect in current horizon",
-                }
-            ],
-            "tech_space_seed": [],
-            "market_space_seed": [],
-            "uncertainty_space": {"overall_confidence": 0.6},
-            "source_trace": [],
-            "source_meta": {
-                "source_path": str(input_doc),
-                "generated_at": "2026-04-08T12:00:00",
-                "pack_id": "strategic_actor_case_v1",
-                "pack_version": "1.0.0",
-                "actor_ref": str(actor_json),
-            },
-        }
+    def _fake_run(**kwargs: object) -> None:
+        captured["actor"] = kwargs.get("actor")
 
-    monkeypatch.setattr(situation_cli, "analyze_situation_document", _fake_analyze)
-
-    def _fake_save(path: Path, payload: dict[str, object]) -> Path:
-        captured["saved_context_actor_ref"] = ((payload.get("context") or {}).get("actor_ref"))
-        return path
-
-    monkeypatch.setattr(situation_cli, "save_situation_artifact", _fake_save)
-    monkeypatch.setattr(situation_cli, "save_situation_markdown", lambda path, payload, config_path=None: path)
-    monkeypatch.setattr(situation_cli, "build_situation_confidence_trace", lambda **kwargs: {"artifact_type": "situation_generation_trace"})
-    monkeypatch.setattr(situation_cli, "save_auxiliary_json", lambda path, payload: path)
+    monkeypatch.setattr(situation_cli, "run_situation_analysis", _fake_run)
 
     args = Namespace(
         doc="case",
@@ -195,13 +81,11 @@ def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, t
         output=str(tmp_path / "situation.json"),
         pack_id=None,
         pack_version="1.0.0",
-        config="config/llm.toml",
     )
 
     result = situation_cli.handle_situation_analyze_command(args)
     assert result == 0
-    assert captured["actor_ref"] == str(actor_json)
-    assert captured["saved_context_actor_ref"] == str(actor_json)
+    assert captured["actor"] == str(actor_json)
 
 
 def test_handle_situation_analyze_command_rejects_missing_explicit_actor_ref(
@@ -209,11 +93,11 @@ def test_handle_situation_analyze_command_rejects_missing_explicit_actor_ref(
     tmp_path: Path,
     capsys,
 ) -> None:
-    input_doc = tmp_path / "case.md"
-    input_doc.write_text("example", encoding="utf-8")
-
-    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
+    monkeypatch.setattr(
+        situation_cli,
+        "run_situation_analysis",
+        lambda **kwargs: (_ for _ in ()).throw(ValueError("actor reference not found")),
+    )
 
     args = Namespace(
         doc="case",
@@ -223,29 +107,21 @@ def test_handle_situation_analyze_command_rejects_missing_explicit_actor_ref(
         output=str(tmp_path / "situation.json"),
         pack_id=None,
         pack_version="1.0.0",
-        config="config/llm.toml",
     )
 
     result = situation_cli.handle_situation_analyze_command(args)
     output = capsys.readouterr().out
     assert result == 2
-    assert "actor reference not found" in output
+    assert "Situation analysis failed: actor reference not found" in output
 
 
 def test_handle_situation_analyze_command_exits_gracefully_on_invalid_enhance_json(
     monkeypatch,
-    tmp_path: Path,
     capsys,
 ) -> None:
-    input_doc = tmp_path / "case.md"
-    input_doc.write_text("example", encoding="utf-8")
-
-    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
-    monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "case_v1")
     monkeypatch.setattr(
         situation_cli,
-        "analyze_situation_document",
+        "run_situation_analysis",
         lambda **kwargs: (_ for _ in ()).throw(
             LLMJsonValidationAbort(
                 stage="situation_enhance_prompt",
@@ -262,7 +138,6 @@ def test_handle_situation_analyze_command_exits_gracefully_on_invalid_enhance_js
         output=None,
         pack_id=None,
         pack_version="1.0.0",
-        config="config/llm.toml",
     )
 
     result = situation_cli.handle_situation_analyze_command(args)
@@ -308,7 +183,6 @@ def test_handle_scenario_command_writes_non_json_llm_output(monkeypatch, tmp_pat
         pack_id=None,
         pack_version="1.0.0",
         actor=None,
-        config="config/llm.toml",
     )
 
     result = situation_cli.handle_scenario_command(args)
@@ -364,7 +238,6 @@ def test_handle_scenario_command_writes_output_for_generic_validation_failure(
         pack_id=None,
         pack_version="1.0.0",
         actor=None,
-        config="config/llm.toml",
     )
 
     result = situation_cli.handle_scenario_command(args)

@@ -7,7 +7,7 @@ import json
 import re
 from typing import Any
 
-from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.clients import invoke_json_prompt
 from omen.ingest.synthesizer.prompts import build_actor_ontology_prompt
 from omen.ingest.synthesizer.schema.actor import (
     ACTOR_TYPE_ALIAS,
@@ -280,17 +280,6 @@ def _normalize_actor_kind_and_role(raw_type: Any, raw_role: Any = None) -> tuple
     if normalized_role in STRATEGIC_ROLE_TOKENS:
         return "StrategicActor", role_token or normalized_role
     return "Actor", role_token or normalized_role or "actor"
-
-
-def _extract_json_object(text: str) -> dict[str, Any]:
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError("LLM response does not contain a JSON object")
-    payload = json.loads(text[start : end + 1])
-    if not isinstance(payload, dict):
-        raise ValueError("actor payload is not a JSON object")
-    return payload
 
 
 def _default_actor(case_id: str, timeline_events: list[dict[str, Any]]) -> dict[str, Any]:
@@ -730,11 +719,15 @@ def extract_actor_ontology(
     prompt = build_actor_ontology_prompt(case_doc, excerpt, timeline_json)
 
     try:
-        chat = create_chat_client(config)
-        response = chat.invoke(prompt)
-        content = response.content if isinstance(response.content, str) else json.dumps(response.content)
-        payload = _extract_json_object(content)
+        payload = invoke_json_prompt(
+            user_prompt=prompt,
+            config=config,
+            stage="actor_ontology_prompt",
+            expected_type="object",
+        )
         if payload:
+            if not isinstance(payload, dict):
+                raise ValueError("actor payload is not a JSON object")
             return _normalize_founder_payload(payload, case_doc)
     except Exception:
         pass

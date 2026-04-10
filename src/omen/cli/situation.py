@@ -7,26 +7,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.processor import fetch_url_text, save_url_source_text
-from omen.ingest.synthesizer.builders.situation import (
-    validate_situation_source_or_raise,
-)
-from omen.scenario.loader import (
-    load_situation_artifact,
-    resolve_situation_artifact_ref,
-    save_auxiliary_json,
+from omen.ingest.synthesizer.services.scenario import (
     save_scenario_ontology_markdown,
     save_scenario_ontology_slice,
-    save_situation_artifact,
-    save_situation_markdown,
 )
 from omen.scenario.planner import from_situation
 from omen.scenario.planner import ScenarioDecompositionValidationError
+from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 from omen.ingest.synthesizer.services.situation import (
-    LLMJsonValidationAbort,
-    analyze_situation_document,
-    build_situation_confidence_trace,
-    generate_situation_case_document,
+    load_situation_artifact,
+    resolve_situation_artifact_ref,
+    run_situation_analysis,
+    save_auxiliary_json,
 )
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
 
@@ -88,10 +80,6 @@ def _validate_explicit_actor_ref(actor_ref: str) -> str:
 
 def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "scenario_pack.json"
-
-
-def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
-    return situation_output_path.parent / "generation" / "log.json"
 
 
 def _resolve_scenario_generation_trace_path(scenario_output_path: Path) -> Path:
@@ -197,10 +185,6 @@ def _write_scenario_failure_trace(
     return trace_path
 
 
-def _resolve_generated_case_path(case_name: str) -> Path:
-    return Path("cases/situations") / f"{case_name}.md"
-
-
 def _derive_pack_id_from_situation_artifact(situation_artifact: dict[str, Any], situation_path: Path) -> str:
     source_meta = situation_artifact.get("source_meta") or {}
     actor_ref = source_meta.get("actor_ref")
@@ -251,12 +235,6 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
         default="1.0.0",
         help="Deterministic pack version",
     )
-    situation.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML",
-    )
 
 
 def register_scenario_command(subparsers: Any) -> None:
@@ -291,96 +269,21 @@ def register_scenario_command(subparsers: Any) -> None:
         required=False,
         help="Optional actor reference used for planning query preparation",
     )
-    scenario.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML",
-    )
 
 
 def handle_situation_analyze_command(args: Any) -> int:
+    print("Situation analysis started")
     try:
-        if args.url and (args.doc or args.input):
-            print("Analyze situation failed: use either --doc or --url, not both")
-            return 2
-
-        raw_doc = args.doc or args.input
-        if args.url:
-            print("Using URL source for situation analysis...")
-            try:
-                source_text = fetch_url_text(str(args.url))
-                source_text_path = save_url_source_text(url=str(args.url), text=source_text)
-                print(f"URL fetch: SUCCESS ({source_text_path})")
-            except Exception as exc:
-                print(f"URL fetch: ERROR ({exc})")
-                print("Unable to fetch or extract readable text from the provided URL.")
-                return 2
-
-            try:
-                print("LLM case generation from URL text...")
-                case_name, case_markdown = generate_situation_case_document(
-                    source_text=source_text,
-                    source_ref=str(args.url),
-                    source_text_path=str(source_text_path),
-                    config_path=str(args.config),
-                )
-                generated_case_path = _resolve_generated_case_path(case_name)
-                generated_case_path.parent.mkdir(parents=True, exist_ok=True)
-                generated_case_path.write_text(case_markdown, encoding="utf-8")
-                print(f"Generated situation case: SUCCESS ({generated_case_path})")
-            except Exception as exc:
-                print(f"LLM case generation: ERROR ({exc})")
-                print("Unable to convert fetched URL text into a situation case document.")
-                return 2
-
-            raw_doc = str(generated_case_path)
-
-        if not raw_doc:
-            print("Analyze situation failed: missing required argument --doc or --url")
-            return 2
-
-        input_path = _resolve_situation_doc_path(str(raw_doc))
-        if not input_path.exists():
-            print(f"Analyze situation failed: input not found: {input_path}")
-            return 2
-
-        validate_situation_source_or_raise(input_path)
-        effective_actor_ref = None
-        if args.actor is not None:
-            effective_actor_ref = _validate_explicit_actor_ref(str(args.actor))
-        pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
-        output_path_arg = (
-            Path(args.output)
-            if args.output
-            else _resolve_default_output_path(input_path, pack_id)
-        )
-
-        if effective_actor_ref:
-            print("Building scenario pack with strategic actor context...")
-
-        situation_artifact = analyze_situation_document(
-            situation_file=input_path,
-            actor_ref=effective_actor_ref,
-            pack_id=pack_id,
+        run_situation_analysis(
+            doc=args.doc,
+            input_alias=args.input,
+            url=args.url,
+            actor=args.actor,
+            output=args.output,
+            pack_id=str(args.pack_id) if args.pack_id else None,
             pack_version=str(args.pack_version),
-            config_path=str(args.config),
         )
-        context = situation_artifact.get("context")
-        if effective_actor_ref and isinstance(context, dict):
-            context["actor_ref"] = effective_actor_ref
-        output_path = save_situation_artifact(output_path_arg, situation_artifact)
-        markdown_path = output_path.with_suffix(".md")
-        save_situation_markdown(markdown_path, situation_artifact, config_path=str(args.config))
-        generation_trace_path = _resolve_generation_trace_output_path(output_path)
-        generation_trace_payload = build_situation_confidence_trace(
-            situation_artifact=situation_artifact,
-            situation_artifact_path=output_path,
-        )
-        save_auxiliary_json(generation_trace_path, generation_trace_payload)
-        print(f"Saved situation artifact to {output_path}")
-        print(f"Saved situation summary to {markdown_path}")
-        print(f"Saved situation generation trace to {generation_trace_path}")
+        print("Situation analysis completed")
         return 0
     except DeferredScopeFeatureError as exc:
         print(f"Deferred scope: {exc}")
@@ -396,7 +299,7 @@ def handle_situation_analyze_command(args: Any) -> int:
         )
         return 2
     except Exception as exc:
-        print(f"Analyze situation failed: {exc}")
+        print(f"Situation analysis failed: {exc}")
         return 2
 
 
@@ -429,7 +332,6 @@ def handle_scenario_command(args: Any) -> int:
             pack_id=pack_id,
             pack_version=str(args.pack_version),
             actor_ref=actor_ref,
-            config_path=str(args.config),
             traces_dir=output_path_arg.parent / "traces",
         )
         planner_trace = dict(ontology.pop("_planner_trace", {}) or {})

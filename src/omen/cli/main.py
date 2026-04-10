@@ -26,11 +26,11 @@ from omen.explain.report import build_explanation_report
 from omen.ingest.synthesizer.builders.assertion import build_assertions_from_candidates
 from omen.ingest.synthesizer.builders.candidate import build_candidates_from_text
 from omen.ingest.processor import build_source_inventory, extract_pdf_pages
-from omen.scenario.loader import (
+from omen.ingest.synthesizer.services.scenario import (
     load_case_package_from_scenario,
     load_scenario_with_ontology,
 )
-from omen.scenario.ontology_loader import load_ontology_input
+from omen.ingest.synthesizer.builders.scenario import load_ontology_input
 from omen.scenario.ingest_validator import validate_extracted_entity_candidates_or_raise
 from omen.scenario.ingest_validator import validate_ontology_assertion_candidates_or_raise
 from omen.scenario.ingest_validator import validate_precision_profile_or_raise

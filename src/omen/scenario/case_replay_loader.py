@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from omen.scenario.ontology_loader import bind_ontology_to_scenario
+from omen.ingest.synthesizer.builders.scenario import bind_ontology_to_scenario
 from omen.ingest.validators.strategy import (
     validate_ontology_input_with_warnings,
 )

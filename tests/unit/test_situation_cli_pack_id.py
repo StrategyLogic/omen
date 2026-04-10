@@ -5,8 +5,8 @@ from omen.cli.situation import (
     _derive_default_pack_id,
     _derive_pack_id_from_situation_artifact,
     _resolve_default_output_path,
-    _resolve_generation_trace_output_path,
     _resolve_splitter_default_output_path,
+    _resolve_scenario_generation_trace_path,
 )
 
 
@@ -50,7 +50,7 @@ def test_default_output_paths_follow_pack_id() -> None:
 
 
 def test_generation_trace_path_uses_generation_suffix() -> None:
-    trace_output = _resolve_generation_trace_output_path(
+    trace_output = _resolve_scenario_generation_trace_path(
         Path("data/scenarios/nokia_v1/situation.json")
     )
     assert trace_output == Path("data/scenarios/nokia_v1/generation/log.json")

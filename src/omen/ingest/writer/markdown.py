@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
+from omen.ingest.synthesizer.clients import invoke_json_prompt, invoke_text_prompt, render_prompt_template
+from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 
 _REQUIRED_SECTION_LABELS = (
@@ -137,7 +138,7 @@ def _build_brief_prompt_payload(situation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_situation_brief(situation: dict[str, object], config_path: str = "config/llm.toml") -> str:
+def render_situation_brief(situation: dict[str, object]) -> str:
     template = _load_brief_template()
     system_prompt, user_prompt_template = _load_report_prompts()
     prompt_payload = _build_brief_prompt_payload(dict(situation))
@@ -150,7 +151,6 @@ def render_situation_brief(situation: dict[str, object], config_path: str = "con
         },
     )
     generated = invoke_text_prompt(
-        config_path=config_path,
         system_prompt=system_prompt,
         user_prompt=user_prompt,
     )
@@ -158,6 +158,13 @@ def render_situation_brief(situation: dict[str, object], config_path: str = "con
     if not _looks_like_expected_brief(generated):
         raise ValueError("generated situation brief does not match expected report format")
     return generated.strip() + "\n"
+
+
+def save_situation_brief(path: str | Path, situation: dict[str, object]) -> Path:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(render_situation_brief(situation), encoding="utf-8")
+    return output_path
 
 
 def render_situation_case(
@@ -224,3 +231,115 @@ def render_situation_case(
     ).strip()
 
     return case_name, markdown + "\n"
+
+
+def _invoke_case_json_prompt(prompt: str) -> dict[str, Any]:
+    retry_prompt = build_json_retry_prompt(prompt)
+    payload = invoke_json_prompt(
+        user_prompt=prompt,
+        allow_retry=True,
+        retry_prompt=retry_prompt,
+        stage="situation_source_to_case_prompt",
+        expected_type="object",
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("situation source-to-case response must be a JSON object")
+    return payload
+
+
+def save_situation_case_from_source(
+    *,
+    source_text: str,
+    source_ref: str,
+    source_text_path: str,
+    output_dir: str | Path = "cases/situations",
+) -> Path:
+    prompt = render_prompt_template(
+        get_prompt_template("situation_source_to_case_prompt", tier="base"),
+        {
+            "source_ref": source_ref,
+            "source_text_path": source_text_path,
+            "source_text": source_text,
+        },
+    )
+    payload = _invoke_case_json_prompt(prompt)
+    case_name, case_markdown = render_situation_case(
+        payload=payload,
+        source_ref=source_ref,
+        source_text_path=source_text_path,
+    )
+    output_path = Path(output_dir) / f"{case_name}.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(case_markdown, encoding="utf-8")
+    return output_path
+
+
+def render_scenario_ontology_markdown(ontology: dict[str, Any]) -> str:
+    lines: list[str] = []
+    lines.append(f"# Scenario Ontology: {ontology.get('derived_from_situation_id', 'unknown')}")
+    lines.append("")
+    lines.append(f"- pack_id: {ontology.get('pack_id', 'unknown')}")
+    lines.append(f"- pack_version: {ontology.get('pack_version', 'unknown')}")
+    lines.append(f"- ontology_version: {ontology.get('ontology_version', 'unknown')}")
+
+    source_meta = ontology.get("source_meta") or {}
+    source_path = source_meta.get("source_path")
+    if source_path:
+        lines.append(f"- source_path: {source_path}")
+    generated_at = source_meta.get("generated_at")
+    if generated_at:
+        lines.append(f"- generated_at: {generated_at}")
+
+    for scenario in ontology.get("scenarios", []):
+        key = scenario.get("scenario_key", "?")
+        title = scenario.get("title", "")
+        lines.append("")
+        lines.append(f"## Scenario {key}: {title}")
+        lines.append("")
+        lines.append(f"- goal: {scenario.get('goal', '')}")
+        lines.append(f"- target: {scenario.get('target', '')}")
+        lines.append(f"- objective: {scenario.get('objective', '')}")
+
+        variables = scenario.get("variables") or []
+        lines.append("- variables:")
+        for item in variables:
+            name = str(item.get("name") or "unknown")
+            vtype = str(item.get("type") or "unknown")
+            lines.append(f"  - {name} ({vtype})")
+
+        constraints = scenario.get("constraints") or []
+        lines.append("- constraints:")
+        for item in constraints:
+            lines.append(f"  - {item}")
+
+        tradeoffs = scenario.get("tradeoff_pressure") or []
+        lines.append("- tradeoff_pressure:")
+        for item in tradeoffs:
+            lines.append(f"  - {item}")
+
+        resistance = scenario.get("resistance_assumptions") or {}
+        lines.append("- resistance_assumptions:")
+        for field in (
+            "structural_conflict",
+            "resource_reallocation_drag",
+            "cultural_misalignment",
+            "veto_node_intensity",
+            "aggregate_resistance",
+        ):
+            if field in resistance:
+                lines.append(f"  - {field}: {resistance[field]}")
+
+        rationale = resistance.get("assumption_rationale") or []
+        if rationale:
+            lines.append("- assumption_rationale:")
+            for item in rationale:
+                lines.append(f"  - {item}")
+
+        modeling_notes = scenario.get("modeling_notes") or []
+        if modeling_notes:
+            lines.append("- modeling_notes:")
+            for item in modeling_notes:
+                lines.append(f"  - {item}")
+
+    lines.append("")
+    return "\n".join(lines)

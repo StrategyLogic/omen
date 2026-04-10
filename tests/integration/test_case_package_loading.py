@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from omen.scenario.loader import load_case_package_from_scenario
+from omen.ingest.synthesizer.services.scenario import load_case_package_from_scenario
 
 
 ROOT = Path(__file__).resolve().parents[2]

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from omen.ingest.synthesizer.builders.actor import extract_actor_ontology
@@ -99,14 +98,10 @@ def test_actor_builder_profile_for_chen_case(monkeypatch) -> None:
         "influences": [],
     }
 
-    class _Response:
-        content = json.dumps(llm_payload, ensure_ascii=False)
-
-    class _Chat:
-        def invoke(self, _prompt: str):
-            return _Response()
-
-    monkeypatch.setattr("omen.ingest.synthesizer.builders.actor.create_chat_client", lambda _cfg: _Chat())
+    monkeypatch.setattr(
+        "omen.ingest.synthesizer.builders.actor.invoke_json_prompt",
+        lambda **kwargs: llm_payload,
+    )
 
     actor_ontology = extract_actor_ontology(
         case_doc=case_doc,
@@ -210,14 +205,10 @@ def test_actor_builder_normalizes_competitor_product_and_influences(monkeypatch)
         "influences": [],
     }
 
-    class _Response:
-        content = json.dumps(llm_payload, ensure_ascii=False)
-
-    class _Chat:
-        def invoke(self, _prompt: str):
-            return _Response()
-
-    monkeypatch.setattr("omen.ingest.synthesizer.builders.actor.create_chat_client", lambda _cfg: _Chat())
+    monkeypatch.setattr(
+        "omen.ingest.synthesizer.builders.actor.invoke_json_prompt",
+        lambda **kwargs: llm_payload,
+    )
 
     actor_ontology = extract_actor_ontology(
         case_doc=case_doc,
@@ -290,14 +281,10 @@ def test_actor_builder_backfills_background_facts_from_events(monkeypatch) -> No
         "influences": [],
     }
 
-    class _Response:
-        content = json.dumps(llm_payload, ensure_ascii=False)
-
-    class _Chat:
-        def invoke(self, _prompt: str):
-            return _Response()
-
-    monkeypatch.setattr("omen.ingest.synthesizer.builders.actor.create_chat_client", lambda _cfg: _Chat())
+    monkeypatch.setattr(
+        "omen.ingest.synthesizer.builders.actor.invoke_json_prompt",
+        lambda **kwargs: llm_payload,
+    )
 
     actor_ontology = extract_actor_ontology(
         case_doc=case_doc,

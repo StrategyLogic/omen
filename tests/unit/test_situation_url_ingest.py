@@ -23,43 +23,12 @@ def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, 
     generated_case_path = tmp_path / "cases" / "situations" / "nokia_case.md"
     situation_output_path = tmp_path / "data" / "scenarios" / "nokia_v1" / "nokia_case_situation.json"
 
-    monkeypatch.setattr(situation_cli, "fetch_url_text", lambda url: "Fetched article text")
     monkeypatch.setattr(
         situation_cli,
-        "save_url_source_text",
-        lambda *, url, text: tmp_path / "data" / "ingest" / "source" / "example.txt",
-    )
-    monkeypatch.setattr(
-        situation_cli,
-        "generate_situation_case_document",
-        lambda *, source_text, source_ref, source_text_path: ("nokia_case", "# Nokia Case\n\nBody\n"),
-    )
-    monkeypatch.setattr(situation_cli, "_resolve_generated_case_path", lambda case_name: generated_case_path)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
-    monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "nokia_v1")
-    monkeypatch.setattr(situation_cli, "_resolve_default_output_path", lambda input_path, pack_id: situation_output_path)
-    monkeypatch.setattr(
-        situation_cli,
-        "analyze_and_save_situation",
+        "analyze_and_save_situation_from_url",
         lambda **kwargs: {
-            "situation_artifact": {
-                "version": "0.1.0",
-                "id": "nokia_case",
-                "context": {
-                    "title": "Nokia Case",
-                    "core_question": "What next?",
-                    "current_state": "State",
-                    "core_dilemma": "Dilemma",
-                    "key_decision_point": "Decision",
-                    "target_outcomes": ["Outcome"],
-                    "hard_constraints": ["Constraint"],
-                    "known_unknowns": ["Unknown"],
-                },
-                "signals": [{"name": "Signal"}],
-                "uncertainty_space": {"confidence_risk": 0.4, "confidence_overall": 0.7, "metrics": {"cognitive_coverage": 0.5}},
-                "source_meta": {"source_path": str(generated_case_path), "generated_at": "2026-04-05T12:00:00", "pack_id": "nokia_v1", "pack_version": "1.0.0"},
-                "source_trace": [{"source_path": str(generated_case_path), "situation_id": "nokia_case"}],
-            },
+            "source_text_path": tmp_path / "data" / "ingest" / "source" / "example.txt",
+            "generated_case_path": generated_case_path,
             "artifact_path": situation_output_path,
             "markdown_path": situation_output_path.with_suffix(".md"),
             "generation_trace_path": situation_output_path.parent / "generation" / "log.json",
@@ -80,7 +49,7 @@ def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, 
     output = capsys.readouterr().out
 
     assert result == 0
-    assert generated_case_path.exists()
+    assert str(generated_case_path) in output
     assert "Using URL source for situation analysis..." in output
     assert "URL fetch: SUCCESS" in output
     assert "Generated situation case: SUCCESS" in output

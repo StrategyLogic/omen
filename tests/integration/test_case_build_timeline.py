@@ -32,16 +32,9 @@ def test_timeline_extraction_falls_back_to_chunk_grounded_events(monkeypatch, tm
         "2018: Pricing and expansion adjustments followed.",
     ]
 
-    class _BrokenResponse:
-        content = "not json"
-
-    class _BrokenChatClient:
-        def invoke(self, _prompt: str):
-            return _BrokenResponse()
-
     monkeypatch.setattr(
-        "omen.ingest.synthesizer.builders.event.create_chat_client",
-        lambda _cfg: _BrokenChatClient(),
+        "omen.ingest.synthesizer.builders.event.invoke_json_prompt",
+        lambda **kwargs: (_ for _ in ()).throw(ValueError("not json")),
     )
 
     events = extract_timeline_events(case_doc=case_doc, chunks=chunks, config=_minimal_config())

@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
+from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
 from omen.ingest.writer.markdown import save_situation_brief, save_situation_case_from_source
 from omen.ingest.validators.situation import validate_situation_artifact_or_raise
 from omen.ingest.validators.situation import validate_situation_source_or_raise
+from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME
 
 from omen.ingest.synthesizer.builders import situation as _builder
 
@@ -64,8 +66,27 @@ def _validate_explicit_actor_ref(actor_ref: str) -> str:
 
     raise ValueError(
         "actor reference not found. Pass an existing actor artifact path with --actor, "
-        "or omit --actor for decoupled situation analysis"
+        "or omit --actor to auto-build and link a strategic actor from the situation case"
     )
+
+
+def _resolve_actor_ref_for_analysis(*, actor: str | None, input_path: Path) -> str:
+    if actor is not None:
+        return _validate_explicit_actor_ref(actor)
+
+    print("No explicit actor provided; building strategic actor from situation case...")
+    _case_id, case_dir = ensure_actor_artifacts(
+        doc=str(input_path),
+        title=None,
+        known_outcome=None,
+        config_path="config/llm.toml",
+        output_dir="output/actors",
+    )
+    actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
+    if not actor_path.exists():
+        raise ValueError(f"auto-generated actor artifact not found: {actor_path}")
+    print(f"Actor context auto-linked: {actor_path}")
+    return str(actor_path)
 
 
 def analyze_situation_document(
@@ -154,8 +175,6 @@ def run_situation_analysis(
     if url and (doc or input_alias):
         raise ValueError("use either --doc or --url, not both")
 
-    effective_actor_ref = _validate_explicit_actor_ref(actor) if actor is not None else None
-
     if url:
         print(f"URL fetch started: {url}")
         source_text = fetch_url_text(str(url))
@@ -178,6 +197,8 @@ def run_situation_analysis(
         if not input_path.exists():
             raise ValueError(f"input not found: {input_path}")
         validate_situation_source_or_raise(input_path)
+
+    effective_actor_ref = _resolve_actor_ref_for_analysis(actor=actor, input_path=input_path)
 
     effective_pack_id = str(pack_id) if pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
     output_path = Path(output) if output else _resolve_default_output_path(effective_pack_id)

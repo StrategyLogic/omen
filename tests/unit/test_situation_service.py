@@ -46,6 +46,11 @@ def test_run_situation_analysis_doc_flow_uses_defaults(monkeypatch, tmp_path: Pa
         "validate_situation_source_or_raise",
         lambda p: validated_paths.append(Path(p)),
     )
+    monkeypatch.setattr(
+        situation_service,
+        "_resolve_actor_ref_for_analysis",
+        lambda *, actor, input_path: "output/actors/nokia-elop-2010/actor_ontology.json",
+    )
 
     def _fake_analyze(**kwargs: object) -> None:
         captured.update(kwargs)
@@ -64,10 +69,10 @@ def test_run_situation_analysis_doc_flow_uses_defaults(monkeypatch, tmp_path: Pa
 
     assert validated_paths == [doc_path]
     assert captured["situation_file"] == doc_path
-    assert captured["actor_ref"] is None
-    assert captured["pack_id"] == "nokia_v1"
+    assert captured["actor_ref"] == "output/actors/nokia-elop-2010/actor_ontology.json"
+    assert captured["pack_id"] == "strategic_actor_nokia_v1"
     assert captured["pack_version"] == "1.0.0"
-    assert captured["output_path"] == Path("data/scenarios/nokia_v1/situation.json")
+    assert captured["output_path"] == Path("data/scenarios/strategic_actor_nokia_v1/situation.json")
 
 
 def test_run_situation_analysis_url_flow_generates_case_then_analyzes(monkeypatch, tmp_path: Path) -> None:
@@ -92,6 +97,11 @@ def test_run_situation_analysis_url_flow_generates_case_then_analyzes(monkeypatc
         return generated_case_path
 
     monkeypatch.setattr(situation_service, "save_situation_case_from_source", _fake_save_case)
+    monkeypatch.setattr(
+        situation_service,
+        "_resolve_actor_ref_for_analysis",
+        lambda *, actor, input_path: "output/actors/sap-case/actor_ontology.json",
+    )
     monkeypatch.setattr(
         situation_service,
         "validate_situation_source_or_raise",
@@ -121,7 +131,8 @@ def test_run_situation_analysis_url_flow_generates_case_then_analyzes(monkeypatc
     analyze_kwargs = calls["analyze"]
     assert isinstance(analyze_kwargs, dict)
     assert analyze_kwargs["situation_file"] == generated_case_path
-    assert analyze_kwargs["pack_id"] == "sap_v1"
+    assert analyze_kwargs["pack_id"] == "strategic_actor_sap_v1"
+    assert analyze_kwargs["actor_ref"] == "output/actors/sap-case/actor_ontology.json"
 
 
 def test_run_situation_analysis_accepts_explicit_actor_path(monkeypatch, tmp_path: Path) -> None:
@@ -171,6 +182,23 @@ def test_run_situation_analysis_requires_doc_or_url() -> None:
             input_alias=None,
             url=None,
             actor=None,
+            output=None,
+            pack_id=None,
+            pack_version="1.0.0",
+        )
+
+
+def test_run_situation_analysis_rejects_empty_actor_argument(tmp_path: Path) -> None:
+    doc_path = tmp_path / "cases" / "situations" / "case.md"
+    doc_path.parent.mkdir(parents=True, exist_ok=True)
+    doc_path.write_text("content", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="actor reference is empty"):
+        situation_service.run_situation_analysis(
+            doc=str(doc_path),
+            input_alias=None,
+            url=None,
+            actor="",
             output=None,
             pack_id=None,
             pack_version="1.0.0",

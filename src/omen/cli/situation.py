@@ -74,7 +74,7 @@ def _validate_explicit_actor_ref(actor_ref: str) -> str:
 
     raise ValueError(
         "actor reference not found. Pass an existing actor artifact path with --actor, "
-        "or omit --actor for decoupled situation analysis"
+        "or omit --actor to auto-build and link a strategic actor from the situation case"
     )
 
 
@@ -216,7 +216,7 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
     situation.add_argument(
         "--actor",
         required=False,
-        help="Optional existing actor artifact path used as background context. Omit --actor to run a decoupled situation analysis",
+        help="Optional existing actor artifact path used as background context. Omit --actor to auto-build and link a strategic actor from the situation case",
     )
     situation.add_argument(
         "--output",

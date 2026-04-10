@@ -4,10 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from omen.analysis.actor.strategy import (
-    generate_condition_sets,
-)
-
 
 def get_simulate_reasoning_order() -> tuple[str, ...]:
     return (
@@ -54,29 +50,6 @@ def derive_actor_path(
             f"Primary capability anchor: {dominant_capability}",
         ],
     }
-
-
-def derive_scenario_conditions(
-    *,
-    scenario_key: str,
-    actor_derivation: dict[str, Any],
-    selected_dimensions: dict[str, Any],
-    resistance_baseline: dict[str, Any],
-) -> dict[str, Any]:
-    conditions = generate_condition_sets(
-        scenario_key=scenario_key,
-        resistance_baseline=resistance_baseline,
-    )
-
-    selected = [str(item).strip() for item in (selected_dimensions.get("selected_dimension_keys") or []) if str(item).strip()]
-    style = str(actor_derivation.get("decision_style") or "balanced")
-    if selected:
-        conditions["required"].append(
-            f"围绕关键能力维度执行: {', '.join(selected[:2])}"
-        )
-    conditions["required"].append(f"执行决策风格: {style}")
-    conditions["reasoning_order"] = list(get_simulate_reasoning_order())
-    return conditions
 
 
 def build_actor_derivation_trace(

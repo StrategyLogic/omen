@@ -25,7 +25,6 @@ from omen.simulation.actor import (
     build_actor_derivation_artifact,
     build_actor_derivation_trace,
     build_comparability_metadata,
-    derive_scenario_conditions,
     derive_actor_path,
 )
 from omen.simulation.reason import (
@@ -88,12 +87,11 @@ def run_deterministic_simulate_from_pack(
             evidence_refs=[],
             scenario_key=scenario_key,
         )
-        scenario_conditions = derive_scenario_conditions(
-            scenario_key=scenario_key,
-            actor_derivation=actor_derivation,
-            selected_dimensions=selected_dimensions,
-            resistance_baseline=scenario["resistance_baseline"],
-        )
+        scenario_conditions = {
+            "required": [],
+            "warning": [],
+            "blocking": [],
+        }
         derivation_trace = build_actor_derivation_trace(
             scenario_key=scenario_key,
             scenario_ontology=scene,
@@ -145,7 +143,7 @@ def run_deterministic_simulate_from_pack(
             scenario_results,
             order=DETERMINISTIC_PACK_REQUIRED_SLOTS,
         ),
-        "recommendation_summary": build_recommendation_from_condition_sets(scenario_results),
+        "recommendation_summary": "",
         "comparability": comparability,
         "export_status": "success",
     }
@@ -198,22 +196,46 @@ def run_deterministic_simulate_from_pack(
             for item in reason_chain_rows
             if isinstance(item, dict)
         }
+        scene_by_key = {str(key): dict(scene) for key, scene, _ in raw_reason_chain_inputs}
         for result in scenario_results:
             key = str(result.get("scenario_key") or "")
             reason_chain = chain_by_key.get(key, {})
             buckets = extract_conclusion_buckets(dict(reason_chain.get("conclusions") or {}))
-            conditions = dict(result.get("scenario_conditions") or {})
-            conditions["required"] = [str(item.get("text") or "").strip() for item in buckets["required"] if str(item.get("text") or "").strip()]
-            conditions["warning"] = [str(item.get("text") or "").strip() for item in buckets["warning"] if str(item.get("text") or "").strip()]
-            conditions["blocking"] = [str(item.get("text") or "").strip() for item in buckets["blocking"] if str(item.get("text") or "").strip()]
+            conditions = {
+                "required": [
+                    str(item.get("text") or "").strip()
+                    for item in buckets["required"]
+                    if str(item.get("text") or "").strip()
+                ],
+                "warning": [
+                    str(item.get("text") or "").strip()
+                    for item in buckets["warning"]
+                    if str(item.get("text") or "").strip()
+                ],
+                "blocking": [
+                    str(item.get("text") or "").strip()
+                    for item in buckets["blocking"]
+                    if str(item.get("text") or "").strip()
+                ],
+            }
             result["scenario_conditions"] = conditions
             result["evidence_refs"] = build_linked_evidence_refs(reason_chain)
 
+            missing_reasons = list((result.get("derivation_trace") or {}).get("missing_evidence_reasons") or [])
             if result["evidence_refs"]:
                 result["confidence_level"] = "full-confidence"
-                derivation_trace = dict(result.get("derivation_trace") or {})
-                derivation_trace["missing_evidence_reasons"] = []
-                result["derivation_trace"] = derivation_trace
+                missing_reasons = []
+
+            result["derivation_trace"] = build_actor_derivation_trace(
+                scenario_key=key,
+                scenario_ontology=scene_by_key.get(key, {}),
+                actor_derivation=dict(result.get("actor_derivation") or {}),
+                selected_dimensions=dict(result.get("selected_dimensions") or {}),
+                strategic_conditions=conditions,
+                missing_evidence_reasons=missing_reasons,
+            )
+
+        artifact["recommendation_summary"] = build_recommendation_from_condition_sets(scenario_results)
 
         for row in scenario_derivations:
             key = str(row.get("scenario_key") or "").strip().lower()

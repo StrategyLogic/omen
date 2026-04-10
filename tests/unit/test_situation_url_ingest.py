@@ -291,7 +291,7 @@ def test_handle_scenario_command_writes_non_json_llm_output(monkeypatch, tmp_pat
     )
     monkeypatch.setattr(
         situation_cli,
-        "plan_scenarios_from_situation",
+        "from_situation",
         lambda **kwargs: (_ for _ in ()).throw(
             LLMJsonValidationAbort(
                 stage="situation_decompose_prompt",
@@ -349,7 +349,7 @@ def test_handle_scenario_command_writes_output_for_generic_validation_failure(
     )
     monkeypatch.setattr(
         situation_cli,
-        "plan_scenarios_from_situation",
+        "from_situation",
         lambda **kwargs: (_ for _ in ()).throw(
             ScenarioDecompositionValidationError(
                 "Scenario decomposition validation failed: `scenarios` must be a JSON array",

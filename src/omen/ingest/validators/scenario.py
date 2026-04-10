@@ -92,6 +92,26 @@ def is_scenario_ontology_input_path(path: str | Path) -> bool:
     return is_scenario_ontology_input_payload(payload)
 
 
+def is_situation_planned_scenario_payload(payload: Any) -> bool:
+    if not is_scenario_ontology_input_payload(payload):
+        return False
+    if not isinstance(payload, dict):
+        return False
+
+    situation_id = str(payload.get("derived_from_situation_id") or "").strip()
+    planning_query_ref = str(payload.get("planning_query_ref") or "").strip()
+    prior_snapshot_ref = str(payload.get("prior_snapshot_ref") or "").strip()
+    return bool(situation_id and planning_query_ref and prior_snapshot_ref)
+
+
+def is_situation_planned_scenario_path(path: str | Path) -> bool:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return is_situation_planned_scenario_payload(payload)
+
+
 class ResultArtifactContract(BaseModel):
     scenario_id: str = Field(min_length=1)
     outcome_class: str = Field(min_length=1)

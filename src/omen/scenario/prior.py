@@ -8,7 +8,7 @@ from typing import Any
 from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
-from omen.analysis.actor.formation import extract_strategic_actor_style_payload
+from omen.analysis.actor.formation import strategic_style
 from omen.analysis.actor.formation import load_actor_ontology_payload
 from omen.scenario.models import ScenarioPriorProbabilitySnapshotModel
 
@@ -73,7 +73,7 @@ def score_prior_probabilities(
     config_path: str,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     actor_payload = load_actor_ontology_payload(actor_ref)
-    actor_style = extract_strategic_actor_style_payload(actor_payload)
+    actor_style = strategic_style(actor_payload)
     scenario_candidates = _build_prior_candidates_from_scenarios(scenario_ontology)
     prompt = _render_base_prompt(
         "scenario_prior_prompt",

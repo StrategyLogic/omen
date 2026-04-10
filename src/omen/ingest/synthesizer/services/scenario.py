@@ -123,7 +123,7 @@ def _is_filled_field(field_name: str, value: Any) -> bool:
     return bool(str(value or "").strip())
 
 
-def _assess_scenario_decomposition_quality(payload: dict[str, Any]) -> dict[str, Any]:
+def _assess_quality(payload: dict[str, Any]) -> dict[str, Any]:
     scenarios = payload.get("scenarios")
     coerced = _coerce_slot_payloads(scenarios)
     by_slot: dict[str, Any] = coerced["by_slot"]
@@ -181,7 +181,7 @@ def _assess_scenario_decomposition_quality(payload: dict[str, Any]) -> dict[str,
     }
 
 
-def _normalize_decomposition_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _normalize(payload: dict[str, Any]) -> dict[str, Any]:
     scenarios = payload.get("scenarios")
     normalized_scenarios: list[Any]
 
@@ -235,7 +235,7 @@ def _normalize_decomposition_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def decompose_scenario_from_situation(
+def planning(
     *,
     situation_artifact: dict[str, Any],
     pack_id: str,
@@ -259,8 +259,8 @@ def decompose_scenario_from_situation(
         config_path=config_path,
         stage="situation_decompose_prompt",
     )
-    payload = _normalize_decomposition_payload(payload)
-    quality = _assess_scenario_decomposition_quality(payload)
+    payload = _normalize(payload)
+    quality = _assess_quality(payload)
 
     retries = 0
     if quality["schema_completeness_ratio"] < 0.5:
@@ -275,8 +275,8 @@ def decompose_scenario_from_situation(
             config_path=config_path,
             stage="situation_decompose_prompt",
         )
-        payload = _normalize_decomposition_payload(payload)
-        quality = _assess_scenario_decomposition_quality(payload)
+        payload = _normalize(payload)
+        quality = _assess_quality(payload)
         retries = 1
 
     payload.setdefault("pack_id", pack_id)
@@ -299,14 +299,14 @@ def decompose_scenario_from_situation(
     return payload
 
 
-def load_scenario_ontology_slice_payload(path: str | Path) -> dict[str, Any]:
+def load(path: str | Path) -> dict[str, Any]:
     scenario_path = Path(path)
     payload = json.loads(scenario_path.read_text(encoding="utf-8"))
     validated = validate_scenario_ontology_slice_or_raise(payload)
     return validated.model_dump()
 
 
-def scenario_ontology_to_deterministic(ontology: dict[str, Any]) -> dict[str, Any]:
+def pack(ontology: dict[str, Any]) -> dict[str, Any]:
     scenarios: list[dict[str, Any]] = []
     for scenario in ontology.get("scenarios", []):
         if not isinstance(scenario, dict):
@@ -336,9 +336,9 @@ def scenario_ontology_to_deterministic(ontology: dict[str, Any]) -> dict[str, An
     }
 
 
-def prepare_deterministic_inputs_from_scenario(path: str | Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    ontology = load_scenario_ontology_slice_payload(path)
-    deterministic_pack = scenario_ontology_to_deterministic(ontology)
+def prepare(path: str | Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    ontology = load(path)
+    deterministic_pack = pack(ontology)
     validated_pack = validate_deterministic_scenario_pack_or_raise(deterministic_pack)
     planned_scenarios = {
         str(item.get("scenario_key") or ""): dict(item)

@@ -12,14 +12,12 @@ from omen.analysis.actor.formation import (
     project_scenario_selected_dimensions,
 )
 from omen.analysis.actor.report_writer import (
-    attach_strategic_freedom_summary,
     build_fixed_order_scenario_comparison,
     write_actor_derivation_artifact,
     write_deterministic_run_artifact,
     write_reason_chain_artifact,
     write_reason_chain_view_model_artifact,
 )
-from omen.analysis.actor.strategy import calculate_strategic_freedom_factor
 from omen.ingest.synthesizer.services.scenario import prepare
 from omen.ingest.synthesizer.prompts.registry import get_scenario_reason_chain_prompt_version_token
 from omen.ingest.validators.scenario import is_situation_planned_scenario_path
@@ -27,8 +25,8 @@ from omen.simulation.actor import (
     build_actor_derivation_artifact,
     build_actor_derivation_trace,
     build_comparability_metadata,
+    derive_scenario_conditions,
     derive_actor_path,
-    get_simulate_reasoning_order,
 )
 from omen.simulation.reason import (
     apply_partial_evidence_confidence_policy,
@@ -92,23 +90,18 @@ def run_deterministic_simulate_from_pack(
             evidence_refs=[],
             scenario_key=scenario_key,
         )
-        strategic_score = calculate_strategic_freedom_factor(
-            capability_fit=capability_fit["fit"],
+        scenario_conditions = derive_scenario_conditions(
+            scenario_key=scenario_key,
+            actor_derivation=actor_derivation,
+            selected_dimensions=selected_dimensions,
             resistance_baseline=scenario["resistance_baseline"],
         )
-        strategic_conditions = {
-            "score": strategic_score,
-            "required": [],
-            "warning": [],
-            "blocking": [],
-            "reasoning_order": list(get_simulate_reasoning_order()),
-        }
         derivation_trace = build_actor_derivation_trace(
             scenario_key=scenario_key,
             scenario_ontology=scene,
             actor_derivation=actor_derivation,
             selected_dimensions=selected_dimensions,
-            strategic_conditions=strategic_conditions,
+            strategic_conditions=scenario_conditions,
             missing_evidence_reasons=missing_reasons,
         )
 
@@ -119,7 +112,7 @@ def run_deterministic_simulate_from_pack(
                 "selected_dimensions": selected_dimensions,
                 "actor_derivation": actor_derivation,
                 "resistance": scenario["resistance_baseline"],
-                "strategic_freedom": strategic_conditions,
+                "scenario_conditions": scenario_conditions,
                 "derivation_trace": derivation_trace,
                 "evidence_refs": [],
                 "confidence_level": confidence_level,
@@ -130,7 +123,6 @@ def run_deterministic_simulate_from_pack(
                 "scenario_key": scenario_key,
                 "actor_derivation": actor_derivation,
                 "selected_dimensions": selected_dimensions,
-                "strategic_freedom_score": strategic_score,
             }
         )
         raw_reason_chain_inputs.append((scenario_key, scene, scenario_results[-1]))
@@ -221,11 +213,11 @@ def run_deterministic_simulate_from_pack(
             key = str(result.get("scenario_key") or "")
             reason_chain = chain_by_key.get(key, {})
             buckets = extract_conclusion_buckets(dict(reason_chain.get("conclusions") or {}))
-            freedom = dict(result.get("strategic_freedom") or {})
-            freedom["required"] = [str(item.get("text") or "").strip() for item in buckets["required"] if str(item.get("text") or "").strip()]
-            freedom["warning"] = [str(item.get("text") or "").strip() for item in buckets["warning"] if str(item.get("text") or "").strip()]
-            freedom["blocking"] = [str(item.get("text") or "").strip() for item in buckets["blocking"] if str(item.get("text") or "").strip()]
-            result["strategic_freedom"] = freedom
+            conditions = dict(result.get("scenario_conditions") or {})
+            conditions["required"] = [str(item.get("text") or "").strip() for item in buckets["required"] if str(item.get("text") or "").strip()]
+            conditions["warning"] = [str(item.get("text") or "").strip() for item in buckets["warning"] if str(item.get("text") or "").strip()]
+            conditions["blocking"] = [str(item.get("text") or "").strip() for item in buckets["blocking"] if str(item.get("text") or "").strip()]
+            result["scenario_conditions"] = conditions
             result["evidence_refs"] = build_linked_evidence_refs(reason_chain)
 
             if result["evidence_refs"]:
@@ -257,7 +249,7 @@ def run_deterministic_simulate_from_pack(
             saved_view_model = write_reason_chain_view_model_artifact(view_model_path, view_model_artifact)
             artifact["reason_chain_view_model_ref"] = str(saved_view_model)
 
-    return attach_strategic_freedom_summary(artifact)
+    return artifact
 
 
 def run_deterministic_compare_from_pack(

@@ -11,19 +11,16 @@ def test_actor_derivation_baseline_contract_fields() -> None:
         "scenario_key": "A",
         "actor_derivation": {"decision_style": "offense_breakthrough"},
         "selected_dimensions": {"selected_dimension_keys": ["ecosystem_control"]},
-        "strategic_freedom_score": 0.73,
       },
       {
         "scenario_key": "B",
         "actor_derivation": {"decision_style": "defense_resilience"},
         "selected_dimensions": {"selected_dimension_keys": ["execution_velocity"]},
-        "strategic_freedom_score": 0.51,
       },
       {
         "scenario_key": "C",
         "actor_derivation": {"decision_style": "confrontation_competition"},
         "selected_dimensions": {"selected_dimension_keys": ["execution_velocity"]},
-        "strategic_freedom_score": 0.49,
       },
     ],
   )
@@ -38,4 +35,3 @@ def test_actor_derivation_baseline_contract_fields() -> None:
   assert [row.get("scenario_key") for row in rows] == ["A", "B", "C"]
   assert all("actor_derivation" in row for row in rows)
   assert all("selected_dimensions" in row for row in rows)
-  assert all(isinstance(row.get("strategic_freedom_score"), float) for row in rows)

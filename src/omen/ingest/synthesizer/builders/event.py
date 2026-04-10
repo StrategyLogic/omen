@@ -2,23 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
-from omen.ingest.synthesizer.clients import create_chat_client
+from omen.ingest.synthesizer.clients import invoke_json_prompt
 from omen.ingest.synthesizer.prompts import build_timeline_events_prompt
 from omen.ingest.models import CaseDocument, LLMConfig
-
-
-def _extract_json_array(text: str) -> list[dict[str, Any]]:
-    start = text.find("[")
-    end = text.rfind("]")
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError("LLM response does not contain a JSON array")
-    payload = json.loads(text[start : end + 1])
-    if not isinstance(payload, list):
-        raise ValueError("event payload is not a JSON array")
-    return [item for item in payload if isinstance(item, dict)]
 
 
 def _classify_event_type(text: str) -> str:
@@ -89,10 +77,15 @@ def extract_timeline_events(
     prompt = build_timeline_events_prompt(case_doc, excerpt)
 
     try:
-        chat = create_chat_client(config)
-        response = chat.invoke(prompt)
-        content = response.content if isinstance(response.content, str) else json.dumps(response.content)
-        events = _normalize_events(_extract_json_array(content))
+        payload = invoke_json_prompt(
+            user_prompt=prompt,
+            config=config,
+            stage="timeline_events_prompt",
+            expected_type="array",
+        )
+        if not isinstance(payload, list):
+            raise ValueError("event payload is not a JSON array")
+        events = _normalize_events(payload)
         if events:
             return events
     except Exception:

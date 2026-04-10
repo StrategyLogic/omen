@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.processor import fetch_url_text, save_url_source_text
 from omen.ingest.synthesizer.services.scenario import (
     save_scenario_ontology_markdown,
     save_scenario_ontology_slice,
@@ -17,7 +16,7 @@ from omen.scenario.planner import ScenarioDecompositionValidationError
 from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 from omen.ingest.synthesizer.services.situation import (
     analyze_and_save_situation,
-    generate_situation_case_document,
+    analyze_and_save_situation_from_url,
     load_situation_artifact,
     resolve_situation_artifact_ref,
     save_auxiliary_json,
@@ -83,10 +82,6 @@ def _validate_explicit_actor_ref(actor_ref: str) -> str:
 
 def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "scenario_pack.json"
-
-
-def _resolve_generation_trace_output_path(situation_output_path: Path) -> Path:
-    return situation_output_path.parent / "generation" / "log.json"
 
 
 def _resolve_scenario_generation_trace_path(scenario_output_path: Path) -> Path:
@@ -192,10 +187,6 @@ def _write_scenario_failure_trace(
     return trace_path
 
 
-def _resolve_generated_case_path(case_name: str) -> Path:
-    return Path("cases/situations") / f"{case_name}.md"
-
-
 def _derive_pack_id_from_situation_artifact(situation_artifact: dict[str, Any], situation_path: Path) -> str:
     source_meta = situation_artifact.get("source_meta") or {}
     actor_ref = source_meta.get("actor_ref")
@@ -289,34 +280,35 @@ def handle_situation_analyze_command(args: Any) -> int:
             return 2
 
         raw_doc = args.doc or args.input
+        effective_actor_ref = None
+        if args.actor is not None:
+            effective_actor_ref = _validate_explicit_actor_ref(str(args.actor))
+
         if args.url:
             print("Using URL source for situation analysis...")
             try:
-                source_text = fetch_url_text(str(args.url))
-                source_text_path = save_url_source_text(url=str(args.url), text=source_text)
-                print(f"URL fetch: SUCCESS ({source_text_path})")
-            except Exception as exc:
-                print(f"URL fetch: ERROR ({exc})")
-                print("Unable to fetch or extract readable text from the provided URL.")
-                return 2
-
-            try:
-                print("LLM case generation from URL text...")
-                case_name, case_markdown = generate_situation_case_document(
-                    source_text=source_text,
-                    source_ref=str(args.url),
-                    source_text_path=str(source_text_path),
+                output_path_arg = Path(args.output) if args.output else None
+                result = analyze_and_save_situation_from_url(
+                    url=str(args.url),
+                    actor_ref=effective_actor_ref,
+                    pack_id=str(args.pack_id) if args.pack_id else None,
+                    pack_version=str(args.pack_version),
+                    output_path=output_path_arg,
                 )
-                generated_case_path = _resolve_generated_case_path(case_name)
-                generated_case_path.parent.mkdir(parents=True, exist_ok=True)
-                generated_case_path.write_text(case_markdown, encoding="utf-8")
+                source_text_path = Path(result["source_text_path"])
+                generated_case_path = Path(result["generated_case_path"])
+                output_path = Path(result["artifact_path"])
+                markdown_path = Path(result["markdown_path"])
+                generation_trace_path = Path(result["generation_trace_path"])
+                print(f"URL fetch: SUCCESS ({source_text_path})")
                 print(f"Generated situation case: SUCCESS ({generated_case_path})")
+                print(f"Saved situation artifact to {output_path}")
+                print(f"Saved situation summary to {markdown_path}")
+                print(f"Saved situation generation trace to {generation_trace_path}")
+                return 0
             except Exception as exc:
-                print(f"LLM case generation: ERROR ({exc})")
-                print("Unable to convert fetched URL text into a situation case document.")
+                print(f"Analyze situation failed: {exc}")
                 return 2
-
-            raw_doc = str(generated_case_path)
 
         if not raw_doc:
             print("Analyze situation failed: missing required argument --doc or --url")
@@ -328,9 +320,6 @@ def handle_situation_analyze_command(args: Any) -> int:
             return 2
 
         validate_situation_source_or_raise(input_path)
-        effective_actor_ref = None
-        if args.actor is not None:
-            effective_actor_ref = _validate_explicit_actor_ref(str(args.actor))
         pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
         output_path_arg = (
             Path(args.output)

@@ -10,7 +10,7 @@ from typing import Any
 import yaml
 
 from omen.ingest.reporter.markdown import render_situation_case
-from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
+from omen.ingest.synthesizer.clients import invoke_json_prompt, render_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
@@ -62,44 +62,27 @@ def validate_situation_source_or_raise(situation_file: str | Path) -> None:
     _validate_source_scope_or_raise(text)
 
 
-def _extract_json_object(text: str) -> dict[str, Any]:
-    decoder = json.JSONDecoder()
-    start = text.find("{")
-    if start == -1:
-        raise ValueError("LLM response does not contain JSON object")
-    payload, _ = decoder.raw_decode(text[start:])
-    if not isinstance(payload, dict):
-        raise ValueError("LLM response payload is not an object")
-    return payload
-
-
 def _invoke_json(
     prompt: str,
     *,
     allow_retry: bool = True,
     stage: str = "llm_json",
 ) -> dict[str, Any]:
-    content = invoke_text_prompt(user_prompt=prompt)
-    try:
-        return _extract_json_object(content)
-    except Exception as exc:
-        if not allow_retry:
-            raise LLMJsonValidationAbort(
-                stage=stage,
-                reason=str(exc),
-                raw_output=content,
-            ) from exc
-        retry_prompt = build_json_retry_prompt(prompt)
-        retry_content = invoke_text_prompt(user_prompt=retry_prompt)
-        try:
-            return _extract_json_object(retry_content)
-        except Exception as retry_exc:
-            raise LLMJsonValidationAbort(
-                stage=stage,
-                reason=str(retry_exc),
-                raw_output=content,
-                retry_output=retry_content,
-            ) from retry_exc
+    retry_prompt = build_json_retry_prompt(prompt) if allow_retry else None
+    payload = invoke_json_prompt(
+        user_prompt=prompt,
+        allow_retry=allow_retry,
+        retry_prompt=retry_prompt,
+        stage=stage,
+        expected_type="object",
+    )
+    if not isinstance(payload, dict):
+        raise LLMJsonValidationAbort(
+            stage=stage,
+            reason="parsed payload is not an object",
+            raw_output=json.dumps(payload, ensure_ascii=False),
+        )
+    return payload
 
 
 def _read_source_text(path: str | Path) -> str:

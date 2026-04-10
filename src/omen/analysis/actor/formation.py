@@ -151,7 +151,7 @@ def extract_strategic_actor_identity(payload: dict[str, Any]) -> tuple[str, str]
     )
 
 
-def extract_strategic_actor_style_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def strategic_style(payload: dict[str, Any]) -> dict[str, Any]:
     strategic_actor = find_strategic_actor(payload)
     profile = strategic_actor.get("profile") or {}
     style = profile.get("strategic_style") or {}

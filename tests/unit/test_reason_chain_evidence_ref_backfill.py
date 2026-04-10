@@ -1,4 +1,4 @@
-from omen.analysis.actor.derivation_trace import build_linked_evidence_refs
+from omen.simulation.reason import build_linked_evidence_refs
 
 
 def test_evidence_refs_backfill_reason_step_ids_from_reason_chain_steps() -> None:

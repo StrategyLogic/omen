@@ -8,7 +8,7 @@ from typing import Any
 from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
-from omen.analysis.actor.formation import extract_strategic_actor_style_payload
+from omen.analysis.actor.formation import strategic_style
 from omen.analysis.actor.formation import load_actor_ontology_payload
 from omen.scenario.models import ScenarioPriorProbabilitySnapshotModel
 
@@ -73,7 +73,7 @@ def score_prior_probabilities(
     config_path: str,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     actor_payload = load_actor_ontology_payload(actor_ref)
-    actor_style = extract_strategic_actor_style_payload(actor_payload)
+    actor_style = strategic_style(actor_payload)
     scenario_candidates = _build_prior_candidates_from_scenarios(scenario_ontology)
     prompt = _render_base_prompt(
         "scenario_prior_prompt",
@@ -117,18 +117,45 @@ def score_prior_probabilities(
 
 
 def _normalize_priors(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    total = sum(float(item.get("score") or 0.0) for item in raw)
-    if total <= 0.0:
-        total = 1.0
-    normalized: list[dict[str, Any]] = []
+    if not raw:
+        return []
+
+    cleaned: list[dict[str, Any]] = []
     for item in raw:
-        score = float(item.get("score") or 0.0)
-        explain = str(item.get("explain") or "").strip()
-        normalized.append(
+        cleaned.append(
             {
                 "scenario_key": str(item.get("scenario_key") or ""),
-                "score": round(score / total, 6),
-                "explain": explain,
+                "score": max(0.0, float(item.get("score") or 0.0)),
+                "explain": str(item.get("explain") or "").strip(),
+            }
+        )
+
+    total = sum(float(item["score"]) for item in cleaned)
+    if total <= 0.0:
+        uniform = 1.0 / float(len(cleaned))
+        return [
+            {
+                "scenario_key": item["scenario_key"],
+                "score": uniform,
+                "explain": item["explain"],
+            }
+            for item in cleaned
+        ]
+
+    normalized: list[dict[str, Any]] = []
+    running_total = 0.0
+    last_index = len(cleaned) - 1
+    for index, item in enumerate(cleaned):
+        if index == last_index:
+            score = max(0.0, 1.0 - running_total)
+        else:
+            score = float(item["score"]) / total
+            running_total += score
+        normalized.append(
+            {
+                "scenario_key": item["scenario_key"],
+                "score": score,
+                "explain": item["explain"],
             }
         )
     return normalized

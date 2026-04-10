@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -71,6 +73,43 @@ def validate_scenario(payload: dict) -> ScenarioConfig:
 
 def validate_scenario_or_raise(payload: dict) -> ScenarioConfig:
     return validate_scenario(payload)
+
+
+def is_scenario_ontology_input_payload(payload: Any) -> bool:
+    return (
+        isinstance(payload, dict)
+        and "pack_id" in payload
+        and "scenarios" in payload
+        and ("ontology_version" in payload or "derived_from_situation_id" in payload)
+    )
+
+
+def is_scenario_ontology_input_path(path: str | Path) -> bool:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return is_scenario_ontology_input_payload(payload)
+
+
+def is_situation_planned_scenario_payload(payload: Any) -> bool:
+    if not is_scenario_ontology_input_payload(payload):
+        return False
+    if not isinstance(payload, dict):
+        return False
+
+    situation_id = str(payload.get("derived_from_situation_id") or "").strip()
+    planning_query_ref = str(payload.get("planning_query_ref") or "").strip()
+    prior_snapshot_ref = str(payload.get("prior_snapshot_ref") or "").strip()
+    return bool(situation_id and planning_query_ref and prior_snapshot_ref)
+
+
+def is_situation_planned_scenario_path(path: str | Path) -> bool:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return is_situation_planned_scenario_payload(payload)
 
 
 class ResultArtifactContract(BaseModel):

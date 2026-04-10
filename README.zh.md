@@ -11,7 +11,7 @@
 
 [核心概念](docs/concepts.md) | [快速开始](docs/quick-start.md) | [案例模板](docs/case-template.md) | [项目路线图](docs/roadmap.md)
 
-## 💡 Omen 做什么？
+## 📢 Omen 做什么？
 
 > 模拟征兆，揭示混沌。
 
@@ -24,7 +24,7 @@
 
 通过可解释的逻辑推演，Omen 致力于揭示技术演进如何重塑市场格局，让每一次战略决策可计算、可模拟、可验证、可追溯。
 
-## ✨ 核心功能
+## 🪄 核心功能
 
 | 功能模块 | 描述 |
 | :--- | :--- |
@@ -83,8 +83,6 @@ streamlit run app/strategic_actor.py
 data/scenarios/sap/situation.md
 ```
 
-想了解更多？阅读[精度评估](docs/precision.md)文档。
-
 ## 👥 适用人群
 
 Omen 专为以下角色打造：
@@ -106,13 +104,13 @@ Omen 专为以下角色打造：
 *   `开源模型` vs `闭源商业 API`
 *   `数据治理` vs `AI 原生知识系统`
 
-## 📖 许可证
+## 📃 许可证
 
 Omen 采取[**AGPL-3.0-or-later**](LICENSE)许可证，由 **[StrategyLogic®](https://www.strategylogic.ai)** 开发与维护。
 
 *注意：如果您希望在闭源环境中使用 Omen 或将其作为 SaaS 服务提供而不公开源码，请联系我们获取商业授权。*
 
-## 🔮 愿景
+## 🌟 愿景
 
 Omen 希望成为一个**开放的战略推演工作台**：
 > 它不输出唯一的答案，而是帮助人们系统地理解**未来如何分叉**；<br/>

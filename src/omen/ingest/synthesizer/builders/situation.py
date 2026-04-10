@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
-from typing import Any
-
-from omen.ingest.reporter.markdown import render_situation_brief
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
 
 
@@ -45,70 +41,6 @@ def _validate_source_scope_or_raise(text: str) -> None:
 def validate_situation_source_or_raise(situation_file: str | Path) -> None:
     text = Path(situation_file).read_text(encoding="utf-8")
     _validate_source_scope_or_raise(text)
-
-
-def build_scenario_ontology_from_situation_artifact(
-    *,
-    situation_artifact: dict[str, Any],
-    llm_decomposition: dict[str, Any],
-    pack_id: str,
-    pack_version: str,
-) -> dict[str, Any]:
-    from omen.scenario.planner import normalize_llm_scenarios_with_policy
-
-    scenarios = normalize_llm_scenarios_with_policy(
-        list(llm_decomposition.get("scenarios") or []),
-        source_hint=f"Derived from situation artifact: {situation_artifact.get('id', 'unknown')}",
-    )
-    source_meta = dict(llm_decomposition.get("source_meta") or {})
-    source_meta.setdefault(
-        "source_path",
-        str((situation_artifact.get("source_meta") or {}).get("source_path") or ""),
-    )
-    source_meta.setdefault("generated_at", datetime.now().isoformat())
-    source_meta["generated_from"] = "situation_artifact"
-
-    return {
-        "pack_id": pack_id,
-        "pack_version": pack_version,
-        "derived_from_situation_id": str(situation_artifact.get("id") or "unknown"),
-        "ontology_version": str(llm_decomposition.get("ontology_version") or "scenario_ontology_v1"),
-        "planning_query_ref": str(llm_decomposition.get("planning_query_ref") or "traces/planning_query.json"),
-        "prior_snapshot_ref": str(llm_decomposition.get("prior_snapshot_ref") or "traces/prior_snapshot.json"),
-        "scenarios": scenarios,
-        "source_meta": source_meta,
-    }
-
-
-def situation_artifact_to_markdown(situation: dict[str, Any], config_path: str = "config/llm.toml") -> str:
-    return render_situation_brief(situation, config_path=config_path)
-
-
-def scenario_ontology_to_deterministic_pack(ontology: dict) -> dict:
-    scenarios = []
-    for scenario in ontology.get("scenarios", []):
-        scenarios.append(
-            {
-                "scenario_key": scenario["scenario_key"],
-                "title": scenario["title"],
-                "target_outcome": scenario["objective"],
-                "constraints": list(scenario.get("constraints") or []),
-                "dilemma_tradeoffs": list(scenario.get("tradeoff_pressure") or []),
-                "resistance_baseline": {
-                    "structural_conflict": scenario["resistance_assumptions"]["structural_conflict"],
-                    "resource_reallocation_drag": scenario["resistance_assumptions"]["resource_reallocation_drag"],
-                    "cultural_misalignment": scenario["resistance_assumptions"]["cultural_misalignment"],
-                    "veto_node_intensity": scenario["resistance_assumptions"]["veto_node_intensity"],
-                    "aggregate_resistance": scenario["resistance_assumptions"]["aggregate_resistance"],
-                },
-            }
-        )
-
-    return {
-        "pack_id": ontology["pack_id"],
-        "pack_version": ontology["pack_version"],
-        "scenarios": scenarios,
-    }
 
 
 def scenario_ontology_to_markdown(ontology: dict) -> str:

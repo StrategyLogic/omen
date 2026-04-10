@@ -1,4 +1,4 @@
-from omen.analysis.actor.derivation_trace import reasoning_order_is_valid
+from omen.simulation.reason import reasoning_order_is_valid
 
 
 def test_reason_chain_order_accepts_seed_to_blocking_sequence() -> None:

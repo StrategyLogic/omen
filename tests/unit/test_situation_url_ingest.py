@@ -25,7 +25,7 @@ def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, 
 
     monkeypatch.setattr(
         situation_cli,
-        "analyze_and_save_situation_from_url",
+        "run_situation_analysis",
         lambda **kwargs: {
             "source_text_path": tmp_path / "data" / "ingest" / "source" / "example.txt",
             "generated_case_path": generated_case_path,
@@ -49,11 +49,8 @@ def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, 
     output = capsys.readouterr().out
 
     assert result == 0
-    assert str(generated_case_path) in output
-    assert "Using URL source for situation analysis..." in output
-    assert "URL fetch: SUCCESS" in output
-    assert "Generated situation case: SUCCESS" in output
-    assert "Saved situation artifact to" in output
+    assert "Situation analysis started" in output
+    assert "Situation analysis completed:" in output
 
 
 def test_handle_situation_analyze_command_rejects_doc_and_url_together(capsys) -> None:
@@ -71,25 +68,18 @@ def test_handle_situation_analyze_command_rejects_doc_and_url_together(capsys) -
     output = capsys.readouterr().out
 
     assert result == 2
-    assert "use either --doc or --url, not both" in output
+    assert "Situation analysis started" in output
+    assert "Situation analysis failed:" in output
 
 
 def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, tmp_path: Path) -> None:
-    input_doc = tmp_path / "case.md"
-    input_doc.write_text("example", encoding="utf-8")
-
     captured: dict[str, object] = {}
-
-    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
-    monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "strategic_actor_case_v1")
     actor_json = tmp_path / "actor_ontology.json"
     actor_json.write_text("{}", encoding="utf-8")
 
-    def _fake_analyze_and_save(**kwargs: object) -> dict[str, object]:
-        captured["actor_ref"] = kwargs.get("actor_ref")
-        output_path = kwargs["output_path"]
-        assert isinstance(output_path, Path)
+    def _fake_run(**kwargs: object) -> dict[str, object]:
+        captured["actor"] = kwargs.get("actor")
+        output_path = Path(str(kwargs["output"] or tmp_path / "situation.json"))
         return {
             "situation_artifact": {
                 "version": "0.1.0",
@@ -139,11 +129,11 @@ def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, t
                 "uncertainty_space": {"overall_confidence": 0.6},
                 "source_trace": [],
                 "source_meta": {
-                    "source_path": str(input_doc),
+                    "source_path": "cases/situations/case.md",
                     "generated_at": "2026-04-08T12:00:00",
                     "pack_id": "strategic_actor_case_v1",
                     "pack_version": "1.0.0",
-                    "actor_ref": str(actor_json),
+                    "actor_ref": str(kwargs.get("actor") or ""),
                 },
             },
             "artifact_path": output_path,
@@ -151,7 +141,7 @@ def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, t
             "generation_trace_path": output_path.parent / "generation" / "log.json",
         }
 
-    monkeypatch.setattr(situation_cli, "analyze_and_save_situation", _fake_analyze_and_save)
+    monkeypatch.setattr(situation_cli, "run_situation_analysis", _fake_run)
 
     args = Namespace(
         doc="case",
@@ -165,7 +155,7 @@ def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, t
 
     result = situation_cli.handle_situation_analyze_command(args)
     assert result == 0
-    assert captured["actor_ref"] == str(actor_json)
+    assert captured["actor"] == str(actor_json)
 
 
 def test_handle_situation_analyze_command_rejects_missing_explicit_actor_ref(
@@ -173,11 +163,11 @@ def test_handle_situation_analyze_command_rejects_missing_explicit_actor_ref(
     tmp_path: Path,
     capsys,
 ) -> None:
-    input_doc = tmp_path / "case.md"
-    input_doc.write_text("example", encoding="utf-8")
-
-    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
+    monkeypatch.setattr(
+        situation_cli,
+        "run_situation_analysis",
+        lambda **kwargs: (_ for _ in ()).throw(ValueError("actor reference not found")),
+    )
 
     args = Namespace(
         doc="case",
@@ -192,23 +182,16 @@ def test_handle_situation_analyze_command_rejects_missing_explicit_actor_ref(
     result = situation_cli.handle_situation_analyze_command(args)
     output = capsys.readouterr().out
     assert result == 2
-    assert "actor reference not found" in output
+    assert "Situation analysis failed: actor reference not found" in output
 
 
 def test_handle_situation_analyze_command_exits_gracefully_on_invalid_enhance_json(
     monkeypatch,
-    tmp_path: Path,
     capsys,
 ) -> None:
-    input_doc = tmp_path / "case.md"
-    input_doc.write_text("example", encoding="utf-8")
-
-    monkeypatch.setattr(situation_cli, "_resolve_situation_doc_path", lambda raw: input_doc)
-    monkeypatch.setattr(situation_cli, "validate_situation_source_or_raise", lambda path: None)
-    monkeypatch.setattr(situation_cli, "_derive_default_pack_id", lambda input_path, actor_ref=None: "case_v1")
     monkeypatch.setattr(
         situation_cli,
-        "analyze_and_save_situation",
+        "run_situation_analysis",
         lambda **kwargs: (_ for _ in ()).throw(
             LLMJsonValidationAbort(
                 stage="situation_enhance_prompt",

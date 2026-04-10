@@ -1,5 +1,5 @@
 from pathlib import Path
-import omen.ingest.reporter.markdown as markdown_reporter
+import omen.ingest.writer.markdown as markdown_reporter
 
 
 def test_situation_markdown_renders_strategic_brief_sections(monkeypatch) -> None:

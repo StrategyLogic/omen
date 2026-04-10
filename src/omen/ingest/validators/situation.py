@@ -2,8 +2,45 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from omen.ingest.models import SituationArtifactModel
 from omen.scenario.ingest_validator import IncompleteDeterministicPackError
+from omen.scenario.ingest_validator import DeferredScopeFeatureError
+
+
+_DEFERRED_DYNAMIC_MARKERS = {
+    "dynamic_authoring",
+    "dynamic_scenarios",
+    "free_form_scenarios",
+    "scenario_generator",
+}
+
+_DEFERRED_ENTERPRISE_MARKERS = {
+    "enterprise_resistance_extensions",
+    "enterprise_template_catalog",
+    "resistance_extension_profiles",
+    "custom_resistance_dimensions",
+    "enterprise_resistance_profile",
+}
+
+
+def validate_situation_source_or_raise(situation_file: str | Path) -> None:
+    text = Path(situation_file).read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    for marker in _DEFERRED_DYNAMIC_MARKERS:
+        if marker in lowered:
+            raise DeferredScopeFeatureError(
+                f"`{marker}` is deferred scope in this release. "
+                "Only deterministic A/B/C scenario packs are supported."
+            )
+
+    for marker in _DEFERRED_ENTERPRISE_MARKERS:
+        if marker in lowered:
+            raise DeferredScopeFeatureError(
+                f"`{marker}` is deferred scope. Enterprise resistance extensions are not supported in this release."
+            )
 
 
 def validate_situation_artifact_or_raise(payload: dict) -> SituationArtifactModel:

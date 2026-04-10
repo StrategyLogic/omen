@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
-from omen.ingest.reporter.markdown import save_situation_brief
+from omen.ingest.writer.markdown import save_situation_brief, save_situation_case_from_source
 from omen.ingest.validators.situation import validate_situation_artifact_or_raise
+from omen.ingest.validators.situation import validate_situation_source_or_raise
 
 from omen.ingest.synthesizer.builders import situation as _builder
 
@@ -36,12 +37,35 @@ def _resolve_default_output_path(pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "situation.json"
 
 
-def _resolve_generated_case_path(case_name: str) -> Path:
-    return Path("cases/situations") / f"{case_name}.md"
+def _resolve_situation_doc_path(raw_doc: str) -> Path:
+    raw = str(raw_doc).strip()
+    if "/" in raw:
+        candidate = Path(raw)
+        if not candidate.suffix:
+            candidate = candidate.with_suffix(".md")
+        return candidate
+
+    stem = raw[:-3] if raw.endswith(".md") else raw
+    return Path("cases/situations") / f"{stem}.md"
 
 
-def validate_situation_source_or_raise(situation_file: str | Path) -> None:
-    _builder.validate_situation_source_or_raise(situation_file)
+def _validate_explicit_actor_ref(actor_ref: str) -> str:
+    raw = str(actor_ref or "").strip()
+    if not raw:
+        raise ValueError("actor reference is empty")
+
+    candidate = Path(raw)
+    if candidate.exists():
+        return raw
+
+    cases_candidate = Path("cases") / raw
+    if cases_candidate.exists():
+        return str(cases_candidate)
+
+    raise ValueError(
+        "actor reference not found. Pass an existing actor artifact path with --actor, "
+        "or omit --actor for decoupled situation analysis"
+    )
 
 
 def analyze_situation_document(
@@ -86,6 +110,13 @@ def analyze_and_save_situation(
     pack_version: str,
     output_path: str | Path,
 ) -> dict[str, Any]:
+    print(f"Situation source validation: {situation_file}")
+    validate_situation_source_or_raise(situation_file)
+
+    if actor_ref:
+        print(f"Actor context enabled: {actor_ref}")
+
+    print("Running LLM situation extraction and enhancement...")
     artifact = analyze_situation_document(
         situation_file=situation_file,
         actor_ref=actor_ref,
@@ -96,6 +127,7 @@ def analyze_and_save_situation(
     if actor_ref and isinstance(artifact.get("context"), dict):
         artifact["context"]["actor_ref"] = actor_ref
 
+    print("Persisting situation artifacts...")
     artifact_path = save_situation_artifact(output_path, artifact)
     validated = validate_situation_artifact_or_raise(artifact)
     markdown_path = save_situation_brief(artifact_path.with_suffix(".md"), validated.model_dump())
@@ -107,6 +139,10 @@ def analyze_and_save_situation(
     )
     save_auxiliary_json(generation_trace_path, generation_trace_payload)
 
+    print(f"Situation artifact saved: {artifact_path}")
+    print(f"Situation brief saved: {markdown_path}")
+    print(f"Situation trace saved: {generation_trace_path}")
+
     return {
         "situation_artifact": artifact,
         "artifact_path": artifact_path,
@@ -115,45 +151,63 @@ def analyze_and_save_situation(
     }
 
 
-def analyze_and_save_situation_from_url(
+def run_situation_analysis(
     *,
-    url: str,
-    actor_ref: str | None,
+    doc: str | None,
+    input_alias: str | None,
+    url: str | None,
+    actor: str | None,
+    output: str | None,
     pack_id: str | None,
     pack_version: str,
-    output_path: str | Path | None,
 ) -> dict[str, Any]:
-    source_text = fetch_url_text(url)
-    source_text_path = save_url_source_text(url=url, text=source_text)
+    if url and (doc or input_alias):
+        raise ValueError("use either --doc or --url, not both")
 
-    case_name, case_markdown = _builder.generate_situation_case_document(
-        source_text=source_text,
-        source_ref=url,
-        source_text_path=str(source_text_path),
-    )
-    generated_case_path = _resolve_generated_case_path(case_name)
-    generated_case_path.parent.mkdir(parents=True, exist_ok=True)
-    generated_case_path.write_text(case_markdown, encoding="utf-8")
+    effective_actor_ref = _validate_explicit_actor_ref(actor) if actor is not None else None
+    source_text_path: Path | None = None
+    generated_case_path: Path | None = None
 
-    validate_situation_source_or_raise(generated_case_path)
+    if url:
+        print(f"URL fetch started: {url}")
+        source_text = fetch_url_text(str(url))
+        source_text_path = save_url_source_text(url=str(url), text=source_text)
+        print(f"URL source saved: {source_text_path}")
+        generated_case_path = save_situation_case_from_source(
+            source_text=source_text,
+            source_ref=str(url),
+            source_text_path=str(source_text_path),
+        )
+        print(f"Situation case generated: {generated_case_path}")
+        validate_situation_source_or_raise(generated_case_path)
+        input_path = generated_case_path
+    else:
+        raw_doc = doc or input_alias
+        if not raw_doc:
+            raise ValueError("missing required argument --doc or --url")
 
-    effective_pack_id = str(pack_id) if pack_id else _derive_default_pack_id(generated_case_path, actor_ref=actor_ref)
-    effective_output_path = Path(output_path) if output_path is not None else _resolve_default_output_path(effective_pack_id)
+        input_path = _resolve_situation_doc_path(str(raw_doc))
+        if not input_path.exists():
+            raise ValueError(f"input not found: {input_path}")
+
+    effective_pack_id = str(pack_id) if pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
+    output_path = Path(output) if output else _resolve_default_output_path(effective_pack_id)
 
     result = analyze_and_save_situation(
-        situation_file=generated_case_path,
-        actor_ref=actor_ref,
+        situation_file=input_path,
+        actor_ref=effective_actor_ref,
         pack_id=effective_pack_id,
         pack_version=pack_version,
-        output_path=effective_output_path,
+        output_path=output_path,
     )
-    result.update(
-        {
-            "source_text_path": source_text_path,
-            "generated_case_path": generated_case_path,
-            "pack_id": effective_pack_id,
-        }
-    )
+    if source_text_path is not None and generated_case_path is not None:
+        result.update(
+            {
+                "source_text_path": source_text_path,
+                "generated_case_path": generated_case_path,
+                "pack_id": effective_pack_id,
+            }
+        )
     return result
 
 

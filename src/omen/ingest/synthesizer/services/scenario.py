@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.reporter.markdown import render_scenario_ontology_markdown
+from omen.ingest.writer.markdown import render_scenario_ontology_markdown
 from omen.ingest.synthesizer.builders.scenario import (
     build_scenario_ontology_from_decomposition,
     bind_ontology_to_scenario,

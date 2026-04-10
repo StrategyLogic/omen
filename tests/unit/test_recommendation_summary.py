@@ -5,11 +5,11 @@ def test_recommendation_summary_no_local_template_fallback_text() -> None:
   rows = [
     {
       "scenario_key": "A",
-      "strategic_freedom": {"score": 0.4, "required": [], "warning": [], "blocking": []},
+      "scenario_conditions": {"required": [], "warning": [], "blocking": []},
     },
     {
       "scenario_key": "B",
-      "strategic_freedom": {"score": 0.5, "required": [], "warning": [], "blocking": []},
+      "scenario_conditions": {"required": [], "warning": [], "blocking": []},
     },
   ]
 

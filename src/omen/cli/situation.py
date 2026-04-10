@@ -8,25 +8,20 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
-from omen.ingest.synthesizer.builders.situation import (
-    analyze_situation_document,
-    validate_situation_source_or_raise,
-)
-from omen.scenario.loader import (
-    load_situation_artifact,
-    resolve_situation_artifact_ref,
-    save_auxiliary_json,
+from omen.ingest.synthesizer.services.scenario import (
     save_scenario_ontology_markdown,
     save_scenario_ontology_slice,
-    save_situation_artifact,
-    save_situation_markdown,
 )
 from omen.scenario.planner import from_situation
 from omen.scenario.planner import ScenarioDecompositionValidationError
+from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 from omen.ingest.synthesizer.services.situation import (
-    LLMJsonValidationAbort,
-    build_situation_confidence_trace,
+    analyze_and_save_situation,
     generate_situation_case_document,
+    load_situation_artifact,
+    resolve_situation_artifact_ref,
+    save_auxiliary_json,
+    validate_situation_source_or_raise,
 )
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
 
@@ -251,12 +246,6 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
         default="1.0.0",
         help="Deterministic pack version",
     )
-    situation.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML",
-    )
 
 
 def register_scenario_command(subparsers: Any) -> None:
@@ -291,12 +280,6 @@ def register_scenario_command(subparsers: Any) -> None:
         required=False,
         help="Optional actor reference used for planning query preparation",
     )
-    scenario.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML",
-    )
 
 
 def handle_situation_analyze_command(args: Any) -> int:
@@ -323,7 +306,6 @@ def handle_situation_analyze_command(args: Any) -> int:
                     source_text=source_text,
                     source_ref=str(args.url),
                     source_text_path=str(source_text_path),
-                    config_path=str(args.config),
                 )
                 generated_case_path = _resolve_generated_case_path(case_name)
                 generated_case_path.parent.mkdir(parents=True, exist_ok=True)
@@ -359,25 +341,16 @@ def handle_situation_analyze_command(args: Any) -> int:
         if effective_actor_ref:
             print("Building scenario pack with strategic actor context...")
 
-        situation_artifact = analyze_situation_document(
+        result = analyze_and_save_situation(
             situation_file=input_path,
             actor_ref=effective_actor_ref,
             pack_id=pack_id,
             pack_version=str(args.pack_version),
-            config_path=str(args.config),
+            output_path=output_path_arg,
         )
-        context = situation_artifact.get("context")
-        if effective_actor_ref and isinstance(context, dict):
-            context["actor_ref"] = effective_actor_ref
-        output_path = save_situation_artifact(output_path_arg, situation_artifact)
-        markdown_path = output_path.with_suffix(".md")
-        save_situation_markdown(markdown_path, situation_artifact, config_path=str(args.config))
-        generation_trace_path = _resolve_generation_trace_output_path(output_path)
-        generation_trace_payload = build_situation_confidence_trace(
-            situation_artifact=situation_artifact,
-            situation_artifact_path=output_path,
-        )
-        save_auxiliary_json(generation_trace_path, generation_trace_payload)
+        output_path = Path(result["artifact_path"])
+        markdown_path = Path(result["markdown_path"])
+        generation_trace_path = Path(result["generation_trace_path"])
         print(f"Saved situation artifact to {output_path}")
         print(f"Saved situation summary to {markdown_path}")
         print(f"Saved situation generation trace to {generation_trace_path}")
@@ -429,7 +402,6 @@ def handle_scenario_command(args: Any) -> int:
             pack_id=pack_id,
             pack_version=str(args.pack_version),
             actor_ref=actor_ref,
-            config_path=str(args.config),
             traces_dir=output_path_arg.parent / "traces",
         )
         planner_trace = dict(ontology.pop("_planner_trace", {}) or {})

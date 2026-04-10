@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from omen.scenario.loader import load_scenario
+from omen.ingest.synthesizer.services.scenario import load_scenario
 from omen.simulation.engine import run_simulation
 
 

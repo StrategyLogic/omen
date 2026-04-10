@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from omen.explain.report import build_explanation_report
-from omen.scenario.loader import load_scenario
+from omen.ingest.synthesizer.services.scenario import load_scenario
 from omen.simulation.engine import run_simulation
 from omen.simulation.replay import compare_run_results, run_counterfactual
 

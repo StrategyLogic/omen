@@ -66,7 +66,7 @@ def test_analyze_situation_document_injects_signal_template_and_normalizes_schem
     prompts.append(str(kwargs["user_prompt"]))
     return next(responses)
 
-  monkeypatch.setattr("omen.ingest.synthesizer.services.situation.invoke_text_prompt", _fake_invoke)
+  monkeypatch.setattr("omen.ingest.synthesizer.builders.situation.invoke_text_prompt", _fake_invoke)
 
   artifact = analyze_situation_document(
     situation_file=situation_file,
@@ -136,7 +136,7 @@ def test_analyze_situation_document_requires_llm_signals(
   )
 
   monkeypatch.setattr(
-    "omen.ingest.synthesizer.services.situation.invoke_text_prompt",
+    "omen.ingest.synthesizer.builders.situation.invoke_text_prompt",
     lambda **kwargs: next(responses),
   )
 

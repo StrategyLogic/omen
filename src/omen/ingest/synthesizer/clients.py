@@ -39,7 +39,7 @@ def render_prompt_template(template: str, values: dict[str, object]) -> str:
 
 def invoke_text_prompt(
     *,
-    config_path: str,
+    config_path: str | None = None,
     user_prompt: str,
     system_prompt: str | None = None,
 ) -> str:

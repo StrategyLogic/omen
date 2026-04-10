@@ -2,7 +2,7 @@ import omen.ingest.reporter.markdown as markdown_reporter
 
 
 def test_situation_markdown_renders_strategic_brief_sections(monkeypatch) -> None:
-    def _fake_invoke(*, config_path: str, user_prompt: str, system_prompt: str | None = None) -> str:
+    def _fake_invoke(*, user_prompt: str, system_prompt: str | None = None, config_path: str | None = None) -> str:
         _ = config_path, system_prompt
         json_payload = user_prompt.split("Situation data (JSON):", 1)[1]
         assert '"risk_confidence": 0.4' in user_prompt

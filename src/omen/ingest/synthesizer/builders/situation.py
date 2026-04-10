@@ -76,11 +76,10 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 def _invoke_json(
     prompt: str,
     *,
-    config_path: str,
     allow_retry: bool = True,
     stage: str = "llm_json",
 ) -> dict[str, Any]:
-    content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
+    content = invoke_text_prompt(user_prompt=prompt)
     try:
         return _extract_json_object(content)
     except Exception as exc:
@@ -91,7 +90,7 @@ def _invoke_json(
                 raw_output=content,
             ) from exc
         retry_prompt = build_json_retry_prompt(prompt)
-        retry_content = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
+        retry_content = invoke_text_prompt(user_prompt=retry_prompt)
         try:
             return _extract_json_object(retry_content)
         except Exception as retry_exc:
@@ -749,7 +748,6 @@ def generate_situation_case_document(
     source_text: str,
     source_ref: str,
     source_text_path: str,
-    config_path: str = "config/llm.toml",
 ) -> tuple[str, str]:
     payload = _invoke_json(
         _render_base_prompt(
@@ -760,7 +758,6 @@ def generate_situation_case_document(
                 "source_text": source_text,
             },
         ),
-        config_path=config_path,
     )
     return render_situation_case(
         payload=payload,
@@ -775,7 +772,6 @@ def analyze_situation_document(
     actor_ref: str | None,
     pack_id: str,
     pack_version: str,
-    config_path: str = "config/llm.toml",
 ) -> dict[str, Any]:
     path = Path(situation_file)
     source_text = _read_source_text(path)
@@ -791,7 +787,6 @@ def analyze_situation_document(
                 "source_text": source_text,
             },
         ),
-        config_path=config_path,
     )
 
     enhanced = _invoke_json(
@@ -805,7 +800,6 @@ def analyze_situation_document(
                 "source_text": source_text,
             },
         ),
-        config_path=config_path,
         allow_retry=False,
         stage="situation_enhance_prompt",
     )

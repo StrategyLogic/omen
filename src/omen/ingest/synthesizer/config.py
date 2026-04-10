@@ -11,6 +11,7 @@ from pathlib import Path
 from omen.ingest.models import LLMConfig
 
 _ENV_PATTERN = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
+DEFAULT_LLM_CONFIG_PATH = Path("config/llm.toml")
 
 
 def _resolve_env_placeholder(value: str) -> str:
@@ -78,13 +79,19 @@ def _load_llm_config_from_env() -> LLMConfig:
     )
 
 
-def load_llm_config(config_path: str | Path = "config/llm.toml") -> LLMConfig:
+def resolve_llm_config_path(config_path: str | Path | None = None) -> Path:
+    if config_path is None:
+        return DEFAULT_LLM_CONFIG_PATH
+    return Path(config_path)
+
+
+def load_llm_config(config_path: str | Path | None = None) -> LLMConfig:
     try:
         dotenv_module = importlib.import_module("dotenv")
         dotenv_module.load_dotenv(override=False)
     except Exception:
         pass
-    path = Path(config_path)
+    path = resolve_llm_config_path(config_path)
     if not path.exists():
         return _load_llm_config_from_env()
 

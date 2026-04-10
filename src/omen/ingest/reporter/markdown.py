@@ -137,7 +137,7 @@ def _build_brief_prompt_payload(situation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_situation_brief(situation: dict[str, object], config_path: str = "config/llm.toml") -> str:
+def render_situation_brief(situation: dict[str, object]) -> str:
     template = _load_brief_template()
     system_prompt, user_prompt_template = _load_report_prompts()
     prompt_payload = _build_brief_prompt_payload(dict(situation))
@@ -150,7 +150,6 @@ def render_situation_brief(situation: dict[str, object], config_path: str = "con
         },
     )
     generated = invoke_text_prompt(
-        config_path=config_path,
         system_prompt=system_prompt,
         user_prompt=user_prompt,
     )
@@ -158,6 +157,13 @@ def render_situation_brief(situation: dict[str, object], config_path: str = "con
     if not _looks_like_expected_brief(generated):
         raise ValueError("generated situation brief does not match expected report format")
     return generated.strip() + "\n"
+
+
+def save_situation_brief(path: str | Path, situation: dict[str, object]) -> Path:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(render_situation_brief(situation), encoding="utf-8")
+    return output_path
 
 
 def render_situation_case(

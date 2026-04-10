@@ -115,7 +115,7 @@ def decompose_scenario_from_situation(
     situation_artifact: dict[str, Any],
     pack_id: str,
     pack_version: str,
-    config_path: str,
+    config_path: str = "config/llm.toml",
     planning_template: dict[str, Any],
     planning_query: dict[str, Any],
 ) -> dict[str, Any]:
@@ -135,7 +135,7 @@ def from_situation(
     pack_id: str,
     pack_version: str,
     actor_ref: str | None,
-    config_path: str,
+    config_path: str = "config/llm.toml",
     traces_dir: str | Path,
 ) -> dict[str, Any]:
     actor_json_ref = _resolve_actor_json_ref(actor_ref)

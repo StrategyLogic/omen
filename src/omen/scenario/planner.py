@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import random
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -12,14 +11,17 @@ from typing import Any
 import yaml
 
 from omen.analysis.actor.formation import ensure_strategic_actor_style
-from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
+from omen.ingest.synthesizer.services.scenario import planning
 from omen.scenario.models import ScenarioPlanningRuleTemplateModel
 from omen.scenario.prior import build_prior_snapshot
 from omen.scenario.prior import score_prior_probabilities
 from omen.scenario.space import build_planning_query
 
 
-def load_planning_template(path: str | Path = "config/templates/planning.yaml") -> ScenarioPlanningRuleTemplateModel:
+REQUIRED_SCENARIO_KEYS: tuple[str, str, str] = ("A", "B", "C")
+
+
+def load_template(path: str | Path = "config/templates/planning.yaml") -> ScenarioPlanningRuleTemplateModel:
     template_path = Path(path)
     if not template_path.is_absolute() and not template_path.exists():
         repo_root = Path(__file__).resolve().parents[3]
@@ -47,7 +49,7 @@ def _nonempty_text_list(value: Any) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
-def _validate_structured_llm_scenario(raw: dict[str, Any], *, scenario_key: str) -> None:
+def _validate(raw: dict[str, Any], *, scenario_key: str) -> None:
     missing_fields: list[str] = []
     for field_name in ("title", "goal", "target", "objective"):
         if not str(raw.get(field_name) or "").strip():
@@ -69,110 +71,38 @@ def _validate_structured_llm_scenario(raw: dict[str, Any], *, scenario_key: str)
         )
 
 
-@dataclass(frozen=True)
-class ScenarioSlotPolicy:
-    key: str
-    label: str
-    intent: str
-    signal_basis: str
-    objective: str
-    tradeoffs: tuple[str, str]
-    resistance: tuple[float, float, float, float]
-    constraint_hint: str
-
-
-def fixed_slot_policies() -> tuple[ScenarioSlotPolicy, ...]:
-    return (
-        ScenarioSlotPolicy(
-            key="A",
-            label="Offense",
-            intent="Breakthrough action under advantage assumptions",
-            signal_basis="Proactive rule-shaping and upside-capture assumptions",
-            objective="Create asymmetric advantage through proactive strategic offense.",
-            tradeoffs=(
-                "Execution speed vs operating stability",
-                "Aggressive investment vs short-term margin protection",
-            ),
-            resistance=(0.8, 0.7, 0.6, 0.7),
-            constraint_hint="Prioritize upside signal capture while controlling execution fragility",
-        ),
-        ScenarioSlotPolicy(
-            key="B",
-            label="Defense",
-            intent="Bottom-line defense under external constraints",
-            signal_basis="Constraint-led survival and compliance assumptions",
-            objective="Protect core assets and survivability under pressure.",
-            tradeoffs=(
-                "Predictability vs innovation velocity",
-                "Cost control vs option creation",
-            ),
-            resistance=(0.5, 0.5, 0.5, 0.4),
-            constraint_hint="Prioritize continuity under linearly projected market and org constraints",
-        ),
-        ScenarioSlotPolicy(
-            key="C",
-            label="Confrontation",
-            intent="Direct rivalry action under competitive escalation",
-            signal_basis="Rival activation and strategic confrontation assumptions",
-            objective="Compete in direct strategic confrontation under fixed rules.",
-            tradeoffs=(
-                "Emergency containment vs long-term autonomy",
-                "Fast de-risking vs strategic upside preservation",
-            ),
-            resistance=(0.4, 0.4, 0.5, 0.3),
-            constraint_hint="Prioritize downside containment and contingency optionality",
-        ),
-    )
-
-
-def normalize_llm_scenarios_with_policy(
+def normalize(
     llm_scenarios: list[Any],
-    *,
-    source_hint: str,
-    strict_structured: bool = False,
 ) -> list[dict[str, Any]]:
-    policies = fixed_slot_policies()
     by_key: dict[str, dict[str, Any]] = {}
-    slot_order = [slot.key for slot in policies]
 
-    for index, item in enumerate(llm_scenarios):
-        if isinstance(item, dict):
-            key = str(item.get("scenario_key") or "").strip().upper()
-            if key in {"A", "B", "C"}:
-                by_key[key] = item
-                continue
-            if index < len(slot_order):
-                by_key.setdefault(slot_order[index], item)
-            continue
+    for index, item in enumerate(llm_scenarios, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(
+                "LLM scenario decomposition must return JSON objects for all slots "
+                f"(invalid position: {index})"
+            )
 
-        text = str(item).strip()
-        if not text:
-            continue
-        if index < len(slot_order):
-            if strict_structured:
-                raise ValueError(
-                    "LLM scenario decomposition returned non-object payload "
-                    f"for slot {slot_order[index]}: {text!r}"
-                )
-            raise ValueError("LLM scenario decomposition must return JSON objects for all slots")
+        key = str(item.get("scenario_key") or "").strip().upper()
+        if key not in REQUIRED_SCENARIO_KEYS:
+            raise ValueError(
+                f"LLM scenario decomposition has invalid scenario_key at position {index}: {key!r}"
+            )
+        if key in by_key:
+            raise ValueError(f"LLM scenario decomposition duplicated scenario_key: {key}")
+        by_key[key] = item
 
-    missing = [slot.key for slot in policies if slot.key not in by_key]
+    missing = [key for key in REQUIRED_SCENARIO_KEYS if key not in by_key]
     if missing:
         raise ValueError(f"LLM scenario decomposition missing required slots: {missing}")
 
     normalized: list[dict[str, Any]] = []
-    for policy in policies:
-        raw = by_key[policy.key]
-        if strict_structured:
-            _validate_structured_llm_scenario(raw, scenario_key=policy.key)
+    for key in REQUIRED_SCENARIO_KEYS:
+        raw = by_key[key]
+        _validate(raw, scenario_key=key)
 
         constraints = _nonempty_text_list(raw.get("constraints"))
-        if not constraints:
-            constraints = [policy.constraint_hint]
-
         tradeoffs = _nonempty_text_list(raw.get("tradeoff_pressure"))
-        if not tradeoffs:
-            tradeoffs = list(policy.tradeoffs)
 
         raw_variables = raw.get("variables")
         variables: list[dict[str, Any]] = []
@@ -182,42 +112,41 @@ def normalize_llm_scenarios_with_policy(
                     variables.append(item)
 
         if not variables:
-            raise ValueError(f"LLM scenario decomposition slot {policy.key} has empty variables")
+            raise ValueError(f"LLM scenario decomposition slot {key} has empty variables")
 
         resistance_raw = raw.get("resistance_assumptions") or {}
-        if isinstance(resistance_raw, dict):
-            resistance = resistance_raw
-        else:
-            resistance = {}
+        if not isinstance(resistance_raw, dict):
+            raise ValueError(
+                f"LLM scenario decomposition slot {key} must provide object resistance_assumptions"
+            )
 
-        default_r = policy.resistance
+        rationale = [
+            str(x).strip()
+            for x in (resistance_raw.get("assumption_rationale") or [])
+            if str(x).strip()
+        ]
+        if not rationale:
+            raise ValueError(
+                f"LLM scenario decomposition slot {key} missing resistance_assumptions.assumption_rationale"
+            )
+
         normalized.append(
             {
-                "scenario_key": policy.key,
-                "title": str(raw.get("title") or f"Scenario {policy.key}: {policy.label}").strip(),
-                "goal": str(raw.get("goal") or policy.objective).strip(),
-                "target": str(raw.get("target") or "strategic-position").strip(),
-                "objective": str(raw.get("objective") or policy.objective).strip(),
+                "scenario_key": key,
+                "title": str(raw.get("title") or "").strip(),
+                "goal": str(raw.get("goal") or "").strip(),
+                "target": str(raw.get("target") or "").strip(),
+                "objective": str(raw.get("objective") or "").strip(),
                 "variables": variables,
                 "constraints": constraints,
                 "tradeoff_pressure": tradeoffs,
                 "resistance_assumptions": {
-                    "structural_conflict": float(resistance.get("structural_conflict", default_r[0])),
-                    "resource_reallocation_drag": float(resistance.get("resource_reallocation_drag", default_r[1])),
-                    "cultural_misalignment": float(resistance.get("cultural_misalignment", default_r[2])),
-                    "veto_node_intensity": float(resistance.get("veto_node_intensity", default_r[3])),
-                    "aggregate_resistance": float(
-                        resistance.get("aggregate_resistance", round(sum(default_r) / 4.0, 3))
-                    ),
-                    "assumption_rationale": [
-                        *[
-                            str(x).strip()
-                            for x in (resistance.get("assumption_rationale") or [])
-                            if str(x).strip()
-                        ],
-                        source_hint,
-                        f"intent: {policy.intent}",
-                    ],
+                    "structural_conflict": float(resistance_raw["structural_conflict"]),
+                    "resource_reallocation_drag": float(resistance_raw["resource_reallocation_drag"]),
+                    "cultural_misalignment": float(resistance_raw["cultural_misalignment"]),
+                    "veto_node_intensity": float(resistance_raw["veto_node_intensity"]),
+                    "aggregate_resistance": float(resistance_raw["aggregate_resistance"]),
+                    "assumption_rationale": rationale,
                 },
                 "modeling_notes": [
                     *[
@@ -225,24 +154,21 @@ def normalize_llm_scenarios_with_policy(
                         for x in (raw.get("modeling_notes") or [])
                         if str(x).strip()
                     ],
-                    "Scenario normalized under deterministic A/B/C intent policy",
-                    f"signal_basis: {policy.signal_basis}",
                 ],
             }
         )
     return normalized
 
 
-def _build_scenario_ontology_from_situation_artifact(
+def _build_from_situation_artifact(
     *,
     situation_artifact: dict[str, Any],
     llm_decomposition: dict[str, Any],
     pack_id: str,
     pack_version: str,
 ) -> dict[str, Any]:
-    scenarios = normalize_llm_scenarios_with_policy(
+    scenarios = normalize(
         list(llm_decomposition.get("scenarios") or []),
-        source_hint=f"Derived from situation artifact: {situation_artifact.get('id', 'unknown')}",
     )
     source_meta = dict(llm_decomposition.get("source_meta") or {})
     source_meta.setdefault(
@@ -309,7 +235,7 @@ def _build_random_prior_fallback(*, scenario_ontology: dict[str, Any]) -> list[d
     ]
 
 
-def _validate_decomposition_json_or_raise(decomposition: dict[str, Any]) -> None:
+def _validate_artifact_or_raise(decomposition: dict[str, Any]) -> None:
     scenarios = decomposition.get("scenarios")
     if not isinstance(scenarios, list):
         raise ScenarioDecompositionValidationError(
@@ -327,7 +253,26 @@ def _validate_decomposition_json_or_raise(decomposition: dict[str, Any]) -> None
         )
 
 
-def plan_scenarios_from_situation(
+def decompose_scenario_from_situation(
+    *,
+    situation_artifact: dict[str, Any],
+    pack_id: str,
+    pack_version: str,
+    config_path: str,
+    planning_template: dict[str, Any],
+    planning_query: dict[str, Any],
+) -> dict[str, Any]:
+    return planning(
+        situation_artifact=situation_artifact,
+        pack_id=pack_id,
+        pack_version=pack_version,
+        config_path=config_path,
+        planning_template=planning_template,
+        planning_query=planning_query,
+    )
+
+
+def from_situation(
     *,
     situation_artifact: dict[str, Any],
     pack_id: str,
@@ -351,23 +296,29 @@ def plan_scenarios_from_situation(
             "actor_ref": str(actor_ref or ""),
         }
 
-    template = load_planning_template()
+    template = load_template()
     planning_query = build_planning_query(
         situation_artifact=situation_artifact,
         actor_ref=str(actor_ref or "none"),
         template=template,
     )
 
-    decomposition = decompose_scenario_from_situation(
-        situation_artifact=situation_artifact,
-        pack_id=pack_id,
-        pack_version=pack_version,
-        config_path=config_path,
-        planning_template=template.model_dump(),
-        planning_query=planning_query,
-    )
+    try:
+        decomposition = decompose_scenario_from_situation(
+            situation_artifact=situation_artifact,
+            pack_id=pack_id,
+            pack_version=pack_version,
+            config_path=config_path,
+            planning_template=template.model_dump(),
+            planning_query=planning_query,
+        )
+    except Exception as exc:
+        raise ScenarioDecompositionValidationError(
+            "Scenario planning failed: LLM decomposition call failed. No local artifacts were written.",
+            decomposition_payload={"error": str(exc), "error_type": type(exc).__name__},
+        ) from exc
 
-    _validate_decomposition_json_or_raise(decomposition)
+    _validate_artifact_or_raise(decomposition)
 
     traces_path = Path(traces_dir)
     traces_path.mkdir(parents=True, exist_ok=True)
@@ -375,7 +326,7 @@ def plan_scenarios_from_situation(
     planning_query_path = traces_path / "planning_query.json"
     _write_auxiliary_json(planning_query_path, planning_query)
 
-    ontology = _build_scenario_ontology_from_situation_artifact(
+    ontology = _build_from_situation_artifact(
         situation_artifact=situation_artifact,
         llm_decomposition=decomposition,
         pack_id=pack_id,

@@ -20,9 +20,9 @@ from omen.analysis.actor.report_writer import (
     write_reason_chain_view_model_artifact,
 )
 from omen.analysis.actor.strategy import calculate_strategic_freedom_factor
-from omen.ingest.synthesizer.services.scenario import prepare_deterministic_inputs_from_scenario
+from omen.ingest.synthesizer.services.scenario import prepare
 from omen.ingest.synthesizer.prompts.registry import get_scenario_reason_chain_prompt_version_token
-from omen.ingest.validators.scenario import is_scenario_ontology_input_path
+from omen.ingest.validators.scenario import is_situation_planned_scenario_path
 from omen.simulation.actor import (
     build_actor_derivation_artifact,
     build_actor_derivation_trace,
@@ -286,7 +286,7 @@ def run_deterministic_compare_from_pack(
     return payload
 
 
-def run_deterministic_simulate_from_scenario_ontology(
+def run_simulate(
     *,
     scenario_path: str | Path,
     actor_profile_ref: str,
@@ -296,7 +296,7 @@ def run_deterministic_simulate_from_scenario_ontology(
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
-    pack_payload, planned_scenarios = prepare_deterministic_inputs_from_scenario(scenario_path)
+    pack_payload, planned_scenarios = prepare(scenario_path)
     return run_deterministic_simulate_from_pack(
         pack=pack_payload,
         actor_profile_ref=actor_profile_ref,
@@ -319,7 +319,7 @@ def run_deterministic_compare_from_scenario_ontology(
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any]:
-    pack_payload, planned_scenarios = prepare_deterministic_inputs_from_scenario(scenario_path)
+    pack_payload, planned_scenarios = prepare(scenario_path)
     return run_deterministic_compare_from_pack(
         pack=pack_payload,
         actor_profile_ref=actor_profile_ref,
@@ -332,7 +332,7 @@ def run_deterministic_compare_from_scenario_ontology(
     )
 
 
-def try_run_deterministic_simulate_from_scenario_input(
+def run_simulate_with_actor(
     *,
     scenario_path: str | Path,
     actor_profile_ref: str,
@@ -341,14 +341,13 @@ def try_run_deterministic_simulate_from_scenario_input(
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any] | None:
-    if not is_scenario_ontology_input_path(scenario_path):
-        return None
-
     actor_derivation_output_path = Path(scenario_path).parent / "traces" / "actor_derivation.json"
-    return run_deterministic_simulate_from_scenario_ontology(
-        scenario_path=scenario_path,
+    pack_payload, planned_scenarios = prepare(scenario_path)
+    return run_deterministic_simulate_from_pack(
+        pack=pack_payload,
         actor_profile_ref=actor_profile_ref,
         calculation_policy_version=calculation_policy_version,
+        planned_scenarios=planned_scenarios,
         actor_derivation_output_path=actor_derivation_output_path,
         config_path=config_path,
         debug=debug,
@@ -356,7 +355,7 @@ def try_run_deterministic_simulate_from_scenario_input(
     )
 
 
-def try_run_deterministic_compare_from_scenario_input(
+def run_compare(
     *,
     scenario_path: str | Path,
     actor_profile_ref: str,
@@ -365,7 +364,7 @@ def try_run_deterministic_compare_from_scenario_input(
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any] | None:
-    if not is_scenario_ontology_input_path(scenario_path):
+    if not is_situation_planned_scenario_path(scenario_path):
         return None
 
     actor_derivation_output_path = Path(scenario_path).parent / "traces" / "actor_derivation.json"
@@ -380,5 +379,5 @@ def try_run_deterministic_compare_from_scenario_input(
     )
 
 
-def save_deterministic_payload(output_path: str | Path, payload: dict[str, Any]) -> Path:
+def save(output_path: str | Path, payload: dict[str, Any]) -> Path:
     return write_deterministic_run_artifact(output_path, payload)

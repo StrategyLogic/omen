@@ -20,7 +20,7 @@ from omen.scenario.loader import (
     save_situation_artifact,
     save_situation_markdown,
 )
-from omen.scenario.planner import plan_scenarios_from_situation
+from omen.scenario.planner import from_situation
 from omen.scenario.planner import ScenarioDecompositionValidationError
 from omen.ingest.synthesizer.services.situation import (
     LLMJsonValidationAbort,
@@ -424,7 +424,7 @@ def handle_scenario_command(args: Any) -> int:
             else _resolve_splitter_default_output_path(situation_path, pack_id)
         )
 
-        ontology = plan_scenarios_from_situation(
+        ontology = from_situation(
             situation_artifact=situation_artifact,
             pack_id=pack_id,
             pack_version=str(args.pack_version),

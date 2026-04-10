@@ -3,31 +3,72 @@ import json
 
 import pytest
 
-from omen.scenario.planner import normalize_llm_scenarios_with_policy
-from omen.scenario.planner import plan_scenarios_from_situation
+from omen.scenario.planner import normalize
+from omen.scenario.planner import from_situation
 from omen.scenario.space import build_planning_query
 from omen.scenario.space import _normalize_similarity_scores
-from omen.scenario.planner import load_planning_template
+from omen.scenario.planner import load_template
+
+
+def _mock_planning_scenarios() -> list[dict[str, object]]:
+    resistance = {
+        "structural_conflict": 0.5,
+        "resource_reallocation_drag": 0.5,
+        "cultural_misalignment": 0.5,
+        "veto_node_intensity": 0.5,
+        "aggregate_resistance": 0.5,
+        "assumption_rationale": ["mock rationale"],
+    }
+    return [
+        {
+            "scenario_key": "A",
+            "title": "A",
+            "goal": "gA",
+            "target": "tA",
+            "objective": "oA",
+            "variables": [{"name": "vA"}],
+            "constraints": ["cA"],
+            "tradeoff_pressure": ["tpA"],
+            "resistance_assumptions": resistance,
+        },
+        {
+            "scenario_key": "B",
+            "title": "B",
+            "goal": "gB",
+            "target": "tB",
+            "objective": "oB",
+            "variables": [{"name": "vB"}],
+            "constraints": ["cB"],
+            "tradeoff_pressure": ["tpB"],
+            "resistance_assumptions": resistance,
+        },
+        {
+            "scenario_key": "C",
+            "title": "C",
+            "goal": "gC",
+            "target": "tC",
+            "objective": "oC",
+            "variables": [{"name": "vC"}],
+            "constraints": ["cC"],
+            "tradeoff_pressure": ["tpC"],
+            "resistance_assumptions": resistance,
+        },
+    ]
 
 
 def test_normalize_llm_scenarios_accepts_plain_text_slots_with_fallback_by_default() -> None:
     with pytest.raises(ValueError, match="must return JSON objects"):
-        normalize_llm_scenarios_with_policy(
-            ["A", "B", "C"],
-            source_hint="Derived from situation artifact: sap_reltio_acquisition",
-        )
+        normalize(["A", "B", "C"])
 
 
 def test_normalize_llm_scenarios_rejects_incomplete_structured_slots_in_strict_mode() -> None:
     try:
-        normalize_llm_scenarios_with_policy(
+        normalize(
             [
                 {"scenario_key": "A", "title": "A", "objective": "oA"},
                 {"scenario_key": "B", "title": "B", "objective": "oB"},
                 {"scenario_key": "C", "title": "C", "objective": "oC"},
             ],
-            source_hint="Derived from situation artifact: sap_reltio_acquisition",
-            strict_structured=True,
         )
     except ValueError as exc:
         assert "incomplete structured payload" in str(exc)
@@ -38,20 +79,16 @@ def test_normalize_llm_scenarios_rejects_incomplete_structured_slots_in_strict_m
 
 def test_normalize_llm_scenarios_rejects_plain_text_slots_in_strict_mode() -> None:
     try:
-        normalize_llm_scenarios_with_policy(
-            ["A", "B", "C"],
-            source_hint="Derived from situation artifact: sap_reltio_acquisition",
-            strict_structured=True,
-        )
+        normalize(["A", "B", "C"])
     except ValueError as exc:
-        assert "non-object payload" in str(exc)
+        assert "must return JSON objects" in str(exc)
     else:
         raise AssertionError("Expected ValueError for plain-text LLM scenario payload")
 
 
 def test_normalize_llm_scenarios_normalizes_variable_and_resistance_text_types() -> None:
     with pytest.raises(ValueError, match="empty variables"):
-        normalize_llm_scenarios_with_policy(
+        normalize(
             [
                 {
                     "scenario_key": "A",
@@ -90,12 +127,11 @@ def test_normalize_llm_scenarios_normalizes_variable_and_resistance_text_types()
                     "modeling_notes": ["note C"],
                 },
             ],
-            source_hint="Derived from situation artifact: sap_reltio_acquisition",
         )
 
 
 def test_build_planning_query_preserves_signal_mechanism_fields() -> None:
-    template = load_planning_template()
+    template = load_template()
     planning_query = build_planning_query(
         situation_artifact={
             "id": "sap_reltio_acquisition",
@@ -155,7 +191,7 @@ def test_plan_scenarios_aborts_without_writing_artifacts_on_invalid_decompositio
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "omen.scenario.planner.decompose_scenario_from_situation",
+        "omen.scenario.planner.planning",
         lambda **kwargs: {
             "pack_id": kwargs["pack_id"],
             "pack_version": kwargs["pack_version"],
@@ -193,7 +229,7 @@ def test_plan_scenarios_aborts_without_writing_artifacts_on_invalid_decompositio
 
     traces_dir = tmp_path / "traces"
     with pytest.raises(ValueError, match="Scenario decomposition validation failed"):
-        plan_scenarios_from_situation(
+        from_situation(
             situation_artifact={
                 "id": "sap_reltio_acquisition",
                 "signals": [
@@ -263,7 +299,7 @@ def test_build_planning_query_uses_actor_style_weighted_similarity_scores(tmp_pa
         encoding="utf-8",
     )
 
-    template = load_planning_template()
+    template = load_template()
     planning_query = build_planning_query(
         situation_artifact={
             "id": "sap_reltio_acquisition",
@@ -321,44 +357,13 @@ def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
     )
 
     monkeypatch.setattr(
-        "omen.scenario.planner.decompose_scenario_from_situation",
+        "omen.scenario.planner.planning",
         lambda **kwargs: {
             "pack_id": kwargs["pack_id"],
             "pack_version": kwargs["pack_version"],
             "derived_from_situation_id": "sap_reltio_acquisition",
             "ontology_version": "scenario_ontology_v1",
-            "scenarios": [
-                {
-                    "scenario_key": "A",
-                    "title": "A",
-                    "goal": "gA",
-                    "target": "tA",
-                    "objective": "oA",
-                    "variables": [{"name": "vA"}],
-                    "constraints": ["cA"],
-                    "tradeoff_pressure": ["tpA"],
-                },
-                {
-                    "scenario_key": "B",
-                    "title": "B",
-                    "goal": "gB",
-                    "target": "tB",
-                    "objective": "oB",
-                    "variables": [{"name": "vB"}],
-                    "constraints": ["cB"],
-                    "tradeoff_pressure": ["tpB"],
-                },
-                {
-                    "scenario_key": "C",
-                    "title": "C",
-                    "goal": "gC",
-                    "target": "tC",
-                    "objective": "oC",
-                    "variables": [{"name": "vC"}],
-                    "constraints": ["cC"],
-                    "tradeoff_pressure": ["tpC"],
-                },
-            ],
+            "scenarios": _mock_planning_scenarios(),
         },
     )
 
@@ -390,7 +395,7 @@ def test_plan_scenarios_enhances_inadmissible_actor_profile_before_planning(
     )
 
     traces_dir = tmp_path / "traces"
-    plan_scenarios_from_situation(
+    from_situation(
         situation_artifact={
             "id": "sap_reltio_acquisition",
             "signals": [{"name": "signal", "strength": 0.6}],
@@ -442,44 +447,13 @@ def test_plan_scenarios_uses_llm_prior_scores_with_explanations(
     )
 
     monkeypatch.setattr(
-        "omen.scenario.planner.decompose_scenario_from_situation",
+        "omen.scenario.planner.planning",
         lambda **kwargs: {
             "pack_id": kwargs["pack_id"],
             "pack_version": kwargs["pack_version"],
             "derived_from_situation_id": "sap_reltio_acquisition",
             "ontology_version": "scenario_ontology_v1",
-            "scenarios": [
-                {
-                    "scenario_key": "A",
-                    "title": "A",
-                    "goal": "gA",
-                    "target": "tA",
-                    "objective": "oA",
-                    "variables": [{"name": "vA"}],
-                    "constraints": ["cA"],
-                    "tradeoff_pressure": ["tpA"],
-                },
-                {
-                    "scenario_key": "B",
-                    "title": "B",
-                    "goal": "gB",
-                    "target": "tB",
-                    "objective": "oB",
-                    "variables": [{"name": "vB"}],
-                    "constraints": ["cB"],
-                    "tradeoff_pressure": ["tpB"],
-                },
-                {
-                    "scenario_key": "C",
-                    "title": "C",
-                    "goal": "gC",
-                    "target": "tC",
-                    "objective": "oC",
-                    "variables": [{"name": "vC"}],
-                    "constraints": ["cC"],
-                    "tradeoff_pressure": ["tpC"],
-                },
-            ],
+            "scenarios": _mock_planning_scenarios(),
         },
     )
 
@@ -498,7 +472,7 @@ def test_plan_scenarios_uses_llm_prior_scores_with_explanations(
     )
 
     traces_dir = tmp_path / "traces"
-    plan_scenarios_from_situation(
+    from_situation(
         situation_artifact={
             "id": "sap_reltio_acquisition",
             "signals": [{"name": "signal", "strength": 0.6}],
@@ -527,49 +501,18 @@ def test_plan_scenarios_falls_back_to_random_priors_without_actor_json(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "omen.scenario.planner.decompose_scenario_from_situation",
+        "omen.scenario.planner.planning",
         lambda **kwargs: {
             "pack_id": kwargs["pack_id"],
             "pack_version": kwargs["pack_version"],
             "derived_from_situation_id": "sap_reltio_acquisition",
             "ontology_version": "scenario_ontology_v1",
-            "scenarios": [
-                {
-                    "scenario_key": "A",
-                    "title": "A",
-                    "goal": "gA",
-                    "target": "tA",
-                    "objective": "oA",
-                    "variables": [{"name": "vA"}],
-                    "constraints": ["cA"],
-                    "tradeoff_pressure": ["tpA"],
-                },
-                {
-                    "scenario_key": "B",
-                    "title": "B",
-                    "goal": "gB",
-                    "target": "tB",
-                    "objective": "oB",
-                    "variables": [{"name": "vB"}],
-                    "constraints": ["cB"],
-                    "tradeoff_pressure": ["tpB"],
-                },
-                {
-                    "scenario_key": "C",
-                    "title": "C",
-                    "goal": "gC",
-                    "target": "tC",
-                    "objective": "oC",
-                    "variables": [{"name": "vC"}],
-                    "constraints": ["cC"],
-                    "tradeoff_pressure": ["tpC"],
-                },
-            ],
+            "scenarios": _mock_planning_scenarios(),
         },
     )
 
     traces_dir = tmp_path / "traces"
-    ontology = plan_scenarios_from_situation(
+    ontology = from_situation(
         situation_artifact={
             "id": "sap_reltio_acquisition",
             "signals": [{"name": "signal", "strength": 0.6}],

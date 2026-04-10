@@ -8,8 +8,8 @@ from typing import Any
 
 from omen.ingest.synthesizer.builders.situation import (
     scenario_ontology_to_markdown,
-    situation_artifact_to_markdown,
 )
+from omen.ingest.reporter.markdown import render_situation_brief
 from omen.ingest.validators.scenario import (
     ScenarioConfig,
     validate_case_package_or_raise,
@@ -122,7 +122,7 @@ def save_situation_markdown(path: str | Path, payload: dict[str, Any], config_pa
     output_path = Path(path)
     validated = validate_situation_artifact_or_raise(payload)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    markdown = situation_artifact_to_markdown(validated.model_dump(), config_path=config_path)
+    markdown = render_situation_brief(validated.model_dump(), config_path=config_path)
     output_path.write_text(markdown, encoding="utf-8")
     return output_path
 

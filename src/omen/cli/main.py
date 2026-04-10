@@ -43,8 +43,8 @@ from omen.simulation.replay import (
 )
 from omen.simulation.engine import run_simulation
 from omen.simulation.deterministic import (
-    try_run_deterministic_compare_from_scenario_input,
-    try_run_deterministic_simulate_from_scenario_input,
+    run_compare,
+    run_simulate_with_actor,
 )
 from omen.simulation.precision_gate import evaluate_precision_gates
 from omen.simulation.precision_metrics import evaluate_repeatability
@@ -397,7 +397,7 @@ def main() -> None:
 
     if args.command == "simulate":
         try:
-            deterministic_payload = try_run_deterministic_simulate_from_scenario_input(
+            deterministic_payload = run_simulate_with_actor(
                 scenario_path=args.scenario,
                 actor_profile_ref=args.actor_profile_ref,
                 calculation_policy_version=args.calc_policy_version,
@@ -440,7 +440,7 @@ def main() -> None:
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
         try:
-            deterministic_payload = try_run_deterministic_compare_from_scenario_input(
+            deterministic_payload = run_compare(
                 scenario_path=args.scenario,
                 actor_profile_ref=args.actor_profile_ref,
                 calculation_policy_version=args.calc_policy_version,

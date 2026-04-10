@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from omen.ingest.synthesizer.services.situation import analyze_situation_document
-from omen.ingest.synthesizer.services.scenario import decompose_scenario_from_situation
+from omen.ingest.synthesizer.services.scenario import planning
 from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 from omen.ingest.validators.scenario import IncompleteDeterministicPackError
 from omen.ingest.validators.situation import validate_situation_artifact_or_raise
@@ -246,7 +246,7 @@ def test_decompose_scenario_from_situation_coerces_scenarios_object_map(
     lambda **kwargs: json.dumps(response_payload),
   )
 
-  decomposition = decompose_scenario_from_situation(
+  decomposition = planning(
     situation_artifact={"id": "sap_reltio_acquisition", "source_meta": {}},
     pack_id="sap_v1",
     pack_version="1.0.0",

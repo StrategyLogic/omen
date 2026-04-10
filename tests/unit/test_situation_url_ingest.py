@@ -20,19 +20,10 @@ def test_save_url_source_text_writes_under_ingest_source(tmp_path: Path) -> None
 
 
 def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, capsys) -> None:
-    generated_case_path = tmp_path / "cases" / "situations" / "nokia_case.md"
-    situation_output_path = tmp_path / "data" / "scenarios" / "nokia_v1" / "nokia_case_situation.json"
-
     monkeypatch.setattr(
         situation_cli,
         "run_situation_analysis",
-        lambda **kwargs: {
-            "source_text_path": tmp_path / "data" / "ingest" / "source" / "example.txt",
-            "generated_case_path": generated_case_path,
-            "artifact_path": situation_output_path,
-            "markdown_path": situation_output_path.with_suffix(".md"),
-            "generation_trace_path": situation_output_path.parent / "generation" / "log.json",
-        },
+        lambda **kwargs: None,
     )
 
     args = Namespace(
@@ -50,7 +41,7 @@ def test_handle_situation_analyze_command_url_flow(monkeypatch, tmp_path: Path, 
 
     assert result == 0
     assert "Situation analysis started" in output
-    assert "Situation analysis completed:" in output
+    assert "Situation analysis completed" in output
 
 
 def test_handle_situation_analyze_command_rejects_doc_and_url_together(capsys) -> None:
@@ -77,69 +68,8 @@ def test_handle_situation_analyze_command_uses_explicit_actor_ref(monkeypatch, t
     actor_json = tmp_path / "actor_ontology.json"
     actor_json.write_text("{}", encoding="utf-8")
 
-    def _fake_run(**kwargs: object) -> dict[str, object]:
+    def _fake_run(**kwargs: object) -> None:
         captured["actor"] = kwargs.get("actor")
-        output_path = Path(str(kwargs["output"] or tmp_path / "situation.json"))
-        return {
-            "situation_artifact": {
-                "version": "0.1.0",
-                "id": "case",
-                "context": {
-                    "title": "Case",
-                    "core_question": "Q",
-                    "current_state": "S",
-                    "core_dilemma": "D",
-                    "key_decision_point": "K",
-                    "target_outcomes": ["T"],
-                    "hard_constraints": ["H"],
-                    "known_unknowns": [],
-                },
-                "signals": [
-                    {
-                        "id": "sig_market_001",
-                        "name": "Signal",
-                        "domain": "market",
-                        "strength": 0.6,
-                        "direction": "up",
-                        "mapped_targets": [
-                            {
-                                "space": "MarketSpace",
-                                "element_key": "x",
-                                "impact_type": "driver",
-                                "impact_strength": 0.6,
-                                "mechanism_conditions": {
-                                    "activation_condition": "a",
-                                    "expected_effect": "e",
-                                },
-                            }
-                        ],
-                        "cascade_rules": [],
-                        "market_constraints": [
-                            {
-                                "constraint_key": "c",
-                                "binding_strength": 0.5,
-                            }
-                        ],
-                        "mechanism_note": "m",
-                        "no_cascade_reason": "direct local effect in current horizon",
-                    }
-                ],
-                "tech_space_seed": [],
-                "market_space_seed": [],
-                "uncertainty_space": {"overall_confidence": 0.6},
-                "source_trace": [],
-                "source_meta": {
-                    "source_path": "cases/situations/case.md",
-                    "generated_at": "2026-04-08T12:00:00",
-                    "pack_id": "strategic_actor_case_v1",
-                    "pack_version": "1.0.0",
-                    "actor_ref": str(kwargs.get("actor") or ""),
-                },
-            },
-            "artifact_path": output_path,
-            "markdown_path": output_path.with_suffix(".md"),
-            "generation_trace_path": output_path.parent / "generation" / "log.json",
-        }
 
     monkeypatch.setattr(situation_cli, "run_situation_analysis", _fake_run)
 

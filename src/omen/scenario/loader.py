@@ -6,10 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.builders.situation import (
-    scenario_ontology_to_markdown,
-)
 from omen.ingest.reporter.markdown import render_situation_brief
+from omen.ingest.reporter.markdown import render_scenario_ontology_markdown
 from omen.ingest.validators.scenario import (
     ScenarioConfig,
     validate_case_package_or_raise,
@@ -94,7 +92,7 @@ def save_scenario_ontology_markdown(path: str | Path, payload: dict[str, Any]) -
     output_path = Path(path)
     validated = validate_scenario_ontology_slice_or_raise(payload)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    markdown = scenario_ontology_to_markdown(validated.model_dump())
+    markdown = render_scenario_ontology_markdown(validated.model_dump())
     output_path.write_text(markdown, encoding="utf-8")
     return output_path
 

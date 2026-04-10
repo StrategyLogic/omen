@@ -9,6 +9,7 @@ from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
 from omen.ingest.synthesizer.builders.situation import (
+    analyze_situation_document,
     validate_situation_source_or_raise,
 )
 from omen.scenario.loader import (
@@ -24,7 +25,6 @@ from omen.scenario.planner import from_situation
 from omen.scenario.planner import ScenarioDecompositionValidationError
 from omen.ingest.synthesizer.services.situation import (
     LLMJsonValidationAbort,
-    analyze_situation_document,
     build_situation_confidence_trace,
     generate_situation_case_document,
 )

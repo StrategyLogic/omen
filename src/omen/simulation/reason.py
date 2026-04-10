@@ -67,7 +67,7 @@ def blocking_has_activation_links(blocking_item: dict[str, Any]) -> bool:
 
 def extract_conclusion_buckets(conclusions: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     raw = dict(conclusions or {})
-    source = dict(raw.get("scenario_conditions") or raw)
+    source = dict(raw.get("scenario_conditions") or raw.get("strategic_freedom") or raw)
 
     def _normalize_items(items: list[Any], *, bucket: str) -> list[dict[str, Any]]:
         normalized: list[dict[str, Any]] = []
@@ -379,6 +379,7 @@ def try_generate_scenario_reason_chain_via_llm(
         planning_query_json=planning_query_json,
         situation_markdown=situation_markdown,
     )
+    content = ""
     try:
         content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
         payload = _extract_json_object(content)
@@ -392,14 +393,17 @@ def try_generate_scenario_reason_chain_via_llm(
     except Exception as exc:
         retry_payload: dict[str, Any] | None = None
         retry_raw = ""
+        retry_exc: Exception | None = None
         try:
             retry_prompt = build_json_retry_prompt(prompt)
             retry_raw = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
             parsed_retry = _extract_json_object(retry_raw)
             retry_payload = parsed_retry if isinstance(parsed_retry, dict) else None
-        except Exception:
+        except Exception as inner_exc:
+            retry_exc = inner_exc
             retry_payload = None
 
+        first_raw = content if isinstance(content, str) else ""
         _append_debug(
             status=(
                 "ok_after_retry"
@@ -408,11 +412,15 @@ def try_generate_scenario_reason_chain_via_llm(
             ),
             prompt_text=prompt,
             raw_response=(
-                f"{content if isinstance(locals().get('content'), str) else ''}"
+                f"{first_raw}"
                 + ("\n\n--- retry_raw_response ---\n" + retry_raw if retry_raw else "")
             ),
             parsed_payload=retry_payload,
         )
+        if retry_payload is None and not first_raw and not retry_raw:
+            raise RuntimeError(
+                "LLM reason chain invocation failed before any response payload was produced"
+            ) from (retry_exc or exc)
         return retry_payload
 
 
@@ -478,19 +486,30 @@ def resolve_reason_chain_with_llm(
         "tradeoff_pressure": list(scenario_ontology.get("tradeoff_pressure") or []),
         "resistance_assumptions": dict(scenario_ontology.get("resistance_assumptions") or {}),
     }
-    llm_payload = try_generate_scenario_reason_chain_via_llm(
-        scenario_json=llm_scenario_input,
-        actor_profile_json={
-            "actor_profile_ref": actor_profile_ref,
-            "actor_derivation": dict(scenario_result.get("actor_derivation") or {}),
-            "selected_dimensions": list((scenario_result.get("selected_dimensions") or {}).get("selected_dimension_keys") or []),
-            "resistance": dict(scenario_result.get("resistance") or {}),
-        },
-        planning_query_json={},
-        situation_markdown="",
-        debug_output_path=debug_output_path,
-        scenario_key=scenario_key,
-    )
+    try:
+        llm_payload = try_generate_scenario_reason_chain_via_llm(
+            scenario_json=llm_scenario_input,
+            actor_profile_json={
+                "actor_profile_ref": actor_profile_ref,
+                "actor_derivation": dict(scenario_result.get("actor_derivation") or {}),
+                "selected_dimensions": list((scenario_result.get("selected_dimensions") or {}).get("selected_dimension_keys") or []),
+                "resistance": dict(scenario_result.get("resistance") or {}),
+            },
+            planning_query_json={},
+            situation_markdown="",
+            debug_output_path=debug_output_path,
+            scenario_key=scenario_key,
+        )
+    except Exception as exc:
+        raise ValueError(
+            f"LLM reason chain generation failed for scenario {scenario_key}: {exc}"
+        ) from exc
+
+    if llm_payload is None:
+        raise ValueError(
+            "LLM reason chain generation failed: no payload returned after invoke/retry "
+            f"for scenario {scenario_key}"
+        )
     llm_chain = llm_payload.get("reason_chain") if isinstance(llm_payload, dict) and isinstance(llm_payload.get("reason_chain"), dict) else None
     normalized_llm = _normalize_llm_reason_chain(llm_chain or {})
 

@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
+from omen.ingest.synthesizer.clients import invoke_json_prompt, invoke_text_prompt, render_prompt_template
+from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 
 _REQUIRED_SECTION_LABELS = (
@@ -230,6 +231,47 @@ def render_situation_case(
     ).strip()
 
     return case_name, markdown + "\n"
+
+
+def _invoke_case_json_prompt(prompt: str) -> dict[str, Any]:
+    retry_prompt = build_json_retry_prompt(prompt)
+    payload = invoke_json_prompt(
+        user_prompt=prompt,
+        allow_retry=True,
+        retry_prompt=retry_prompt,
+        stage="situation_source_to_case_prompt",
+        expected_type="object",
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("situation source-to-case response must be a JSON object")
+    return payload
+
+
+def save_situation_case_from_source(
+    *,
+    source_text: str,
+    source_ref: str,
+    source_text_path: str,
+    output_dir: str | Path = "cases/situations",
+) -> Path:
+    prompt = render_prompt_template(
+        get_prompt_template("situation_source_to_case_prompt", tier="base"),
+        {
+            "source_ref": source_ref,
+            "source_text_path": source_text_path,
+            "source_text": source_text,
+        },
+    )
+    payload = _invoke_case_json_prompt(prompt)
+    case_name, case_markdown = render_situation_case(
+        payload=payload,
+        source_ref=source_ref,
+        source_text_path=source_text_path,
+    )
+    output_path = Path(output_dir) / f"{case_name}.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(case_markdown, encoding="utf-8")
+    return output_path
 
 
 def render_scenario_ontology_markdown(ontology: dict[str, Any]) -> str:

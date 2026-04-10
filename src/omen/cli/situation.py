@@ -15,12 +15,10 @@ from omen.scenario.planner import from_situation
 from omen.scenario.planner import ScenarioDecompositionValidationError
 from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
 from omen.ingest.synthesizer.services.situation import (
-    analyze_and_save_situation,
-    analyze_and_save_situation_from_url,
     load_situation_artifact,
     resolve_situation_artifact_ref,
+    run_situation_analysis,
     save_auxiliary_json,
-    validate_situation_source_or_raise,
 )
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
 
@@ -274,75 +272,24 @@ def register_scenario_command(subparsers: Any) -> None:
 
 
 def handle_situation_analyze_command(args: Any) -> int:
+    print("Situation analysis started")
     try:
-        if args.url and (args.doc or args.input):
-            print("Analyze situation failed: use either --doc or --url, not both")
-            return 2
-
-        raw_doc = args.doc or args.input
-        effective_actor_ref = None
-        if args.actor is not None:
-            effective_actor_ref = _validate_explicit_actor_ref(str(args.actor))
-
-        if args.url:
-            print("Using URL source for situation analysis...")
-            try:
-                output_path_arg = Path(args.output) if args.output else None
-                result = analyze_and_save_situation_from_url(
-                    url=str(args.url),
-                    actor_ref=effective_actor_ref,
-                    pack_id=str(args.pack_id) if args.pack_id else None,
-                    pack_version=str(args.pack_version),
-                    output_path=output_path_arg,
-                )
-                source_text_path = Path(result["source_text_path"])
-                generated_case_path = Path(result["generated_case_path"])
-                output_path = Path(result["artifact_path"])
-                markdown_path = Path(result["markdown_path"])
-                generation_trace_path = Path(result["generation_trace_path"])
-                print(f"URL fetch: SUCCESS ({source_text_path})")
-                print(f"Generated situation case: SUCCESS ({generated_case_path})")
-                print(f"Saved situation artifact to {output_path}")
-                print(f"Saved situation summary to {markdown_path}")
-                print(f"Saved situation generation trace to {generation_trace_path}")
-                return 0
-            except Exception as exc:
-                print(f"Analyze situation failed: {exc}")
-                return 2
-
-        if not raw_doc:
-            print("Analyze situation failed: missing required argument --doc or --url")
-            return 2
-
-        input_path = _resolve_situation_doc_path(str(raw_doc))
-        if not input_path.exists():
-            print(f"Analyze situation failed: input not found: {input_path}")
-            return 2
-
-        validate_situation_source_or_raise(input_path)
-        pack_id = str(args.pack_id) if args.pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
-        output_path_arg = (
-            Path(args.output)
-            if args.output
-            else _resolve_default_output_path(input_path, pack_id)
-        )
-
-        if effective_actor_ref:
-            print("Building scenario pack with strategic actor context...")
-
-        result = analyze_and_save_situation(
-            situation_file=input_path,
-            actor_ref=effective_actor_ref,
-            pack_id=pack_id,
+        result = run_situation_analysis(
+            doc=args.doc,
+            input_alias=args.input,
+            url=args.url,
+            actor=args.actor,
+            output=args.output,
+            pack_id=str(args.pack_id) if args.pack_id else None,
             pack_version=str(args.pack_version),
-            output_path=output_path_arg,
         )
         output_path = Path(result["artifact_path"])
         markdown_path = Path(result["markdown_path"])
         generation_trace_path = Path(result["generation_trace_path"])
-        print(f"Saved situation artifact to {output_path}")
-        print(f"Saved situation summary to {markdown_path}")
-        print(f"Saved situation generation trace to {generation_trace_path}")
+        print(
+            "Situation analysis completed: "
+            f"artifact={output_path}, summary={markdown_path}, trace={generation_trace_path}"
+        )
         return 0
     except DeferredScopeFeatureError as exc:
         print(f"Deferred scope: {exc}")
@@ -358,7 +305,7 @@ def handle_situation_analyze_command(args: Any) -> int:
         )
         return 2
     except Exception as exc:
-        print(f"Analyze situation failed: {exc}")
+        print(f"Situation analysis failed: {exc}")
         return 2
 
 

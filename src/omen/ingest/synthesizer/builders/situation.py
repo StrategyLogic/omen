@@ -9,12 +9,10 @@ from typing import Any
 
 import yaml
 
-from omen.ingest.reporter.markdown import render_situation_case
 from omen.ingest.synthesizer.clients import invoke_json_prompt, render_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
-from omen.scenario.ingest_validator import DeferredScopeFeatureError
 
 
 _RISK_CONFIDENCE_MIN = 0.2
@@ -24,43 +22,6 @@ _SIGNAL_IMPACT_TYPES = {"driver", "constraint", "amplifier", "dampener"}
 _SIGNAL_DIRECTION_VALUES = {"up", "down", "mixed"}
 _SIGNAL_DOMAIN_VALUES = {"tech", "market", "capital", "standard", "policy"}
 _SIGNAL_EXPECTED_LAG_VALUES = {"short", "medium", "long"}
-
-_DEFERRED_DYNAMIC_MARKERS = {
-    "dynamic_authoring",
-    "dynamic_scenarios",
-    "free_form_scenarios",
-    "scenario_generator",
-}
-
-_DEFERRED_ENTERPRISE_MARKERS = {
-    "enterprise_resistance_extensions",
-    "enterprise_template_catalog",
-    "resistance_extension_profiles",
-    "custom_resistance_dimensions",
-    "enterprise_resistance_profile",
-}
-
-
-def _validate_source_scope_or_raise(text: str) -> None:
-    lowered = text.lower()
-    for marker in _DEFERRED_DYNAMIC_MARKERS:
-        if marker in lowered:
-            raise DeferredScopeFeatureError(
-                f"`{marker}` is deferred scope in this release. "
-                "Only deterministic A/B/C scenario packs are supported."
-            )
-
-    for marker in _DEFERRED_ENTERPRISE_MARKERS:
-        if marker in lowered:
-            raise DeferredScopeFeatureError(
-                f"`{marker}` is deferred scope. Enterprise resistance extensions are not supported in this release."
-            )
-
-
-def validate_situation_source_or_raise(situation_file: str | Path) -> None:
-    text = Path(situation_file).read_text(encoding="utf-8")
-    _validate_source_scope_or_raise(text)
-
 
 def _invoke_json(
     prompt: str,
@@ -724,29 +685,6 @@ def build_situation_confidence_trace(
         "metrics": metrics,
         "assumptions_explicit": uncertainty.get("assumptions_explicit") or [],
     }
-
-
-def generate_situation_case_document(
-    *,
-    source_text: str,
-    source_ref: str,
-    source_text_path: str,
-) -> tuple[str, str]:
-    payload = _invoke_json(
-        _render_base_prompt(
-            "situation_source_to_case_prompt",
-            {
-                "source_ref": source_ref,
-                "source_text_path": source_text_path,
-                "source_text": source_text,
-            },
-        ),
-    )
-    return render_situation_case(
-        payload=payload,
-        source_ref=source_ref,
-        source_text_path=source_text_path,
-    )
 
 
 def analyze_situation_document(

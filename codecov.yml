@@ -1,0 +1,10 @@
+# See https://docs.codecov.com/docs/codecov-yaml for more information on configuration options.
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0.5%
+    patch:
+      default:
+        target: 60%

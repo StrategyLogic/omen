@@ -34,7 +34,7 @@ jobs:
         ruff check .
     - name: Run unit tests
       run: |
-        pytest tests/unit
+        python -m pytest tests/unit
     - name: Build distribution artifacts
       run: |
         python -m build --sdist --wheel

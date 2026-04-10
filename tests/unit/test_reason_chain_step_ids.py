@@ -1,4 +1,4 @@
-from omen.analysis.actor.derivation_trace import (
+from omen.simulation.reason import (
     build_hierarchical_step_id,
     is_hierarchical_step_id,
     validate_reason_chain_step_ids,

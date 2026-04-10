@@ -1,4 +1,4 @@
-from omen.analysis.actor.derivation_trace import blocking_has_activation_links
+from omen.simulation.reason import blocking_has_activation_links
 
 
 def test_blocking_linkage_requires_activation_and_reason_refs() -> None:

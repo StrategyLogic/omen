@@ -302,7 +302,7 @@ def _build_random_prior_fallback(*, scenario_ontology: dict[str, Any]) -> list[d
     return [
         {
             "scenario_key": key,
-            "score": round(samples[key] / total, 6),
+            "score": samples[key] / total,
             "explain": "Fallback random prior due to unavailable actor-aware LLM scoring",
         }
         for key in keys

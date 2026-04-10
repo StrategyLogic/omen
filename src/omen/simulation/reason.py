@@ -1,9 +1,22 @@
-"""Actor derivation trace helpers."""
+"""Reason-chain and simulate-layer helpers."""
 
 from __future__ import annotations
 
+import datetime
+import json
+from pathlib import Path
+import re
 from typing import Any
 
+try:
+    import yaml
+except Exception:  # pragma: no cover - fallback for minimal environments
+    class _YamlFallback:
+        @staticmethod
+        def safe_load(_: str) -> Any:
+            raise ValueError("yaml parser unavailable")
+
+    yaml = _YamlFallback()  # type: ignore[assignment]
 
 REASONING_ORDER: tuple[str, ...] = (
     "seed",
@@ -338,7 +351,6 @@ def build_reason_chain_view_model_artifact(
                 }
             )
 
-        # Keep DAG connected in workshop mode even when conclusions are empty.
         for index in range(1, len(ordered_step_node_ids)):
             graph_edges.append(
                 {
@@ -396,54 +408,346 @@ def build_reason_chain_view_model_artifact(
     }
 
 
-def build_actor_derivation_trace(
+def _extract_json_object(text: str) -> dict[str, Any]:
+    def _try_decode(candidate: str) -> dict[str, Any]:
+        decoder = json.JSONDecoder()
+        start = candidate.find("{")
+        if start == -1:
+            raise ValueError("LLM response does not contain a JSON object")
+        payload, _ = decoder.raw_decode(candidate[start:])
+        if not isinstance(payload, dict):
+            raise ValueError("LLM response JSON payload is not an object")
+        return payload
+
+    def _sanitize(candidate: str) -> str:
+        cleaned = str(candidate or "").replace("\ufeff", "").strip()
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+        cleaned = re.sub(r"```(?:json)?", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"/\*.*?\*/", "", cleaned, flags=re.DOTALL)
+        cleaned = re.sub(r"(^|\s)//.*?$", "", cleaned, flags=re.MULTILINE)
+        cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+        return cleaned.strip()
+
+    raw = str(text or "")
+    candidates: list[str] = [raw]
+
+    fenced = re.findall(r"```(?:json)?\s*(.*?)\s*```", raw, flags=re.IGNORECASE | re.DOTALL)
+    candidates.extend(fenced)
+
+    errors: list[str] = []
+    for candidate in candidates:
+        try:
+            return _try_decode(candidate)
+        except Exception as exc:
+            errors.append(exc.__class__.__name__)
+
+        try:
+            return _try_decode(_sanitize(candidate))
+        except Exception as exc:
+            errors.append(exc.__class__.__name__)
+
+        try:
+            loaded = yaml.safe_load(_sanitize(candidate))
+            if isinstance(loaded, dict):
+                return loaded
+            errors.append("YAMLSafeLoadNotObject")
+        except Exception as exc:
+            errors.append(exc.__class__.__name__)
+
+    raise ValueError(f"Unable to parse JSON object from LLM response ({'/'.join(errors[-4:])})")
+
+
+def render_scenario_reason_chain_prompt(
     *,
+    scenario_json: dict[str, Any],
+    actor_profile_json: dict[str, Any],
+    planning_query_json: dict[str, Any],
+    situation_markdown: str,
+    scenario_key: str,
+) -> str:
+    from omen.ingest.synthesizer.clients import render_prompt_template
+    from omen.ingest.synthesizer.prompts.registry import get_prompt_template
+
+    template = get_prompt_template("scenario_reason_chain_prompt", tier="base")
+    return render_prompt_template(
+        template,
+        {
+            "scenario_json": json.dumps(scenario_json, ensure_ascii=False),
+            "scenario_key": str(scenario_key or ""),
+            "actor_profile_json": json.dumps(actor_profile_json, ensure_ascii=False),
+            "planning_query_json": json.dumps(planning_query_json, ensure_ascii=False),
+            "situation_markdown": str(situation_markdown or ""),
+        },
+    )
+
+
+def try_generate_scenario_reason_chain_via_llm(
+    *,
+    scenario_json: dict[str, Any],
+    actor_profile_json: dict[str, Any],
+    planning_query_json: dict[str, Any],
+    situation_markdown: str,
+    config_path: str | None,
+    debug_output_path: str | None = None,
+    scenario_key: str | None = None,
+) -> dict[str, Any] | None:
+    from omen.ingest.synthesizer.clients import invoke_text_prompt
+    from omen.ingest.synthesizer.prompts import build_json_retry_prompt
+
+    def _append_debug(
+        *,
+        status: str,
+        prompt_text: str,
+        raw_response: str,
+        parsed_payload: dict[str, Any] | None,
+    ) -> None:
+        if not debug_output_path:
+            return
+        try:
+            path = Path(debug_output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload_text = json.dumps(parsed_payload, ensure_ascii=False, indent=2) if isinstance(parsed_payload, dict) else "null"
+            entry = (
+                "\n"
+                "===== scenario_reason_chain_llm_debug =====\n"
+                f"timestamp: {datetime.datetime.now().isoformat()}\n"
+                f"scenario_key: {str(scenario_key or '')}\n"
+                f"status: {status}\n"
+                "--- prompt ---\n"
+                f"{prompt_text}\n"
+                "--- raw_response ---\n"
+                f"{raw_response}\n"
+                "--- parsed_payload ---\n"
+                f"{payload_text}\n"
+            )
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(entry)
+        except Exception:
+            return
+
+    if not config_path:
+        _append_debug(
+            status="skipped_no_config",
+            prompt_text="",
+            raw_response="",
+            parsed_payload=None,
+        )
+        return None
+
+    prompt = render_scenario_reason_chain_prompt(
+        scenario_json=scenario_json,
+        scenario_key=str(scenario_key or scenario_json.get("scenario_key") or ""),
+        actor_profile_json=actor_profile_json,
+        planning_query_json=planning_query_json,
+        situation_markdown=situation_markdown,
+    )
+    try:
+        content = invoke_text_prompt(config_path=config_path, user_prompt=prompt)
+        payload = _extract_json_object(content)
+        _append_debug(
+            status="ok",
+            prompt_text=prompt,
+            raw_response=content,
+            parsed_payload=payload if isinstance(payload, dict) else None,
+        )
+        return payload if isinstance(payload, dict) else None
+    except Exception as exc:
+        retry_payload: dict[str, Any] | None = None
+        retry_raw = ""
+        try:
+            retry_prompt = build_json_retry_prompt(prompt)
+            retry_raw = invoke_text_prompt(config_path=config_path, user_prompt=retry_prompt)
+            parsed_retry = _extract_json_object(retry_raw)
+            retry_payload = parsed_retry if isinstance(parsed_retry, dict) else None
+        except Exception:
+            retry_payload = None
+
+        _append_debug(
+            status=(
+                "ok_after_retry"
+                if isinstance(retry_payload, dict)
+                else f"parse_or_invoke_error:{exc.__class__.__name__}"
+            ),
+            prompt_text=prompt,
+            raw_response=(
+                f"{content if isinstance(locals().get('content'), str) else ''}"
+                + ("\n\n--- retry_raw_response ---\n" + retry_raw if retry_raw else "")
+            ),
+            parsed_payload=retry_payload,
+        )
+        return retry_payload
+
+
+def _normalize_llm_reason_chain(llm_chain: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(llm_chain, dict):
+        return None
+    steps = list(llm_chain.get("steps") or [])
+    if not steps:
+        return None
+
+    normalized_steps: list[dict[str, Any]] = []
+    for index, raw in enumerate(steps, start=1):
+        if not isinstance(raw, dict):
+            continue
+        step_id = str(raw.get("step_id") or "").strip() or f"step_{index}"
+        step_type = str(raw.get("step_type") or "unknown").strip() or "unknown"
+        summary = str(raw.get("summary") or raw.get("description") or step_type).strip() or step_type
+        input_refs = list(raw.get("input_refs") or raw.get("inputs") or [])
+        normalized_steps.append(
+            {
+                **raw,
+                "step_id": step_id,
+                "step_type": step_type,
+                "summary": summary,
+                "input_refs": input_refs,
+            }
+        )
+
+    if not normalized_steps:
+        return None
+
+    normalized_conclusions = dict(llm_chain.get("conclusions") or {})
+    if not normalized_conclusions:
+        normalized_conclusions = {
+            "required": [],
+            "warning": [],
+            "blocking": [],
+        }
+
+    return {
+        "steps": normalized_steps,
+        "intermediate": dict(llm_chain.get("intermediate") or {}),
+        "conclusions": normalized_conclusions,
+    }
+
+
+def resolve_reason_chain_with_llm(
+    *,
+    deterministic_reason_chain: dict[str, Any],
     scenario_key: str,
     scenario_ontology: dict[str, Any],
-    actor_derivation: dict[str, Any],
-    selected_dimensions: dict[str, Any],
-    strategic_conditions: dict[str, Any],
-    missing_evidence_reasons: list[str],
-) -> dict[str, Any]:
-    objective = str(scenario_ontology.get("objective") or "").strip()
-    constraints = [str(item).strip() for item in (scenario_ontology.get("constraints") or []) if str(item).strip()]
-    selected = [str(item).strip() for item in (selected_dimensions.get("selected_dimension_keys") or []) if str(item).strip()]
-    required = [str(item).strip() for item in (strategic_conditions.get("required") or []) if str(item).strip()]
-    derivation_keys = sorted(str(key) for key in actor_derivation.keys()) if isinstance(actor_derivation, dict) else []
-
-    return {
-        "scenario_key": scenario_key,
-        "ontology_refs": [
-            "objective",
-            "constraints",
-            "tradeoff_pressure",
-            "resistance_assumptions",
-        ],
-        "selected_dimensions": selected,
-        "actor_derivation_refs": [f"actor_derivation::{scenario_key}"],
-        "derivation_steps": [
-            f"Scene objective aligned: {objective or 'unknown objective'}",
-            f"Scene constraints interpreted: {', '.join(constraints[:2]) if constraints else 'none'}",
-            f"Actor derivation selected dimensions: {', '.join(selected) if selected else 'none'}",
-            f"Actor derivation fields observed: {', '.join(derivation_keys[:3]) if derivation_keys else 'none'}",
-            f"Strategic condition projection: {', '.join(required[:2]) if required else 'none'}",
-        ],
-        "missing_evidence_reasons": list(missing_evidence_reasons),
-    }
-
-
-def build_actor_derivation_artifact(
-    *,
-    run_id: str,
+    scenario_result: dict[str, Any],
     actor_profile_ref: str,
-    scenario_pack_ref: str,
-    scenario_derivations: list[dict[str, Any]],
-) -> dict[str, Any]:
-    return {
-        "artifact_type": "actor_derivation",
-        "version": "actor_derivation_v1",
-        "run_id": run_id,
-        "actor_profile_ref": actor_profile_ref,
-        "scenario_pack_ref": scenario_pack_ref,
-        "scenario_derivations": scenario_derivations,
+    config_path: str | None,
+    debug_output_path: str | None,
+) -> tuple[dict[str, Any], str]:
+    llm_scenario_input = {
+        "scenario_key": scenario_key,
+        "title": scenario_ontology.get("title"),
+        "goal": scenario_ontology.get("goal"),
+        "target": scenario_ontology.get("target"),
+        "objective": scenario_ontology.get("objective"),
+        "variables": list(scenario_ontology.get("variables") or []),
+        "constraints": list(scenario_ontology.get("constraints") or []),
+        "tradeoff_pressure": list(scenario_ontology.get("tradeoff_pressure") or []),
+        "resistance_assumptions": dict(scenario_ontology.get("resistance_assumptions") or {}),
     }
+    llm_payload = try_generate_scenario_reason_chain_via_llm(
+        scenario_json=llm_scenario_input,
+        actor_profile_json={
+            "actor_profile_ref": actor_profile_ref,
+            "actor_derivation": dict(scenario_result.get("actor_derivation") or {}),
+            "selected_dimensions": list((scenario_result.get("selected_dimensions") or {}).get("selected_dimension_keys") or []),
+            "resistance": dict(scenario_result.get("resistance") or {}),
+        },
+        planning_query_json={},
+        situation_markdown="",
+        config_path=config_path,
+        debug_output_path=debug_output_path,
+        scenario_key=scenario_key,
+    )
+    llm_chain = llm_payload.get("reason_chain") if isinstance(llm_payload, dict) and isinstance(llm_payload.get("reason_chain"), dict) else None
+    normalized_llm = _normalize_llm_reason_chain(llm_chain or {})
+
+    if normalized_llm is not None:
+        return normalized_llm, "ok"
+
+    if config_path:
+        return (
+            {
+                "steps": [
+                    {
+                        "step_id": "llm_failed",
+                        "step_type": "llm_error",
+                        "input_refs": [f"scenario::{scenario_key}"],
+                        "summary": "LLM reason chain generation failed; no deterministic fallback applied.",
+                    }
+                ],
+                "intermediate": {},
+                "conclusions": {
+                    "required": [],
+                    "warning": [],
+                    "blocking": [],
+                },
+            },
+            "llm_failed",
+        )
+
+    return deterministic_reason_chain, "deterministic_no_config"
+
+
+def build_recommendation_from_condition_sets(
+    scenario_results: list[dict[str, Any]],
+) -> str:
+    if not scenario_results:
+        return "No deterministic scenario result available."
+
+    ranked = sorted(
+        scenario_results,
+        key=lambda item: float((item.get("strategic_freedom") or {}).get("score", 0.0)),
+        reverse=True,
+    )
+    best = ranked[0]
+    best_key = str(best.get("scenario_key") or "unknown")
+    conditions = best.get("strategic_freedom") or {}
+    blocking = list(conditions.get("blocking") or [])
+    required = list(conditions.get("required") or [])
+
+    if blocking:
+        return (
+            f"Scenario {best_key} has highest strategic potential but is currently blocked: "
+            f"{'; '.join(blocking[:2])}."
+        )
+
+    required_hint = required[0] if required else "No required condition derived from reason_chain conclusions"
+    return (
+        f"Recommend scenario {best_key} as primary path. "
+        f"First required condition: {required_hint}."
+    )
+
+
+def apply_partial_evidence_confidence_policy(
+    *,
+    evidence_refs: list[str],
+    scenario_key: str | None = None,
+) -> tuple[str, list[str]]:
+    refs = [str(item).strip() for item in evidence_refs if str(item).strip()]
+    if refs:
+        return "full-confidence", []
+    key = str(scenario_key or "unknown")
+    return (
+        "reduced-confidence",
+        [f"Scenario {key}: no evidence refs linked in current iteration"],
+    )
+
+
+def link_blocking_to_reason_steps(
+    blocking_texts: list[str],
+    *,
+    activation_step_id: str,
+    reason_step_id: str,
+) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for text in blocking_texts:
+        normalized = str(text).strip()
+        if not normalized:
+            continue
+        output.append(
+            {
+                "text": normalized,
+                "activation_step_ids": [activation_step_id],
+                "reason_step_ids": [reason_step_id],
+            }
+        )
+    return output

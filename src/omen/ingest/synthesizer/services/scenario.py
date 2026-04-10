@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from omen.ingest.synthesizer.clients import invoke_text_prompt, render_prompt_template
 from omen.ingest.synthesizer.prompts import build_json_retry_prompt
 from omen.ingest.synthesizer.prompts.registry import get_prompt_template
 from omen.ingest.synthesizer.services.errors import LLMJsonValidationAbort
+from omen.ingest.validators.scenario import (
+    validate_deterministic_scenario_pack_or_raise,
+    validate_scenario_ontology_slice_or_raise,
+)
 
 
 _SCENARIO_SLOT_ORDER = ("A", "B", "C")
@@ -292,3 +297,52 @@ def decompose_scenario_from_situation(
         "retries": retries,
     }
     return payload
+
+
+def load_scenario_ontology_slice_payload(path: str | Path) -> dict[str, Any]:
+    scenario_path = Path(path)
+    payload = json.loads(scenario_path.read_text(encoding="utf-8"))
+    validated = validate_scenario_ontology_slice_or_raise(payload)
+    return validated.model_dump()
+
+
+def scenario_ontology_to_deterministic(ontology: dict[str, Any]) -> dict[str, Any]:
+    scenarios: list[dict[str, Any]] = []
+    for scenario in ontology.get("scenarios", []):
+        if not isinstance(scenario, dict):
+            continue
+        resistance = dict(scenario.get("resistance_assumptions") or {})
+        scenarios.append(
+            {
+                "scenario_key": scenario["scenario_key"],
+                "title": scenario["title"],
+                "target_outcome": scenario["objective"],
+                "constraints": list(scenario.get("constraints") or []),
+                "dilemma_tradeoffs": list(scenario.get("tradeoff_pressure") or []),
+                "resistance_baseline": {
+                    "structural_conflict": resistance["structural_conflict"],
+                    "resource_reallocation_drag": resistance["resource_reallocation_drag"],
+                    "cultural_misalignment": resistance["cultural_misalignment"],
+                    "veto_node_intensity": resistance["veto_node_intensity"],
+                    "aggregate_resistance": resistance["aggregate_resistance"],
+                },
+            }
+        )
+
+    return {
+        "pack_id": ontology["pack_id"],
+        "pack_version": ontology["pack_version"],
+        "scenarios": scenarios,
+    }
+
+
+def prepare_deterministic_inputs_from_scenario(path: str | Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    ontology = load_scenario_ontology_slice_payload(path)
+    deterministic_pack = scenario_ontology_to_deterministic(ontology)
+    validated_pack = validate_deterministic_scenario_pack_or_raise(deterministic_pack)
+    planned_scenarios = {
+        str(item.get("scenario_key") or ""): dict(item)
+        for item in list(ontology.get("scenarios") or [])
+        if isinstance(item, dict)
+    }
+    return validated_pack.model_dump(), planned_scenarios

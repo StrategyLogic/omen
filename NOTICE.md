@@ -12,13 +12,8 @@ Copyright © 2026 StrategyLogic.
 
 **StrategyLogic** is a registered trademark of StrategyLogic.
 
-The open-source license for this repository grants rights to use, modify,
-and distribute code under AGPL-3.0-or-later, but it does **not** grant rights
-to use StrategyLogic trademarks, logos, or brand identity except as required
-for truthful attribution.
+The open-source license for this repository grants rights to use, modify, and distribute code under AGPL-3.0-or-later, but it does **not** grant rights to use StrategyLogic trademarks, logos, or brand identity except as required for truthful attribution.
 
 ## Open Source Scope Reminder
 
-This repository contains the open-source Omen project materials and code.
-Commercial service assets, private delivery methods, and internal business
-playbooks are outside this repository scope.
+This repository contains the open-source Omen project materials and code. Commercial service assets, private delivery methods, and internal business playbooks are outside this repository scope.

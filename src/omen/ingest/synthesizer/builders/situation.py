@@ -85,30 +85,9 @@ def situation_artifact_to_markdown(situation: dict[str, Any], config_path: str =
 
 
 def scenario_ontology_to_deterministic_pack(ontology: dict) -> dict:
-    scenarios = []
-    for scenario in ontology.get("scenarios", []):
-        scenarios.append(
-            {
-                "scenario_key": scenario["scenario_key"],
-                "title": scenario["title"],
-                "target_outcome": scenario["objective"],
-                "constraints": list(scenario.get("constraints") or []),
-                "dilemma_tradeoffs": list(scenario.get("tradeoff_pressure") or []),
-                "resistance_baseline": {
-                    "structural_conflict": scenario["resistance_assumptions"]["structural_conflict"],
-                    "resource_reallocation_drag": scenario["resistance_assumptions"]["resource_reallocation_drag"],
-                    "cultural_misalignment": scenario["resistance_assumptions"]["cultural_misalignment"],
-                    "veto_node_intensity": scenario["resistance_assumptions"]["veto_node_intensity"],
-                    "aggregate_resistance": scenario["resistance_assumptions"]["aggregate_resistance"],
-                },
-            }
-        )
+    from omen.ingest.synthesizer.services.scenario import scenario_ontology_to_deterministic
 
-    return {
-        "pack_id": ontology["pack_id"],
-        "pack_version": ontology["pack_version"],
-        "scenarios": scenarios,
-    }
+    return scenario_ontology_to_deterministic(ontology)
 
 
 def scenario_ontology_to_markdown(ontology: dict) -> str:

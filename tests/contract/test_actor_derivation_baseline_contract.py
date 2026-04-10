@@ -1,4 +1,4 @@
-from omen.analysis.actor.derivation_trace import build_actor_derivation_artifact
+from omen.simulation.actor import build_actor_derivation_artifact
 
 
 def test_actor_derivation_baseline_contract_fields() -> None:

@@ -9,10 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from omen.cli.case import handle_case_command, register_case_commands
-from omen.cli.case import (
-    run_deterministic_compare_from_pack,
-    run_deterministic_simulate_from_pack,
-)
 from omen.cli.actor import (
     handle_analyze_command,
     handle_validate_command,
@@ -32,10 +28,8 @@ from omen.ingest.synthesizer.builders.candidate import build_candidates_from_tex
 from omen.ingest.processor import build_source_inventory, extract_pdf_pages
 from omen.scenario.loader import (
     load_case_package_from_scenario,
-    load_scenario_ontology_slice,
     load_scenario_with_ontology,
 )
-from omen.ingest.synthesizer.builders.situation import scenario_ontology_to_deterministic_pack
 from omen.scenario.ontology_loader import load_ontology_input
 from omen.scenario.ingest_validator import validate_extracted_entity_candidates_or_raise
 from omen.scenario.ingest_validator import validate_ontology_assertion_candidates_or_raise
@@ -48,6 +42,10 @@ from omen.simulation.replay import (
     run_counterfactual,
 )
 from omen.simulation.engine import run_simulation
+from omen.simulation.actor import (
+    try_run_deterministic_compare_from_scenario_input,
+    try_run_deterministic_simulate_from_scenario_input,
+)
 from omen.simulation.precision_gate import evaluate_precision_gates
 from omen.simulation.precision_metrics import evaluate_repeatability
 
@@ -360,36 +358,6 @@ def main() -> None:
         help="Add timestamp suffix to output filename to avoid overwrite",
     )
 
-    case_replay_check_llm = sub.add_parser(
-        "case-replay-check-llm",
-        help="run step-by-step LLM connectivity check for DeepSeek and Voyage",
-    )
-    case_replay_check_llm.add_argument(
-        "--config",
-        required=False,
-        default="config/llm.toml",
-        help="Path to local LLM config TOML",
-    )
-    case_replay_check_llm.add_argument(
-        "--sample-text",
-        required=False,
-        default="omen case replay probe",
-        help="Sample text used for embedding probe",
-    )
-    case_replay_check_llm.add_argument("--case-id", required=True, help="Case identifier")
-    case_replay_check_llm.add_argument(
-        "--output-dir",
-        required=False,
-        default="output/case_replay",
-        help="Root output directory",
-    )
-    case_replay_check_llm.add_argument("--output", required=False, help="Optional output JSON path")
-    case_replay_check_llm.add_argument(
-        "--incremental",
-        action="store_true",
-        help="Add timestamp suffix to output filename to avoid overwrite",
-    )
-
     check_llm = sub.add_parser(
         "check-llm",
         help="run generic LLM connectivity check with default sample case file",
@@ -411,12 +379,6 @@ def main() -> None:
         required=False,
         help="Optional probe text override; if omitted, read from --case-file",
     )
-    check_llm.add_argument("--output", required=False, help="Optional output JSON path")
-    check_llm.add_argument(
-        "--incremental",
-        action="store_true",
-        help="Add timestamp suffix to output filename to avoid overwrite",
-    )
 
     analyze_sub = register_analyze_commands(sub)
     register_situation_analyze_commands(analyze_sub)
@@ -426,18 +388,6 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    def _is_scenario_ontology_input(path: str | Path) -> bool:
-        try:
-            payload = json.loads(Path(path).read_text(encoding="utf-8"))
-        except Exception:
-            return False
-        return (
-            isinstance(payload, dict)
-            and "pack_id" in payload
-            and "scenarios" in payload
-            and ("ontology_version" in payload or "derived_from_situation_id" in payload)
-        )
-
     def _print_deferred_scope_message(exc: Exception) -> None:
         print(f"Deferred scope: {exc}")
         print(
@@ -446,27 +396,17 @@ def main() -> None:
         )
 
     if args.command == "simulate":
-        if _is_scenario_ontology_input(args.scenario):
-            try:
-                scenario_ontology = load_scenario_ontology_slice(args.scenario)
-                pack_payload = scenario_ontology_to_deterministic_pack(scenario_ontology)
-                planned_scenarios = {
-                    str(item.get("scenario_key") or ""): item
-                    for item in list(scenario_ontology.get("scenarios") or [])
-                    if isinstance(item, dict)
-                }
-                actor_derivation_output_path = Path(args.scenario).parent / "traces" / "actor_derivation.json"
-                payload = run_deterministic_simulate_from_pack(
-                    pack=pack_payload,
-                    actor_profile_ref=args.actor_profile_ref,
-                    calculation_policy_version=args.calc_policy_version,
-                    planned_scenarios=planned_scenarios,
-                    actor_derivation_output_path=actor_derivation_output_path,
-                    config_path=args.config,
-                    debug=bool(args.debug),
-                    workshop_ui_mode=bool(args.workshop_ui_mode),
-                )
-                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+        try:
+            deterministic_payload = try_run_deterministic_simulate_from_scenario_input(
+                scenario_path=args.scenario,
+                actor_profile_ref=args.actor_profile_ref,
+                calculation_policy_version=args.calc_policy_version,
+                config_path=args.config,
+                debug=bool(args.debug),
+                workshop_ui_mode=bool(args.workshop_ui_mode),
+            )
+            if deterministic_payload is not None:
+                rendered = json.dumps(deterministic_payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(
                     rendered,
                     args.output,
@@ -475,12 +415,13 @@ def main() -> None:
                 )
                 print(f"Saved deterministic simulation result to {output_path}")
                 return
-            except DeferredScopeFeatureError as exc:
-                _print_deferred_scope_message(exc)
-                raise SystemExit(2) from exc
-            except Exception as exc:
-                print(f"Deterministic simulate failed: {exc}")
-                raise SystemExit(2) from exc
+        except DeferredScopeFeatureError as exc:
+            _print_deferred_scope_message(exc)
+            raise SystemExit(2) from exc
+        except Exception as exc:
+            print(f"Deterministic simulate failed: {exc}")
+            raise SystemExit(2) from exc
+
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         if args.seed is None:
@@ -498,27 +439,17 @@ def main() -> None:
         output_path = _write_output(rendered, args.output, "explanation.json", args.incremental)
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
-        if _is_scenario_ontology_input(args.scenario):
-            try:
-                scenario_ontology = load_scenario_ontology_slice(args.scenario)
-                pack_payload = scenario_ontology_to_deterministic_pack(scenario_ontology)
-                planned_scenarios = {
-                    str(item.get("scenario_key") or ""): item
-                    for item in list(scenario_ontology.get("scenarios") or [])
-                    if isinstance(item, dict)
-                }
-                actor_derivation_output_path = Path(args.scenario).parent / "traces" / "actor_derivation.json"
-                payload = run_deterministic_compare_from_pack(
-                    pack=pack_payload,
-                    actor_profile_ref=args.actor_profile_ref,
-                    calculation_policy_version=args.calc_policy_version,
-                    planned_scenarios=planned_scenarios,
-                    actor_derivation_output_path=actor_derivation_output_path,
-                    config_path=args.config,
-                    debug=bool(args.debug),
-                    workshop_ui_mode=bool(args.workshop_ui_mode),
-                )
-                rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+        try:
+            deterministic_payload = try_run_deterministic_compare_from_scenario_input(
+                scenario_path=args.scenario,
+                actor_profile_ref=args.actor_profile_ref,
+                calculation_policy_version=args.calc_policy_version,
+                config_path=args.config,
+                debug=bool(args.debug),
+                workshop_ui_mode=bool(args.workshop_ui_mode),
+            )
+            if deterministic_payload is not None:
+                rendered = json.dumps(deterministic_payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(
                     rendered,
                     args.output,
@@ -527,12 +458,13 @@ def main() -> None:
                 )
                 print(f"Saved deterministic comparison to {output_path}")
                 return
-            except DeferredScopeFeatureError as exc:
-                _print_deferred_scope_message(exc)
-                raise SystemExit(2) from exc
-            except Exception as exc:
-                print(f"Deterministic compare failed: {exc}")
-                raise SystemExit(2) from exc
+        except DeferredScopeFeatureError as exc:
+            _print_deferred_scope_message(exc)
+            raise SystemExit(2) from exc
+        except Exception as exc:
+            print(f"Deterministic compare failed: {exc}")
+            raise SystemExit(2) from exc
+
         load_case_package_from_scenario(args.scenario)
         config, ontology_setup = load_scenario_with_ontology(args.scenario, args.ontology_input)
         baseline = run_simulation(config, ontology_setup=ontology_setup)
@@ -835,31 +767,6 @@ def main() -> None:
             args.incremental,
         )
         print(f"Saved baseline summary to {output_path}")
-    elif args.command == "case-replay-check-llm":
-        from omen.ingest.synthesizer.healthcheck import run_llm_healthcheck
-        from omen.ui.artifacts import ensure_case_output_dir
-
-        def _step_logger(step: str, status: str, message: str) -> None:
-            print(f"[LLM-CHECK][{step}][{status}] {message}", flush=True)
-
-        report = run_llm_healthcheck(
-            config_path=args.config,
-            sample_text=args.sample_text,
-            logger=_step_logger,
-        )
-
-        case_dir = ensure_case_output_dir(args.case_id, output_root=args.output_dir)
-        rendered = json.dumps(report, ensure_ascii=False, indent=2)
-        output_path = _write_output(
-            rendered,
-            args.output or str(case_dir / "llm_check.json"),
-            "llm_check.json",
-            args.incremental,
-        )
-        print(f"Saved llm check report to {output_path}")
-        _print_llm_check_result(report)
-        if not report.get("ok", False):
-            raise SystemExit(2)
     elif args.command == "check-llm":
         from omen.ingest.synthesizer.healthcheck import run_llm_healthcheck
 
@@ -879,15 +786,7 @@ def main() -> None:
             sample_text=sample_text,
             logger=_step_logger,
         )
-
-        rendered = json.dumps(report, ensure_ascii=False, indent=2)
-        output_path = _write_output(
-            rendered,
-            args.output,
-            "llm_check.json",
-            args.incremental,
-        )
-        print(f"Saved llm check report to {output_path}")
+        print(json.dumps(report, ensure_ascii=False, indent=2))
         _print_llm_check_result(report)
         if not report.get("ok", False):
             raise SystemExit(2)

@@ -6,10 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from omen.analysis.actor.insight import generate_persona_insight
 from omen.analysis.actor.query import build_events_snapshot
-from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
-from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
 from omen.ingest.validators.actor import (
     validate_actor_ontology_payload,
     validate_actor_strategy_link_payload,
@@ -136,6 +133,9 @@ def _run_persona(
   actor_payload: dict[str, Any],
   config_path: str,
 ) -> None:
+  from omen.analysis.actor.insight import generate_persona_insight
+  from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+
   ensure_analyze_prompt_available("persona")
   persona_payload = generate_persona_insight(
     case_id=case_id,
@@ -160,6 +160,8 @@ def handle_analyze_command(args: Any) -> int:
     return 2
 
   try:
+    from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
+
     case_id, _ = ensure_actor_artifacts(
       doc=str(args.doc),
       title=str(args.title) if args.title else None,

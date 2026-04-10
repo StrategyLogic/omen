@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -71,6 +73,23 @@ def validate_scenario(payload: dict) -> ScenarioConfig:
 
 def validate_scenario_or_raise(payload: dict) -> ScenarioConfig:
     return validate_scenario(payload)
+
+
+def is_scenario_ontology_input_payload(payload: Any) -> bool:
+    return (
+        isinstance(payload, dict)
+        and "pack_id" in payload
+        and "scenarios" in payload
+        and ("ontology_version" in payload or "derived_from_situation_id" in payload)
+    )
+
+
+def is_scenario_ontology_input_path(path: str | Path) -> bool:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return is_scenario_ontology_input_payload(payload)
 
 
 class ResultArtifactContract(BaseModel):

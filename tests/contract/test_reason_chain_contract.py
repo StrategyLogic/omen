@@ -2,7 +2,7 @@ import json
 import sys
 from pathlib import Path
 
-from omen.analysis.actor.derivation_trace import blocking_has_activation_links
+from omen.simulation.reason import blocking_has_activation_links
 from omen.cli.main import main
 from omen.ingest.validators.scenario import validate_reason_chain_artifact_or_raise
 

@@ -23,9 +23,8 @@ jobs:
         python-version: "3.12"
     - name: Install build dependencies
       run: |
-        pip install --upgrade pip
+        pip install --upgrade pip build twine
         pip install -e .
-        pip install twine
     - name: Build distribution artifacts
       run: |
         python -m build --sdist --wheel

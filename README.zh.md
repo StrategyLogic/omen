@@ -11,7 +11,7 @@
 
 [核心概念](docs/concepts.md) | [快速开始](docs/quick-start.md) | [案例模板](docs/case-template.md) | [项目路线图](docs/roadmap.md)
 
-## 💡 Omen 做什么？
+## ⭐ Omen 做什么？
 
 > 模拟征兆，揭示混沌。
 
@@ -82,8 +82,6 @@ streamlit run app/strategic_actor.py
 # 简报示例路径
 data/scenarios/sap/situation.md
 ```
-
-想了解更多？阅读[精度评估](docs/precision.md)文档。
 
 ## 👥 适用人群
 

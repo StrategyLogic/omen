@@ -82,8 +82,6 @@ After `omen analyze situation`, read the generated brief:
 data/scenarios/sap/situation.md
 ```
 
-Want to learn more? Read the [precision evaluation](docs/precision.md) document.
-
 ## 👥 Target Audience
 
 Omen is built for the following roles:

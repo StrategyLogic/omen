@@ -298,7 +298,7 @@ def build_recommendation_from_condition_sets(
             f"{'; '.join(blocking[:2])}."
         )
 
-    required_hint = required[0] if required else "需补齐关键执行前提"
+    required_hint = required[0] if required else "No required condition derived from reason_chain conclusions"
     return (
         f"Recommend scenario {best_key} as primary path. "
         f"First required condition: {required_hint}."

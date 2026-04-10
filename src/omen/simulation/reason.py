@@ -154,160 +154,6 @@ def build_linked_evidence_refs(reason_chain: dict[str, Any]) -> list[dict[str, A
     return refs
 
 
-def _pattern_map_dimension(variable_name: str) -> tuple[str, str]:
-    text = str(variable_name or "").strip().lower()
-    if text.startswith("standard_") or "standard" in text:
-        return "standardization_velocity", "pattern_match: standard_*"
-    if text.startswith("integration_") or "integration" in text:
-        return "standardization_velocity", "pattern_match: integration_*"
-    if text.startswith("adoption_") or "adoption" in text:
-        return "market_adoption_velocity", "pattern_match: adoption_*"
-    if text.startswith("cost_") or "cost" in text:
-        return "cost_efficiency", "pattern_match: cost_*"
-    return "unmapped", "pattern_match: none"
-
-
-def _describe_score(score: float) -> str:
-    if score >= 0.75:
-        return "high"
-    if score <= 0.4:
-        return "low"
-    return "medium"
-
-
-def build_scenario_reason_chain(
-    *,
-    run_id: str,
-    scenario_key: str,
-    scenario_ontology: dict[str, Any],
-    scenario_result: dict[str, Any],
-) -> dict[str, Any]:
-    variables = list(scenario_ontology.get("variables") or [])
-    selected_dimensions = [
-        str(item).strip()
-        for item in ((scenario_result.get("selected_dimensions") or {}).get("selected_dimension_keys") or [])
-        if str(item).strip()
-    ]
-    capability_scores = dict((scenario_result.get("capability_dilemma_fit") or {}).get("capability_scores") or {})
-
-    dimension_mapping: list[dict[str, Any]] = []
-    for variable in variables:
-        if isinstance(variable, dict):
-            variable_name = str(variable.get("name") or variable.get("variable") or "").strip()
-        else:
-            variable_name = str(variable).strip()
-        if not variable_name:
-            continue
-
-        mapped_to, reason = _pattern_map_dimension(variable_name)
-        if mapped_to == "unmapped" and selected_dimensions:
-            mapped_to = selected_dimensions[0]
-            reason = "fallback: selected_dimension_top_1"
-
-        dimension_mapping.append(
-            {
-                "variable": variable_name,
-                "mapped_to": mapped_to,
-                "reason": reason,
-            }
-        )
-
-    value_calculation: list[dict[str, Any]] = []
-    for dim in selected_dimensions:
-        score = float(capability_scores.get(dim, 0.5))
-        value_calculation.append(
-            {
-                "dimension": dim,
-                "method": "inferred_from_variable",
-                "raw_description": _describe_score(score),
-                "value": round(score, 3),
-                "confidence": 0.6,
-            }
-        )
-
-    scenario_conditions = dict(scenario_result.get("scenario_conditions") or {})
-    required_items = [str(item).strip() for item in (scenario_conditions.get("required") or []) if str(item).strip()]
-    warning_items = [str(item).strip() for item in (scenario_conditions.get("warning") or []) if str(item).strip()]
-    blocking_items = [str(item).strip() for item in (scenario_conditions.get("blocking") or []) if str(item).strip()]
-    objective = str(scenario_ontology.get("objective") or "").strip()
-    constraints = [str(item).strip() for item in (scenario_ontology.get("constraints") or []) if str(item).strip()]
-
-    steps = [
-        {
-            "step_id": build_hierarchical_step_id(1, 1),
-            "step_type": "seed",
-            "input_refs": [f"scenario::{scenario_key}"],
-            "summary": f"Seed from deterministic scenario slot {scenario_key}",
-        },
-        {
-            "step_id": build_hierarchical_step_id(2, 1),
-            "step_type": "constraint_activation",
-            "input_refs": [f"constraint::{item}" for item in constraints[:2]] or [f"scenario::{scenario_key}::constraints"],
-            "summary": "Activate binding constraints before deriving executable path",
-        },
-        {
-            "step_id": build_hierarchical_step_id(3, 1),
-            "step_type": "target_or_objective",
-            "input_refs": [f"objective::{objective}"] if objective else [f"scenario::{scenario_key}::objective"],
-            "summary": f"Lock objective alignment: {objective or 'objective_not_provided'}",
-        },
-        {
-            "step_id": build_hierarchical_step_id(4, 1),
-            "step_type": "gap",
-            "input_refs": ["scenario_conditions::warning", "scenario_conditions::blocking"],
-            "summary": "Identify execution gap under current resistance baseline",
-        },
-        {
-            "step_id": build_hierarchical_step_id(5, 1),
-            "step_type": "required_or_warning_or_blocking",
-            "input_refs": ["scenario_conditions::required", "scenario_conditions::warning", "scenario_conditions::blocking"],
-            "summary": "Project required, warning and blocking conclusions",
-        },
-    ]
-
-    step_types = [str(item.get("step_type") or "") for item in steps]
-    if not reasoning_order_is_valid(step_types):
-        raise ValueError(f"invalid reason chain step order for scenario {scenario_key}")
-    if not validate_reason_chain_step_ids(steps):
-        raise ValueError(f"invalid step_id in reason chain for scenario {scenario_key}")
-
-    return {
-        "run_id": run_id,
-        "scenario_key": scenario_key,
-        "reason_chain": {
-            "steps": steps,
-            "intermediate": {
-                "dimension_mapping": dimension_mapping,
-                "value_calculation": value_calculation,
-            },
-            "conclusions": {
-                "required": [
-                    {
-                        "text": text,
-                        "reason_step_ids": ["step_5.1"],
-                    }
-                    for text in required_items
-                ],
-                "warning": [
-                    {
-                        "text": text,
-                        "reason_step_ids": ["step_5.1"],
-                    }
-                    for text in warning_items
-                ],
-                "blocking": [
-                    {
-                        "text": text,
-                        "activation_step_ids": [build_hierarchical_step_id(2, 1)],
-                        "reason_step_ids": [build_hierarchical_step_id(5, 1)],
-                    }
-                    for text in blocking_items
-                ],
-            },
-        },
-    }
-
-
 def build_reason_chain_artifact(
     *,
     run_id: str,
@@ -488,7 +334,7 @@ def try_generate_scenario_reason_chain_via_llm(
     actor_profile_json: dict[str, Any],
     planning_query_json: dict[str, Any],
     situation_markdown: str,
-    config_path: str | None,
+    config_path: str | None = None,
     debug_output_path: str | None = None,
     scenario_key: str | None = None,
 ) -> dict[str, Any] | None:
@@ -525,15 +371,6 @@ def try_generate_scenario_reason_chain_via_llm(
                 handle.write(entry)
         except Exception:
             return
-
-    if not config_path:
-        _append_debug(
-            status="skipped_no_config",
-            prompt_text="",
-            raw_response="",
-            parsed_payload=None,
-        )
-        return None
 
     prompt = render_scenario_reason_chain_prompt(
         scenario_json=scenario_json,
@@ -624,12 +461,10 @@ def _normalize_llm_reason_chain(llm_chain: dict[str, Any]) -> dict[str, Any] | N
 
 def resolve_reason_chain_with_llm(
     *,
-    deterministic_reason_chain: dict[str, Any],
     scenario_key: str,
     scenario_ontology: dict[str, Any],
     scenario_result: dict[str, Any],
     actor_profile_ref: str,
-    config_path: str | None,
     debug_output_path: str | None,
 ) -> tuple[dict[str, Any], str]:
     llm_scenario_input = {
@@ -653,7 +488,6 @@ def resolve_reason_chain_with_llm(
         },
         planning_query_json={},
         situation_markdown="",
-        config_path=config_path,
         debug_output_path=debug_output_path,
         scenario_key=scenario_key,
     )
@@ -662,29 +496,10 @@ def resolve_reason_chain_with_llm(
 
     if normalized_llm is not None:
         return normalized_llm, "ok"
-
-    if config_path:
-        return (
-            {
-                "steps": [
-                    {
-                        "step_id": "llm_failed",
-                        "step_type": "llm_error",
-                        "input_refs": [f"scenario::{scenario_key}"],
-                        "summary": "LLM reason chain generation failed; no deterministic fallback applied.",
-                    }
-                ],
-                "intermediate": {},
-                "conclusions": {
-                    "required": [],
-                    "warning": [],
-                    "blocking": [],
-                },
-            },
-            "llm_failed",
-        )
-
-    return deterministic_reason_chain, "deterministic_no_config"
+    raise ValueError(
+        "LLM reason chain generation failed: response missing valid reason_chain payload "
+        f"for scenario {scenario_key}"
+    )
 
 
 def build_recommendation_from_condition_sets(

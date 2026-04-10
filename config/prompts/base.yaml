@@ -359,11 +359,19 @@ prompts:
     - variables: array of objects (each object describes one variable)
     - constraints: array of strings
     - tradeoff_pressure: array of strings
-    - resistance_assumptions: object (structured assumptions, not plain string)
+    - resistance_assumptions: object with REQUIRED keys:
+      - structural_conflict: number in [0,1]
+      - resource_reallocation_drag: number in [0,1]
+      - cultural_misalignment: number in [0,1]
+      - veto_node_intensity: number in [0,1]
+      - aggregate_resistance: number in [0,1]
+      - assumption_rationale: array of strings (non-empty)
     - modeling_notes: array of strings
 
     Additional rules:
     - constraints and tradeoff_pressure must reflect constraint-network and rival-network pressure when present
+    - resistance_assumptions must always include ALL six required keys above; do not rename or omit keys
+    - do not invent alternative resistance keys such as countermeasure_effectiveness or escalation_likelihood
     - planning_template_json is a rule template input; do not treat it as a prompt
     - raw_prior_scores is optional; include only when available as array with A/B/C scenario_key and score values
     - Return ONE valid JSON object only. No markdown, no explanation.
@@ -384,7 +392,14 @@ prompts:
           "variables": [{"name": "..."}],
           "constraints": ["..."],
           "tradeoff_pressure": ["..."],
-          "resistance_assumptions": {"assumption_rationale": ["..."]},
+          "resistance_assumptions": {
+            "structural_conflict": 0.0,
+            "resource_reallocation_drag": 0.0,
+            "cultural_misalignment": 0.0,
+            "veto_node_intensity": 0.0,
+            "aggregate_resistance": 0.0,
+            "assumption_rationale": ["..."]
+          },
           "modeling_notes": ["..."]
         }
       ]

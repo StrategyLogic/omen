@@ -67,7 +67,7 @@ def blocking_has_activation_links(blocking_item: dict[str, Any]) -> bool:
 
 def extract_conclusion_buckets(conclusions: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     raw = dict(conclusions or {})
-    source = dict(raw.get("strategic_freedom") or raw)
+    source = dict(raw.get("scenario_conditions") or raw)
 
     def _normalize_items(items: list[Any], *, bucket: str) -> list[dict[str, Any]]:
         normalized: list[dict[str, Any]] = []
@@ -225,10 +225,10 @@ def build_scenario_reason_chain(
             }
         )
 
-    strategic_freedom = dict(scenario_result.get("strategic_freedom") or {})
-    required_items = [str(item).strip() for item in (strategic_freedom.get("required") or []) if str(item).strip()]
-    warning_items = [str(item).strip() for item in (strategic_freedom.get("warning") or []) if str(item).strip()]
-    blocking_items = [str(item).strip() for item in (strategic_freedom.get("blocking") or []) if str(item).strip()]
+    scenario_conditions = dict(scenario_result.get("scenario_conditions") or {})
+    required_items = [str(item).strip() for item in (scenario_conditions.get("required") or []) if str(item).strip()]
+    warning_items = [str(item).strip() for item in (scenario_conditions.get("warning") or []) if str(item).strip()]
+    blocking_items = [str(item).strip() for item in (scenario_conditions.get("blocking") or []) if str(item).strip()]
     objective = str(scenario_ontology.get("objective") or "").strip()
     constraints = [str(item).strip() for item in (scenario_ontology.get("constraints") or []) if str(item).strip()]
 
@@ -254,13 +254,13 @@ def build_scenario_reason_chain(
         {
             "step_id": build_hierarchical_step_id(4, 1),
             "step_type": "gap",
-            "input_refs": ["strategic_freedom::warning", "strategic_freedom::blocking"],
+            "input_refs": ["scenario_conditions::warning", "scenario_conditions::blocking"],
             "summary": "Identify execution gap under current resistance baseline",
         },
         {
             "step_id": build_hierarchical_step_id(5, 1),
             "step_type": "required_or_warning_or_blocking",
-            "input_refs": ["strategic_freedom::required", "strategic_freedom::warning", "strategic_freedom::blocking"],
+            "input_refs": ["scenario_conditions::required", "scenario_conditions::warning", "scenario_conditions::blocking"],
             "summary": "Project required, warning and blocking conclusions",
         },
     ]
@@ -693,14 +693,16 @@ def build_recommendation_from_condition_sets(
     if not scenario_results:
         return "No deterministic scenario result available."
 
-    ranked = sorted(
-        scenario_results,
-        key=lambda item: float((item.get("strategic_freedom") or {}).get("score", 0.0)),
-        reverse=True,
+    best = next(
+        (
+            item
+            for item in scenario_results
+            if not list((item.get("scenario_conditions") or {}).get("blocking") or [])
+        ),
+        scenario_results[0],
     )
-    best = ranked[0]
     best_key = str(best.get("scenario_key") or "unknown")
-    conditions = best.get("strategic_freedom") or {}
+    conditions = best.get("scenario_conditions") or {}
     blocking = list(conditions.get("blocking") or [])
     required = list(conditions.get("required") or [])
 

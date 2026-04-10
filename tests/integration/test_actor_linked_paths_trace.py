@@ -106,13 +106,12 @@ def test_actor_linked_paths_trace_baseline_is_stable(tmp_path: Path, monkeypatch
   for row in scenario_results:
     assert row.get("actor_derivation")
     assert row.get("selected_dimensions")
-    freedom = row.get("strategic_freedom") or {}
-    assert isinstance(freedom.get("required"), list)
-    assert isinstance(freedom.get("warning"), list)
-    assert isinstance(freedom.get("blocking"), list)
+    conditions = row.get("scenario_conditions") or {}
+    assert isinstance(conditions.get("required"), list)
+    assert isinstance(conditions.get("warning"), list)
+    assert isinstance(conditions.get("blocking"), list)
 
   derivation_path = scenario_path.parent / "traces" / "actor_derivation.json"
   derivation_payload = json.loads(derivation_path.read_text(encoding="utf-8"))
   scenario_derivations = list(derivation_payload.get("scenario_derivations") or [])
   assert [row.get("scenario_key") for row in scenario_derivations] == ["A", "B", "C"]
-  assert all(isinstance(row.get("strategic_freedom_score"), float) for row in scenario_derivations)

@@ -64,8 +64,7 @@ class ResistanceBaselineScore(BaseModel):
     aggregate_resistance: float = Field(ge=0.0, le=1.0)
 
 
-class StrategicFreedomConditions(BaseModel):
-    score: float = Field(ge=0.0, le=1.0)
+class ScenarioConditions(BaseModel):
     required: list[str] = Field(default_factory=list)
     warning: list[str] = Field(default_factory=list)
     blocking: list[str] = Field(default_factory=list)
@@ -89,7 +88,7 @@ class DeterministicScenarioResult(BaseModel):
     scenario_key: str = Field(min_length=1)
     capability_dilemma_fit: CapabilityDilemmaFit
     resistance: ResistanceBaselineScore
-    strategic_freedom: StrategicFreedomConditions
+    scenario_conditions: ScenarioConditions
     selected_dimensions: ScenarioSelectedDimensions | None = None
     derivation_trace: ConditionDerivationTrace | None = None
     evidence_refs: list[str] = Field(default_factory=list)

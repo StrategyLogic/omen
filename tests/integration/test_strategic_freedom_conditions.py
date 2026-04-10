@@ -104,15 +104,10 @@ def test_deterministic_compare_contains_actionable_condition_sets(tmp_path: Path
     assert len(results) == 3
 
     for item in results:
-        freedom = item.get("strategic_freedom") or {}
-        assert "score" in freedom
-        assert "required" in freedom
-        assert "warning" in freedom
-        assert "blocking" in freedom
-        assert isinstance(freedom["required"], list)
-        assert isinstance(freedom["warning"], list)
-        assert isinstance(freedom["blocking"], list)
-
-    overview = list(payload.get("strategic_freedom_overview") or [])
-    assert len(overview) == 3
-    assert all("strategic_freedom_score" in row for row in overview)
+        conditions = item.get("scenario_conditions") or {}
+        assert "required" in conditions
+        assert "warning" in conditions
+        assert "blocking" in conditions
+        assert isinstance(conditions["required"], list)
+        assert isinstance(conditions["warning"], list)
+        assert isinstance(conditions["blocking"], list)

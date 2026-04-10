@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from omen.analysis.actor.strategy import (
-    calculate_strategic_freedom_factor,
     generate_condition_sets,
 )
 
@@ -57,21 +56,15 @@ def derive_actor_path(
     }
 
 
-def derive_strategic_freedom_conditions(
+def derive_scenario_conditions(
     *,
     scenario_key: str,
     actor_derivation: dict[str, Any],
     selected_dimensions: dict[str, Any],
     resistance_baseline: dict[str, Any],
-    capability_fit: str,
 ) -> dict[str, Any]:
-    score = calculate_strategic_freedom_factor(
-        capability_fit=capability_fit,
-        resistance_baseline=resistance_baseline,
-    )
     conditions = generate_condition_sets(
         scenario_key=scenario_key,
-        strategic_freedom_score=score,
         resistance_baseline=resistance_baseline,
     )
 

@@ -63,7 +63,17 @@ pip install -e .
 omen analyze situation --doc sap_reltio_acquisition --pack-id sap
 # Step 2. generate scenario planning artifact from situation
 omen scenario --situation sap
+# Step 3. run deterministic simulation
+omen simulate --scenario data/scenarios/sap/scenario_pack.json
+# Step 4. explain simulation result
+omen explain --pack-id sap
 ```
+
+Deterministic outputs are written by default to:
+
+- `output/<pack-id>/result.json`
+- `output/<pack-id>/comparison.json`
+- `output/<pack-id>/explanation.json`
 
 ### View Results
 

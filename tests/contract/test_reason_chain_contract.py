@@ -9,6 +9,15 @@ from omen.ingest.validators.scenario import validate_reason_chain_artifact_or_ra
 
 def _mock_reason_chain_llm(*, config_path: str | None = None, user_prompt: str, system_prompt: str | None = None) -> str:
     _ = (config_path, user_prompt, system_prompt)
+    if "Required keys: recommendation_summary, gap_summary, required_actions." in user_prompt:
+        return json.dumps(
+            {
+                "recommendation_summary": "建议优先推进A路径，并以已激活约束作为节奏边界推进执行。",
+                "gap_summary": "当前状态在约束激活下与目标达成之间仍存在执行闭环差距，需先打通关键前提再推进目标兑现。",
+                "required_actions": "先完成阻断项对应前置动作并固化责任窗口，同时针对预警项建立周期性验证与纠偏机制。",
+            },
+            ensure_ascii=False,
+        )
     return json.dumps(
         {
             "reason_chain": {

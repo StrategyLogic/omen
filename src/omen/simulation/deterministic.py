@@ -32,7 +32,6 @@ from omen.simulation.reason import (
     build_linked_evidence_refs,
     build_reason_chain_artifact,
     build_reason_chain_view_model_artifact,
-    build_recommendation_from_condition_sets,
     extract_conclusion_buckets,
     resolve_reason_chain_with_llm,
 )
@@ -143,7 +142,6 @@ def run_deterministic_simulate_from_pack(
             scenario_results,
             order=DETERMINISTIC_PACK_REQUIRED_SLOTS,
         ),
-        "recommendation_summary": "",
         "comparability": comparability,
         "export_status": "success",
     }
@@ -235,8 +233,6 @@ def run_deterministic_simulate_from_pack(
                 missing_evidence_reasons=missing_reasons,
             )
 
-        artifact["recommendation_summary"] = build_recommendation_from_condition_sets(scenario_results)
-
         for row in scenario_derivations:
             key = str(row.get("scenario_key") or "").strip().lower()
             row["reason_chain_ref"] = f"traces/reason_chain_{key}.json"
@@ -283,7 +279,6 @@ def run_deterministic_compare_from_pack(
         workshop_ui_mode=workshop_ui_mode,
     )
     payload["comparison_type"] = "deterministic_pack"
-    payload["recommendation_summary"] = "Deterministic compare completed."
     return payload
 
 
@@ -337,6 +332,9 @@ def run_simulate_with_actor(
     debug: bool = False,
     workshop_ui_mode: bool = False,
 ) -> dict[str, Any] | None:
+    if not is_situation_planned_scenario_path(scenario_path):
+        return None
+
     actor_derivation_output_path = Path(scenario_path).parent / "traces" / "actor_derivation.json"
     pack_payload, planned_scenarios = prepare(scenario_path)
     return run_deterministic_simulate_from_pack(

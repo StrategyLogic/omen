@@ -87,3 +87,8 @@ def get_analyze_prompt_version_token(command: str) -> str:
 def get_scenario_reason_chain_prompt_version_token() -> str:
     metadata = get_prompt_metadata("scenario_reason_chain_prompt", tier="base")
     return metadata.token
+
+
+def get_action_suggestion_prompt_version_token() -> str:
+    metadata = get_prompt_metadata("action_suggestion_prompt", tier="base")
+    return metadata.token

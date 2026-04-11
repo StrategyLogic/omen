@@ -1,27 +1,29 @@
 <div align="center">
 <h1>OmenAI</h1>
-<strong><p>Strategic Reasoning Engine - Analyze, Simulate, Explain.</p></strong>
+<strong><p>XAI-Powered Strategic Reasoning Engine</p></strong>
 <p>English | <a href="README.zh.md">中文</a></p>
 
-![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
+![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) ![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
 </div>
 
-[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is a strategic reasoning engine based on **Explainable AI**. It leverages **ontological modeling** to understand the phenomena and essence of the strategic world, and **counterfactual analysis** to simulate the known and unknown in decision-making scenarios, generating verifiable, traceable, and explainable strategic insights for decision-makers.
+[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source strategic reasoning engine, powered by **Explainable AI** (XAI). It combines ontological modeling of strategic phenomena with counterfactual analysis of uncertainty - delivering verifiable, traceable, and explainable insights for decision-makers.
 
 [Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 
-## 📢 What Omen Does
+## 🪄 Capabilities
 
-> **Simulate the Signs. Reveal the Chaos.**
+> Analyze, Simulate, Explain.
 
-Unlike traditional predictive models, Omen is designed for complex strategic reasoning and does not promise to *predict a certain future*. Instead, it generates **interpretable, replayable, and comparable future branching paths**. Its core responsibility is to reveal faint omens, critical branching points, and evolutionary trajectories within complex systems, empowering founders, product strategists, technology leaders, and investment analysts to understand:
+Omen **does not predict** future. It is a reasoning engine **built for complexity**. By decoding causal chains and logical dependencies, it generates replayable, comparable branching paths - revealing weak signals, critical points, and evolving ecosystems, helping decision-makers **gain clarity** in complexity:
 
 *   🔄 **Substitution Logic**: Which technology will replace another under what critical conditions?
 *   🛡️ **Capability Evolution**: Which core capabilities will be enhanced first, and which will coexist long-term?
 *   🏆 **Strategy Wins**: Which strategy combinations are more likely to win the market, capital, and developer ecosystem?
 *   ⏳ **Time Windows**: When is the optimal timing for in-house development, alliances, M&A, or contraction?
 
-## 🪄 Core Features
+Through explainable reasoning chains, Omen reveals how technological evolution reshapes markets, helping strategic decisions **decode the omens** from the chaos.
+
+##  ✨ Core Features
 
 | Feature Module | Description |
 | :--- | :--- |
@@ -61,7 +63,17 @@ pip install -e .
 omen analyze situation --doc sap_reltio_acquisition --pack-id sap
 # Step 2. generate scenario planning artifact from situation
 omen scenario --situation sap
+# Step 3. run deterministic simulation
+omen simulate --scenario data/scenarios/sap/scenario_pack.json
+# Step 4. explain simulation result
+omen explain --pack-id sap
 ```
+
+Deterministic outputs are written by default to:
+
+- `output/<pack-id>/result.json`
+- `output/<pack-id>/comparison.json`
+- `output/<pack-id>/explanation.json`
 
 ### View Results
 

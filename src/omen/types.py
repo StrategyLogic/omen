@@ -110,5 +110,7 @@ class DeterministicRunArtifact(BaseModel):
     scenario_pack_ref: str = Field(min_length=1)
     scenario_results: list[DeterministicScenarioResult] = Field(default_factory=list)
     recommendation_summary: str = Field(min_length=1)
+    gap_summary: str = Field(min_length=1)
+    required_actions: str = Field(min_length=1)
     comparability: DeterministicRunComparability
     export_status: str = Field(min_length=1)

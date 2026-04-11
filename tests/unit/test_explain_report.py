@@ -14,7 +14,7 @@ def test_explanation_payload_fields_present() -> None:
     config = load_scenario(SCENARIO_PATH)
     result = run_simulation(config)
 
-    explanation = result["explanation"]
+    explanation = build_explanation_report(result)
     assert explanation["run_id"] == result["run_id"]
     assert isinstance(explanation["branch_points"], list)
     assert isinstance(explanation["causal_chain"], list)

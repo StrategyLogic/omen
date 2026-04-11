@@ -1,30 +1,30 @@
 <div align="center">
 <h1>OmenAI</h1>
-<strong><p>战略推演引擎 － 分析、模拟、解释</p></strong>
+<strong><p>开源战略推演引擎 － 分析、模拟、解释</p></strong>
 <p><a href="README.md">English</a> | 中文</p>
 
-![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
+![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) ![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
 
 </div>
 
-[**Omen**](https://github.com/StrategyLogic/omen) （中文：爻）是基于**可解释AI**的战略推演引擎。它以**本体论建模**理解战略世界中的现象与本质，以**反事实分析**模拟决策情景中的已知与未知，为决策者生成可验证、可追溯和可解释的战略洞察。
+[**Omen**](https://github.com/StrategyLogic/omen) （中文：爻）是一款基于**可解释AI**（XAI）技术的开源战略推演引擎。它将战略现象的本体建模与不确定性的反事实分析相结合，为决策者提供可验证、可追溯、可解释的战略洞察。
 
 [核心概念](docs/concepts.md) | [快速开始](docs/quick-start.md) | [案例模板](docs/case-template.md) | [项目路线图](docs/roadmap.md)
 
-## 📢 Omen 做什么？
+## 🪄 核心能力
 
-> 模拟征兆，揭示混沌。
+> 从分析、模拟，到解释。
 
-与传统的预测模型不同，Omen 是面向复杂战略推演的引擎，它不局限在*单一确定的未来*，而是生成可解释、可回放、可比较的未来分叉路径。通过拆解复杂系统中的因果链条与逻辑关联，精准捕捉微弱征兆、关键分叉点与演化轨迹，让创始人、产品战略家、技术领袖与投资分析师清晰理解：
+Omen **不预测**未来，它是**为复杂性而生**的推演引擎。通过解码复杂系统中的因果链条与逻辑依赖，Omen 生成可回放、可比较的分叉路径，揭示战略中的弱信号、控制点与演化规律，帮助决策者**清晰洞察**复杂局面：
 
 *   🔄 **替代逻辑**：哪项技术会在什么临界条件下替代另一项？
 *   🛡️ **能力演化**：哪些核心能力会先被增强，哪些将长期共存？
 *   🏆 **策略胜率**：哪类策略组合更容易赢得市场、资本与开发者生态？
 *   ⏳ **时间窗口**：何时是自研、结盟、并购或收缩的最佳时机？
 
-通过可解释的逻辑推演，Omen 致力于揭示技术演进如何重塑市场格局，让每一次战略决策可计算、可模拟、可验证、可追溯。
+通过可解释的推演路径，Omen 致力于揭示技术演进如何重塑市场格局，为战略决策**破解天机**。
 
-## 🪄 核心功能
+## ✨ 主要功能
 
 | 功能模块 | 描述 |
 | :--- | :--- |

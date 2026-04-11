@@ -7,7 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from omen.explain.report import build_explanation_report
+from omen.explain.evidence_linker import build_outcome_evidence_links
 from omen.ingest.validators.scenario import ScenarioConfig, validate_scenario_or_raise
 from omen.simulation.condition_types import normalize_semantic_conditions
 from omen.simulation.engine import run_simulation
@@ -170,13 +170,17 @@ def compare_run_results(
         "deltas": deltas,
         "failure_activation": failure_activation,
     }
-    comparison["explanation"] = build_explanation_report(variation_result, comparison=comparison)
     directional = evaluate_directional_correctness(
         comparison,
         conditions=semantic_conditions,
     )
+    trace_links = build_outcome_evidence_links(
+        variation_result,
+        comparison,
+        rule_trace_references=[],
+    )
     trace = evaluate_trace_completeness(
-        comparison["explanation"].get("outcome_evidence_links", [])
+        trace_links
     )
     comparison["precision_summary"] = {
         "directional_correctness": directional,

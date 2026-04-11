@@ -521,38 +521,6 @@ def resolve_reason_chain_with_llm(
     )
 
 
-def build_recommendation_from_condition_sets(
-    scenario_results: list[dict[str, Any]],
-) -> str:
-    if not scenario_results:
-        return "No deterministic scenario result available."
-
-    best = next(
-        (
-            item
-            for item in scenario_results
-            if not list((item.get("scenario_conditions") or {}).get("blocking") or [])
-        ),
-        scenario_results[0],
-    )
-    best_key = str(best.get("scenario_key") or "unknown")
-    conditions = best.get("scenario_conditions") or {}
-    blocking = list(conditions.get("blocking") or [])
-    required = list(conditions.get("required") or [])
-
-    if blocking:
-        return (
-            f"Scenario {best_key} has highest strategic potential but is currently blocked: "
-            f"{'; '.join(blocking[:2])}."
-        )
-
-    required_hint = required[0] if required else "No required condition derived from reason_chain conclusions"
-    return (
-        f"Recommend scenario {best_key} as primary path. "
-        f"First required condition: {required_hint}."
-    )
-
-
 def apply_partial_evidence_confidence_policy(
     *,
     evidence_refs: list[str],

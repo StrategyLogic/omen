@@ -7,6 +7,15 @@ from omen.cli.main import main
 
 def _mock_reason_chain_llm(*, config_path: str | None = None, user_prompt: str, system_prompt: str | None = None) -> str:
     _ = (config_path, user_prompt, system_prompt)
+    if "Required keys: recommendation_summary, gap_summary, required_actions." in user_prompt:
+        return json.dumps(
+            {
+                "recommendation_summary": "建议以A路径为主导推进，并以约束激活信号驱动节奏控制。",
+                "gap_summary": "当前执行基础与目标状态之间的主要差距在于约束条件下的能力兑现效率与跨域协同。",
+                "required_actions": "优先处理阻断条件对应前提动作，随后围绕预警项建立验证节拍并持续补强关键执行链。",
+            },
+            ensure_ascii=False,
+        )
     return json.dumps(
         {
             "reason_chain": {

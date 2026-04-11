@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from omen.explain.report import build_explanation_report
 from omen.ingest.synthesizer.services.scenario import load_scenario_with_ontology
 from omen.ingest.validators.scenario import validate_cross_case_output_contract_or_raise
 from omen.simulation.engine import run_simulation
@@ -31,6 +32,7 @@ def _build_cross_case_contract_for_scenario(path: Path) -> dict:
             }
         ],
     )
+    explanation = build_explanation_report(baseline)
     return {
         "result_artifact": {
             "scenario_id": baseline["scenario_id"],
@@ -38,14 +40,14 @@ def _build_cross_case_contract_for_scenario(path: Path) -> dict:
             "winner": baseline.get("winner"),
             "timeline": baseline.get("timeline", []),
             "ontology_setup": baseline.get("ontology_setup"),
-            "explanation": baseline.get("explanation"),
+            "explanation": explanation,
         },
         "explanation_artifact": {
-            "branch_points": baseline["explanation"].get("branch_points", []),
-            "causal_chain": baseline["explanation"].get("causal_chain", []),
-            "narrative_summary": baseline["explanation"].get("narrative_summary"),
-            "applied_axioms": baseline["explanation"].get("applied_axioms"),
-            "rule_trace_references": baseline["explanation"].get("rule_trace_references"),
+            "branch_points": explanation.get("branch_points", []),
+            "causal_chain": explanation.get("causal_chain", []),
+            "narrative_summary": explanation.get("narrative_summary"),
+            "applied_axioms": explanation.get("applied_axioms"),
+            "rule_trace_references": explanation.get("rule_trace_references"),
         },
         "comparison_artifact": {
             "baseline_outcome_class": comparison["baseline_outcome_class"],

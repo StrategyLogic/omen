@@ -6,7 +6,6 @@ import random
 import uuid
 from dataclasses import asdict
 
-from omen.explain.report import build_explanation_report
 from omen.ingest.validators.scenario import ScenarioConfig
 from omen.simulation.state import ActorRuntimeState, SimulationState
 from omen.simulation.step import (
@@ -137,5 +136,4 @@ def run_simulation(
     }
     if ontology_setup is not None:
         result["ontology_setup"] = ontology_setup
-    result["explanation"] = build_explanation_report(result)
     return result

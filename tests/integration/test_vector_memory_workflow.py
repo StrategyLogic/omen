@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from omen.explain.report import build_explanation_report
 from omen.ingest.synthesizer.services.scenario import load_scenario_with_ontology
 from omen.simulation.engine import run_simulation
 from omen.simulation.replay import compare_run_results, run_counterfactual
@@ -30,11 +31,12 @@ def test_vector_memory_case_runs_shared_workflow() -> None:
             }
         ],
     )
+    explanation = build_explanation_report(baseline)
 
     assert baseline["status"] == "completed"
     assert baseline["scenario_id"] == "vector-memory-baseline"
     assert "timeline" in baseline
-    assert "branch_points" in baseline["explanation"]
+    assert "branch_points" in explanation
 
     assert comparison["baseline_outcome_class"]
     assert comparison["variation_outcome_class"]

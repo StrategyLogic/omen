@@ -7,6 +7,17 @@ from omen.cli.main import main
 
 def _mock_reason_chain_llm(*, config_path: str | None = None, user_prompt: str, system_prompt: str | None = None) -> str:
     _ = (config_path, user_prompt, system_prompt)
+    if "Required keys: recommendation_summary, gap_summary, required_actions." in user_prompt:
+        return json.dumps(
+            {
+                "recommendation_summary": "建议优先走A路径，以约束激活结果设定推进节奏。",
+                "gap_summary": "当前状态与目标状态之间仍有执行落差，关键差距在阻断项尚未完全打通。",
+                "required_actions": "先逐项解锁阻断条件，再将预警项转化为可验证动作并建立周期复盘机制。",
+                "decision_point_response": "建议先执行低后悔度动作，并用短周期验证来收敛不确定性。",
+                "known_unknowns_response": [],
+            },
+            ensure_ascii=False,
+        )
     return json.dumps(
         {
             "reason_chain": {
@@ -151,3 +162,46 @@ def test_smoke_deterministic_compare_cli(tmp_path: Path, monkeypatch) -> None:
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert payload["comparison_type"] == "deterministic_pack"
     assert payload["comparability"]["comparable"] is True
+
+
+def test_smoke_deterministic_explain_cli(tmp_path: Path, monkeypatch) -> None:
+    result_path = tmp_path / "smoke_deterministic_result.json"
+    scenario_path = tmp_path / "scenario_pack.json"
+    _write_ontology(scenario_path)
+    monkeypatch.setattr("omen.ingest.synthesizer.clients.invoke_text_prompt", _mock_reason_chain_llm)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "simulate",
+            "--scenario",
+            str(scenario_path),
+            "--output",
+            str(result_path),
+        ],
+    )
+    main()
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "omen",
+            "explain",
+            "--input",
+            str(result_path),
+        ],
+    )
+    main()
+
+    explanation_path = tmp_path / "output" / "strategic_actor_nokia_v1" / "explanation.json"
+    payload = json.loads(explanation_path.read_text(encoding="utf-8"))
+    assert payload["scenario_pack_ref"] == "strategic_actor_nokia_v1"
+    assert str(payload.get("recommendation_summary") or "").strip()
+    assert str(payload.get("gap_summary") or "").strip()
+    assert str(payload.get("required_actions") or "").strip()
+    assert str(payload.get("decision_point_response") or "").strip()
+    assert isinstance(payload.get("known_unknowns_response"), list)

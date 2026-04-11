@@ -22,6 +22,7 @@ from omen.cli.situation import (
     register_scenario_command,
 )
 from omen.explain.precision_report import build_precision_report
+from omen.explain.generator import generate_deterministic_explanation
 from omen.explain.report import build_explanation_report
 from omen.ingest.synthesizer.builders.assertion import build_assertions_from_candidates
 from omen.ingest.synthesizer.builders.candidate import build_candidates_from_text
@@ -63,12 +64,25 @@ def _write_output(
     default_filename: str,
     incremental: bool,
 ) -> Path:
-    output_path = Path(requested_path) if requested_path else Path("output") / default_filename
+    if requested_path:
+        output_path = Path(requested_path)
+    else:
+        default_path = Path(default_filename)
+        output_path = (
+            default_path
+            if default_path.is_absolute() or len(default_path.parts) > 1
+            else Path("output") / default_path
+        )
     if incremental:
         output_path = _with_timestamp_suffix(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(rendered, encoding="utf-8")
     return output_path
+
+
+def _default_pack_output(pack_id: str, filename: str) -> Path:
+    normalized = str(pack_id or "unknown_pack").strip() or "unknown_pack"
+    return Path("output") / normalized / filename
 
 
 def _print_llm_check_result(report: dict[str, Any]) -> None:
@@ -135,7 +149,13 @@ def main() -> None:
     )
 
     explain = sub.add_parser("explain", help="generate explanation from a saved run result")
-    explain.add_argument("--input", required=True, help="Path to saved run result JSON")
+    explain_target = explain.add_mutually_exclusive_group(required=True)
+    explain_target.add_argument("--input", required=False, help="Path to saved run result JSON")
+    explain_target.add_argument(
+        "--pack-id",
+        required=False,
+        help="Pack id. Input defaults to output/<pack-id>/result.json",
+    )
     explain.add_argument("--output", required=False, help="Optional output JSON path")
     explain.add_argument(
         "--incremental",
@@ -393,11 +413,12 @@ def main() -> None:
                 workshop_ui_mode=bool(args.workshop_ui_mode),
             )
             if deterministic_payload is not None:
+                pack_id = str(deterministic_payload.get("scenario_pack_ref") or "").strip() or "unknown_pack"
                 rendered = json.dumps(deterministic_payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(
                     rendered,
                     args.output,
-                    "deterministic_result.json",
+                    str(_default_pack_output(pack_id, "result.json")),
                     args.incremental,
                 )
                 print(f"Saved deterministic simulation result to {output_path}")
@@ -420,10 +441,19 @@ def main() -> None:
         output_path = _write_output(rendered, args.output, "result.json", args.incremental)
         print(f"Saved simulation result to {output_path}")
     elif args.command == "explain":
-        result = load_run_result(args.input)
-        explanation = result.get("explanation") or build_explanation_report(result)
+        input_path = Path(args.input) if getattr(args, "input", None) else _default_pack_output(args.pack_id, "result.json")
+        result = load_run_result(input_path)
+        if "scenario_pack_ref" in result and "scenario_results" in result:
+            explanation = generate_deterministic_explanation(
+                result_payload=result,
+                result_path=input_path,
+            )
+            default_output = str(_default_pack_output(str(result.get("scenario_pack_ref") or args.pack_id or "unknown_pack"), "explanation.json"))
+        else:
+            explanation = build_explanation_report(result)
+            default_output = "explanation.json"
         rendered = json.dumps(explanation, ensure_ascii=False, indent=2)
-        output_path = _write_output(rendered, args.output, "explanation.json", args.incremental)
+        output_path = _write_output(rendered, args.output, default_output, args.incremental)
         print(f"Saved explanation to {output_path}")
     elif args.command == "compare":
         try:
@@ -435,11 +465,12 @@ def main() -> None:
                 workshop_ui_mode=bool(args.workshop_ui_mode),
             )
             if deterministic_payload is not None:
+                pack_id = str(deterministic_payload.get("scenario_pack_ref") or "").strip() or "unknown_pack"
                 rendered = json.dumps(deterministic_payload, ensure_ascii=False, indent=2)
                 output_path = _write_output(
                     rendered,
                     args.output,
-                    "deterministic_comparison.json",
+                    str(_default_pack_output(pack_id, "comparison.json")),
                     args.incremental,
                 )
                 print(f"Saved deterministic comparison to {output_path}")

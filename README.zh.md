@@ -3,7 +3,7 @@
 <strong><p>开源战略推演引擎 － 分析、模拟、解释</p></strong>
 <p><a href="README.md">English</a> | 中文</p>
 
-![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
+![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) ![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
 
 </div>
 

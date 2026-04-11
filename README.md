@@ -3,7 +3,7 @@
 <strong><p>XAI-Powered Strategic Reasoning Engine</p></strong>
 <p>English | <a href="README.zh.md">中文</a></p>
 
-![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) [![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml)](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
+![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) ![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
 </div>
 
 [**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source strategic reasoning engine, powered by **Explainable AI** (XAI). It combines ontological modeling of strategic phenomena with counterfactual analysis of uncertainty - delivering verifiable, traceable, and explainable insights for decision-makers.

@@ -1,0 +1,152 @@
+{
+  "artifact_type": "actor_derivation_trace",
+  "version": "actor_derivation_v1",
+  "run_id": "sap-reltio-2026-04-06-run-001",
+  "situation_id": "sap_reltio_acquisition",
+  "source_document": "data/scenarios/sap/situation.md",
+  "actor_ontology_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+  "generated_at": "2026-04-06T09:12:30.000000",
+  "derivation_steps": [
+    {
+      "step": 1,
+      "type": "source_parse",
+      "description": "Parsed situation.md to identify named actors, organisations, and their strategic roles",
+      "extracted_entities": [
+        {
+          "raw_name": "SAP",
+          "canonical_id": "sap-se",
+          "resolved_type": "StrategicActor",
+          "role_signal": "acquirer and enterprise AI platform vendor — primary strategic actor",
+          "confidence": 0.97
+        },
+        {
+          "raw_name": "Reltio",
+          "canonical_id": "reltio",
+          "resolved_type": "organization",
+          "role_signal": "master data management and entity resolution acquisition target",
+          "confidence": 0.95
+        },
+        {
+          "raw_name": "Databricks",
+          "canonical_id": "databricks",
+          "resolved_type": "partner",
+          "role_signal": "pre-existing BDC alliance partner and data lake ecosystem amplifier",
+          "confidence": 0.92
+        },
+        {
+          "raw_name": "DSAG",
+          "canonical_id": "dsag-user-group",
+          "resolved_type": "customer",
+          "role_signal": "German SAP user group providing negative adoption signal via research (83% unfamiliarity)",
+          "confidence": 0.9
+        },
+        {
+          "raw_name": "Salesforce Data Cloud",
+          "canonical_id": "competitor-salesforce-data-cloud",
+          "resolved_type": "competitor",
+          "role_signal": "competing enterprise AI data platform — inferred competitive threat",
+          "confidence": 0.75
+        },
+        {
+          "raw_name": "Microsoft Fabric",
+          "canonical_id": "competitor-microsoft-fabric",
+          "resolved_type": "competitor",
+          "role_signal": "competing unified analytics and data integration platform",
+          "confidence": 0.75
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "type": "strategic_actor_profile_build",
+      "description": "Built SAP SE strategic actor profile from situation document and known corporate context",
+      "primary_actor_id": "sap-se",
+      "profile_fields_derived": {
+        "birth_year": {
+          "value": 1972,
+          "source": "known corporate fact — SAP founded 1972",
+          "confidence": 0.99
+        },
+        "origin": {
+          "value": "Walldorf, Germany",
+          "source": "known corporate fact",
+          "confidence": 0.99
+        },
+        "career_trajectory": {
+          "items_count": 4,
+          "source": "synthesised from known SAP corporate history and situation document context",
+          "confidence": 0.92
+        },
+        "key_experiences": {
+          "items_count": 5,
+          "source": "major acquisition events and product launches cited in situation document and known history",
+          "confidence": 0.9
+        },
+        "strategic_style.decision_style": {
+          "value": "acquisition-led platform expansion with ecosystem alliances",
+          "source": "inferred from BDC Databricks partnership + Reltio acquisition pattern",
+          "confidence": 0.85
+        },
+        "strategic_style.value_proposition": {
+          "value": "unified enterprise AI platform combining SAP and non-SAP data for business AI",
+          "source": "direct quote from Muhammad Alam (SAP board exec)",
+          "confidence": 0.95
+        }
+      }
+    },
+    {
+      "step": 3,
+      "type": "influence_graph_derivation",
+      "description": "Derived influence relationships between actors based on situation signals and structural logic",
+      "influences_derived": [
+        {
+          "from": "reltio",
+          "to": "sap-se",
+          "type": "capability_transfer",
+          "derivation_basis": "acquisition — Reltio's entity resolution engine transfers to SAP's product portfolio",
+          "confidence": 0.97
+        },
+        {
+          "from": "databricks",
+          "to": "sap-se",
+          "type": "ecosystem_amplifier",
+          "derivation_basis": "pre-existing BDC alliance creates distribution and co-sell leverage for SAP",
+          "confidence": 0.88
+        },
+        {
+          "from": "dsag-user-group",
+          "to": "sap-se",
+          "type": "market_constraint",
+          "derivation_basis": "DSAG research data (83% BDC unfamiliarity) acts as a constraint signal on SAP's go-to-market",
+          "confidence": 0.93
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "type": "validation",
+      "description": "Validated actor ontology against OntologyValidationIssue schema requirements",
+      "validation_passed": true,
+      "validation_issues": [],
+      "checks_performed": [
+        "meta.version == 'v0.1.0-actor': PASS",
+        "actors list present and non-empty: PASS",
+        "at least one StrategicActor (type=StrategicActor) present: PASS",
+        "StrategicActor profile.background_facts contains all required fields: PASS",
+        "background_facts.birth_year is integer or null: PASS",
+        "background_facts.education, career_trajectory, key_experiences are string arrays: PASS",
+        "events list present: PASS"
+      ]
+    }
+  ],
+  "summary": {
+    "total_actors_identified": 6,
+    "strategic_actors": 1,
+    "partner_actors": 1,
+    "customer_actors": 1,
+    "competitor_actors": 2,
+    "target_actors": 1,
+    "primary_strategic_actor": "sap-se",
+    "derivation_confidence_overall": 0.92
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "meta": {
+    "version": "v0.1.0-actor",
+    "case_id": "sap_reltio_acquisition",
+    "generated_at": "2026-04-06T09:00:00.000000",
+    "source_document": "cases/situations/sap_reltio_acquisition.md",
+    "pack_id": "sap_v1",
+    "pack_version": "0.1.0"
+  },
+  "actors": [
+    {
+      "id": "sap-se",
+      "name": "SAP SE",
+      "type": "StrategicActor",
+      "role": "enterprise software vendor and AI platform provider",
+      "labels": ["organization", "top_management", "acquirer"],
+      "profile": {
+        "background_facts": {
+          "birth_year": 1972,
+          "origin": "Walldorf, Germany",
+          "education": [],
+          "career_trajectory": [
+            "Founded 1972 as Systems, Applications and Products in Data Processing",
+            "Grew to become world's largest enterprise software company by revenue",
+            "Pivoted to cloud with SAP S/4HANA migration programme (2015–present)",
+            "Launched Business Data Cloud (BDC) in February 2025 with Databricks"
+          ],
+          "key_experiences": [
+            "HANA in-memory database platform launch (2010)",
+            "Acquisition of SuccessFactors (2011), Ariba (2012), Qualtrics (2018)",
+            "S/4HANA cloud migration campaign and resulting customer friction",
+            "BDC partnership with Databricks to create unified enterprise data layer",
+            "Reltio acquisition announced March 2026"
+          ]
+        },
+        "strategic_style": {
+          "decision_style": "acquisition-led platform expansion with ecosystem alliances",
+          "value_proposition": "unified enterprise AI platform combining SAP and non-SAP data for business AI",
+          "decision_preferences": [
+            "bolt-on MDM and data integration capabilities via acquisition",
+            "deepen hyperscaler alliances (Databricks, Google Cloud, Microsoft Fabric)",
+            "position BDC as the enterprise AI data backbone"
+          ],
+          "non_negotiables": [
+            "maintaining ERP customer base trust during cloud migration",
+            "interoperability with major cloud data platforms",
+            "SAP One Domain Model consistency across application portfolio"
+          ]
+        }
+      }
+    },
+    {
+      "id": "reltio",
+      "name": "Reltio",
+      "type": "organization",
+      "role": "master data management and AI entity resolution provider (acquisition target)",
+      "labels": ["organization", "saas", "mdm", "target"],
+      "profile": null
+    },
+    {
+      "id": "databricks",
+      "name": "Databricks",
+      "type": "partner",
+      "role": "data lake and AI platform alliance partner underpinning BDC",
+      "labels": ["organization", "partner", "data-platform"],
+      "profile": null
+    },
+    {
+      "id": "dsag-user-group",
+      "name": "DSAG (German SAP User Group)",
+      "type": "customer",
+      "role": "representative body of SAP enterprise customers in DACH region",
+      "labels": ["customer", "user-group", "regulator-adjacent"],
+      "profile": null
+    },
+    {
+      "id": "competitor-salesforce-data-cloud",
+      "name": "Salesforce Data Cloud",
+      "type": "competitor",
+      "role": "competing enterprise AI data platform",
+      "labels": ["competitor", "platform"],
+      "profile": null
+    },
+    {
+      "id": "competitor-microsoft-fabric",
+      "name": "Microsoft Fabric",
+      "type": "competitor",
+      "role": "competing unified analytics and data integration platform",
+      "labels": ["competitor", "platform"],
+      "profile": null
+    }
+  ],
+  "events": [
+    {
+      "event_type": "product_launch",
+      "target": "business-data-cloud",
+      "payload": {
+        "name": "SAP Business Data Cloud Launch",
+        "date": "2025-02",
+        "description": "SAP launched BDC in alliance with Databricks to unify enterprise data for AI",
+        "actors_involved": ["sap-se", "databricks"]
+      }
+    },
+    {
+      "event_type": "market_signal",
+      "target": "bdc-adoption",
+      "payload": {
+        "name": "DSAG BDC Awareness Research",
+        "date": "2025-12",
+        "description": "83% of DSAG members unfamiliar or only slightly familiar with BDC",
+        "actors_involved": ["dsag-user-group", "sap-se"],
+        "severity": "high"
+      }
+    },
+    {
+      "event_type": "acquisition_announced",
+      "target": "reltio",
+      "payload": {
+        "name": "SAP Acquires Reltio",
+        "date": "2026-03-30",
+        "description": "SAP announces acquisition of Reltio to integrate non-SAP data into its AI platform",
+        "actors_involved": ["sap-se", "reltio"],
+        "strategic_rationale": "Extend BDC to harmonise external enterprise data using Reltio AI entity resolution"
+      }
+    }
+  ],
+  "influences": [
+    {
+      "from": "reltio",
+      "to": "sap-se",
+      "type": "capability_transfer",
+      "label": "AI entity resolution and golden record MDM capability"
+    },
+    {
+      "from": "databricks",
+      "to": "sap-se",
+      "type": "ecosystem_amplifier",
+      "label": "Data lake interoperability and hyperscaler distribution"
+    },
+    {
+      "from": "dsag-user-group",
+      "to": "sap-se",
+      "type": "market_constraint",
+      "label": "Adoption trust deficit and migration friction pressure"
+    }
+  ],
+  "query_skeleton": {
+    "primary_actor_id": "sap-se",
+    "query_types": ["status", "persona"],
+    "context_window": "2026-Q1",
+    "strategic_focus": "BDC adoption acceleration via Reltio MDM integration"
+  }
+}

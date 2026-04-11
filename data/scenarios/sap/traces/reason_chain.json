@@ -1,0 +1,238 @@
+{
+  "artifact_type": "reason_chain",
+  "version": "reason_chain_v1",
+  "run_id": "sap-reltio-2026-04-06-run-001",
+  "scenario_pack_ref": "data/scenarios/sap/situation.json",
+  "scenario_chains": [
+    {
+      "scenario_key": "A",
+      "scenario_title": "Reltio MDM as BDC Onboarding Accelerator",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_1.1",
+            "step_type": "seed",
+            "summary": "SAP acquires Reltio to embed AI entity resolution (golden record) into BDC",
+            "evidence": [
+              "SAP announcement: acquisition aimed at integrating non-SAP data into AI platform",
+              "Reltio's entity resolution resolves fragmented enterprise records into unified golden record"
+            ],
+            "signal_refs": ["sig-sap-1-ai-entity-resolution-moat"]
+          },
+          {
+            "step_id": "step_1.2",
+            "step_type": "constraint_activation",
+            "summary": "BDC adoption gap constrains Reltio's market impact — 83% DSAG unfamiliarity binds",
+            "evidence": [
+              "DSAG December 2025 research: 83% of members unfamiliar or only slightly familiar with BDC",
+              "Mid-migration billing friction creates negative customer sentiment"
+            ],
+            "signal_refs": ["sig-sap-2-bdc-adoption-gap", "sig-sap-3-migration-friction-cost"]
+          },
+          {
+            "step_id": "step_1.3",
+            "step_type": "target_or_objective",
+            "summary": "Reltio positions BDC as self-service data onboarding layer for existing SAP customers",
+            "evidence": [
+              "Muhammad Alam quote: 'combining SAP and non-SAP data to deliver data context that business AI requires'",
+              "Strategic goal: extend BDC beyond SAP-data-only to heterogeneous enterprise estates"
+            ],
+            "signal_refs": ["sig-sap-1-ai-entity-resolution-moat", "sig-sap-4-databricks-amplifier"]
+          },
+          {
+            "step_id": "step_1.4",
+            "step_type": "gap",
+            "summary": "Gap: Reltio's technical capability alone does not close DSAG trust deficit",
+            "evidence": [
+              "Trust deficit is a sales and change-management problem, not a product-feature problem",
+              "Binoy James: 'That line is going to haunt SAP's sales deck for a while'"
+            ],
+            "signal_refs": ["sig-sap-2-bdc-adoption-gap"]
+          },
+          {
+            "step_id": "step_1.5",
+            "step_type": "required_or_warning_or_blocking",
+            "summary": "Required: SAP must pair Reltio integration with a migration-simplification programme and revised pricing for mid-migration customers",
+            "evidence": [
+              "Migration pricing reform is needed to convert early BDC adopters into advocates",
+              "Databricks amplifier only activates if BDC has a credible reputation among existing SAP customers"
+            ],
+            "signal_refs": ["sig-sap-3-migration-friction-cost", "sig-sap-4-databricks-amplifier"]
+          }
+        ],
+        "conclusions": {
+          "required": [
+            {
+              "text": "SAP must launch a migration-phase pricing reform before Reltio capabilities go GA to prevent compounding friction.",
+              "reason_step_ids": ["step_1.4", "step_1.5"]
+            },
+            {
+              "text": "Reltio MDM onboarding must be exposed via a low-friction API layer compatible with existing customer data architectures.",
+              "reason_step_ids": ["step_1.3", "step_1.5"]
+            }
+          ],
+          "warning": [
+            {
+              "text": "If DSAG trust deficit is not addressed within 18 months, competitive framing by Salesforce and Microsoft will frame Reltio integration as a further migration burden.",
+              "reason_step_ids": ["step_1.2", "step_1.4"]
+            }
+          ],
+          "blocking": [
+            {
+              "text": "If mid-migration billing friction persists post-acquisition, Reltio premium pricing is blocked by customer perception of SAP as extracting from a captive base.",
+              "reason_step_ids": ["step_1.4"],
+              "activation_step_ids": ["step_1.2"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "scenario_key": "B",
+      "scenario_title": "Reltio Extends BDC to Data-First Enterprises via Databricks Channel",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_2.1",
+            "step_type": "seed",
+            "summary": "Databricks alliance amplifies Reltio's reach beyond core SAP customer base",
+            "evidence": [
+              "BDC-Databricks partnership already established at launch (February 2025)",
+              "Reltio's cloud-native Spanner architecture is compatible with hyperscaler ecosystems"
+            ],
+            "signal_refs": ["sig-sap-4-databricks-amplifier"]
+          },
+          {
+            "step_id": "step_2.2",
+            "step_type": "constraint_activation",
+            "summary": "Databricks competing interests in open data formats may limit deep integration commitment",
+            "evidence": [
+              "Databricks promotes Delta Lake and open lakehouse formats",
+              "SAP's One Domain Model is proprietary — tension may limit full integration depth"
+            ],
+            "signal_refs": ["sig-sap-4-databricks-amplifier"]
+          },
+          {
+            "step_id": "step_2.3",
+            "step_type": "target_or_objective",
+            "summary": "Reach data-first enterprises with Reltio MDM as a Databricks-native integration",
+            "evidence": [
+              "Tony Baer quote: SAP acknowledged it is not the only focal point for enterprise business data",
+              "BDC's original mission: expose SAP data as products shareable with Databricks, Google BigQuery, Snowflake, Microsoft Fabric"
+            ],
+            "signal_refs": ["sig-sap-1-ai-entity-resolution-moat", "sig-sap-4-databricks-amplifier"]
+          },
+          {
+            "step_id": "step_2.4",
+            "step_type": "gap",
+            "summary": "Gap: No joint Reltio-Databricks integration roadmap announced at acquisition time",
+            "evidence": [
+              "Acquisition announcement does not include Databricks-specific integration commitments",
+              "Databricks channel activation requires a separate go-to-market agreement"
+            ],
+            "signal_refs": ["sig-sap-4-databricks-amplifier"]
+          },
+          {
+            "step_id": "step_2.5",
+            "step_type": "required_or_warning_or_blocking",
+            "summary": "Required: SAP and Databricks must publicly commit to a Reltio integration milestone at Sapphire 2026 to activate this scenario",
+            "evidence": [
+              "Market credibility requires a joint announcement to signal to data-first enterprises",
+              "Without Sapphire commitment, Scenario B degrades to a future optionality rather than a near-term driver"
+            ],
+            "signal_refs": ["sig-sap-4-databricks-amplifier", "sig-sap-1-ai-entity-resolution-moat"]
+          }
+        ],
+        "conclusions": {
+          "required": [
+            {
+              "text": "A joint SAP-Databricks announcement of Reltio integration is required at Sapphire 2026 for Scenario B to materialise.",
+              "reason_step_ids": ["step_2.4", "step_2.5"]
+            }
+          ],
+          "warning": [
+            {
+              "text": "If SAP over-proprietary-ises the Reltio MDM layer, Databricks may deprioritise the integration in favour of competing open-MDM offerings.",
+              "reason_step_ids": ["step_2.2", "step_2.4"]
+            }
+          ],
+          "blocking": []
+        }
+      }
+    },
+    {
+      "scenario_key": "C",
+      "scenario_title": "Reltio Exacerbates Migration Complexity — Adoption Stalls",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_3.1",
+            "step_type": "seed",
+            "summary": "Reltio adds integration surface area to an already-challenged BDC migration programme",
+            "evidence": [
+              "Customers mid-migration already paying full cloud fees for unusable systems",
+              "Adding Reltio MDM scope may extend migration timelines and increase project risk"
+            ],
+            "signal_refs": ["sig-sap-3-migration-friction-cost"]
+          },
+          {
+            "step_id": "step_3.2",
+            "step_type": "constraint_activation",
+            "summary": "Enterprise data gravity and multi-year migration timelines bind strongly in this scenario",
+            "evidence": [
+              "ERP migrations are typically 3–7 year programmes",
+              "Adding an MDM harmonisation layer is a distinct, parallel workstream with its own complexity"
+            ],
+            "signal_refs": ["sig-sap-2-bdc-adoption-gap", "sig-sap-3-migration-friction-cost"]
+          },
+          {
+            "step_id": "step_3.3",
+            "step_type": "target_or_objective",
+            "summary": "SAP's objective is BDC adoption growth — but customers see more complexity, not less",
+            "evidence": [
+              "SAP's messaging positions Reltio as simplification — but customer perception is complexity addition",
+              "Consultant quote: 'That line is going to haunt SAP's sales deck'"
+            ],
+            "signal_refs": ["sig-sap-2-bdc-adoption-gap", "sig-sap-3-migration-friction-cost"]
+          },
+          {
+            "step_id": "step_3.4",
+            "step_type": "gap",
+            "summary": "Gap: SAP does not yet have a unified messaging framework that positions Reltio as a simplification tool vs. an additional layer",
+            "evidence": [
+              "Public announcement is product-centric, not customer-journey-centric",
+              "No announced simplification pricing or migration support programme at acquisition"
+            ],
+            "signal_refs": ["sig-sap-2-bdc-adoption-gap"]
+          },
+          {
+            "step_id": "step_3.5",
+            "step_type": "required_or_warning_or_blocking",
+            "summary": "Blocking: Without a customer-facing simplification narrative, Scenario C becomes self-fulfilling as DSAG voices dominate the conversation",
+            "evidence": [
+              "DSAG has proven ability to shape SAP enterprise customer perception",
+              "83% unfamiliarity baseline means SAP has no earned trust buffer to absorb negative signals"
+            ],
+            "signal_refs": ["sig-sap-2-bdc-adoption-gap", "sig-sap-3-migration-friction-cost"]
+          }
+        ],
+        "conclusions": {
+          "required": [],
+          "warning": [
+            {
+              "text": "If SAP does not address mid-migration billing friction within 6 months, Scenario C's stall dynamic becomes difficult to reverse.",
+              "reason_step_ids": ["step_3.3", "step_3.4"]
+            }
+          ],
+          "blocking": [
+            {
+              "text": "Without a customer-facing simplification narrative and pricing reform, negative DSAG perception blocks BDC pipeline growth regardless of Reltio's technical merit.",
+              "reason_step_ids": ["step_3.4", "step_3.5"],
+              "activation_step_ids": ["step_3.2"]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

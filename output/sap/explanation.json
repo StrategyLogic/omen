@@ -1,0 +1,141 @@
+{
+  "run_id": "det-sap-reltio-2026-04-06-001",
+  "branch_points": [
+    {
+      "step": "step_1.2",
+      "type": "constraint_activation",
+      "description": "DSAG adoption gap constraint activates — 83% unfamiliarity rate binds near-term BDC pipeline across all scenarios.",
+      "scenario_keys": ["A", "B", "C"]
+    },
+    {
+      "step": "step_1.4",
+      "type": "gap_identification",
+      "description": "Critical gap identified: Reltio's technical capability alone does not resolve the DSAG trust deficit. The sales and change-management problem remains structurally independent of the product acquisition.",
+      "scenario_keys": ["A", "C"]
+    },
+    {
+      "step": "step_2.4",
+      "type": "dependency_gap",
+      "description": "Scenario B branch point: No joint Reltio-Databricks integration roadmap exists at acquisition time. Scenario B is gated on a Sapphire 2026 announcement.",
+      "scenario_keys": ["B"]
+    },
+    {
+      "step": "step_3.5",
+      "type": "blocking_condition_activation",
+      "description": "Scenario C blocking condition: Without a customer-facing simplification narrative and pricing reform, DSAG voices dominate and BDC pipeline growth is structurally blocked.",
+      "scenario_keys": ["C"]
+    }
+  ],
+  "causal_chain": [
+    "SAP acquires Reltio, adding AI entity resolution (golden record) capability to BDC",
+    "DSAG trust deficit (83% BDC unfamiliarity) constrains near-term pipeline regardless of Reltio's technical merit",
+    "Three strategic paths diverge: (A) Reltio as self-service onboarding accelerator, (B) Reltio extended via Databricks channel, (C) Reltio compounds migration complexity",
+    "Path A activation requires migration-phase pricing reform and low-friction MDM API exposure",
+    "Path B activation requires a joint SAP-Databricks announcement at Sapphire 2026",
+    "Path C is the default risk path if SAP does not proactively address migration friction within 6 months",
+    "Databricks alliance amplifies Path A and enables Path B if not constrained by open-format competing interests"
+  ],
+  "reality_gap_analysis": {
+    "announced_vs_realised_gap": "SAP's acquisition announcement is product-centric (entity resolution capability) but does not address the customer-experience gap (mid-migration billing friction, DSAG trust deficit). The strategic logic is sound, but the go-to-market narrative lags the technical rationale.",
+    "signal_confidence_gaps": [
+      {
+        "signal_id": "sig-sap-2-bdc-adoption-gap",
+        "gap_description": "83% DSAG unfamiliarity is a lagging indicator — current awareness rate post-acquisition announcement is unknown",
+        "risk_level": "high"
+      },
+      {
+        "signal_id": "sig-sap-4-databricks-amplifier",
+        "gap_description": "Databricks amplifier is assumed to activate for Reltio but no integration commitment has been announced",
+        "risk_level": "medium"
+      }
+    ],
+    "key_assumption_risks": [
+      "Reltio's Spanner/GCP architecture compatibility with BDC integration layer is assumed but not confirmed",
+      "SAP's sales cycle can absorb a new MDM narrative while managing existing migration conversations",
+      "Databricks remains a committed amplifier and does not compete directly in the MDM space"
+    ]
+  },
+  "applied_axioms": {
+    "capability_transfer_axiom": "When a target company's core capability directly addresses the acquirer's primary product weakness, integration speed determines competitive moat timing.",
+    "trust_deficit_axiom": "A platform with a documented trust deficit (quantified via third-party research) cannot fully benefit from a capability acquisition until the trust gap is independently addressed.",
+    "ecosystem_amplifier_axiom": "A pre-existing ecosystem alliance amplifies acquisition impact if the integration roadmap is jointly announced and credibly scoped."
+  },
+  "rule_trace_references": [
+    {
+      "rule_id": "capability_transfer_axiom",
+      "branch_point_ref": "step_1.1",
+      "application": "Reltio entity resolution directly addresses BDC's core weakness (external data fragmentation). Integration speed is the moat-timing variable.",
+      "scenario_keys": ["A", "B"]
+    },
+    {
+      "rule_id": "trust_deficit_axiom",
+      "branch_point_ref": "step_1.2",
+      "application": "83% DSAG unfamiliarity is the trust deficit signal. Reltio acquisition cannot close this gap — it requires a separate pricing and migration narrative.",
+      "scenario_keys": ["A", "C"]
+    },
+    {
+      "rule_id": "ecosystem_amplifier_axiom",
+      "branch_point_ref": "step_2.4",
+      "application": "Databricks alliance amplifies Reltio impact only if a joint integration roadmap is publicly committed. Without Sapphire 2026 announcement, the amplifier remains latent.",
+      "scenario_keys": ["B"]
+    }
+  ],
+  "outcome_evidence_links": [
+    {
+      "outcome": "Scenario A: BDC adoption accelerates via Reltio-enabled onboarding",
+      "supporting_evidence": [
+        "Reltio entity resolution directly removes data fragmentation barrier (sig-sap-1)",
+        "Databricks alliance provides distribution amplification (sig-sap-4)",
+        "SAP board exec quote confirms strategic intent: 'combining SAP and non-SAP data'"
+      ],
+      "challenging_evidence": [
+        "83% DSAG unfamiliarity constrains near-term pipeline (sig-sap-2)",
+        "Mid-migration billing friction remains unresolved (sig-sap-3)"
+      ],
+      "confidence": "medium-high"
+    },
+    {
+      "outcome": "Scenario B: Reltio extends BDC to data-first enterprises via Databricks",
+      "supporting_evidence": [
+        "BDC-Databricks partnership pre-established (Feb 2025)",
+        "Reltio's cloud-native Spanner architecture enables hyperscaler ecosystem compatibility"
+      ],
+      "challenging_evidence": [
+        "No joint Databricks-Reltio integration commitment at acquisition announcement",
+        "Databricks open-format strategy may conflict with SAP's One Domain Model"
+      ],
+      "confidence": "low-medium"
+    },
+    {
+      "outcome": "Scenario C: Reltio compounds migration complexity and adoption stalls",
+      "supporting_evidence": [
+        "DSAG research: 83% BDC unfamiliarity with no announced improvement programme",
+        "Mid-migration billing friction: customers paying for unusable systems",
+        "Consultant quote: 'That line is going to haunt SAP's sales deck'"
+      ],
+      "challenging_evidence": [
+        "SAP's acquisition framing as simplification tool offers a counter-narrative",
+        "Reltio's existing enterprise customer base (Pfizer, Radisson, Warner Bros) provides credibility"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "counterfactual_conditions": [
+    {
+      "id": "cf-1",
+      "description": "What if SAP announced a migration-phase pricing reform simultaneously with the Reltio acquisition?",
+      "expected_impact": "Would significantly reduce Scenario C risk and accelerate Scenario A timeline by addressing the trust deficit proactively.",
+      "scenario_affected": "C",
+      "direction": "positive"
+    },
+    {
+      "id": "cf-2",
+      "description": "What if Databricks announces competing MDM/entity resolution capability at Sapphire 2026?",
+      "expected_impact": "Would neutralise sig-sap-4 amplifier and potentially convert Scenario B to a defensive positioning challenge.",
+      "scenario_affected": "B",
+      "direction": "negative"
+    }
+  ],
+  "counterfactual_deltas": [],
+  "narrative_summary": "SAP's Reltio acquisition is strategically coherent — entity resolution directly addresses BDC's external data fragmentation problem. However, the acquisition logic does not automatically resolve the documented DSAG trust deficit or mid-migration billing friction that constrains near-term BDC pipeline. Scenario A (adoption acceleration) is the highest-confidence path and requires SAP to address pricing reform before Reltio capabilities reach GA. Scenario B (Databricks channel extension) offers incremental upside gated on a Sapphire 2026 joint announcement. Scenario C (adoption stall) is the dominant downside risk if SAP allows the current migration friction narrative to persist unchallenged."
+}

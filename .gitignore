@@ -54,5 +54,12 @@ config/llm.toml
 .local.md
 data/ingest/source/
 data/scenarios/*/
-output/
+!data/scenarios/sap/
+!data/scenarios/sap/**
+output/**
+!output/actors/
+!output/actors/sap_reltio_acquisition/
+!output/actors/sap_reltio_acquisition/**
+!output/sap/
+!output/sap/**
 *legacy*

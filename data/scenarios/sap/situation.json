@@ -1,0 +1,243 @@
+{
+  "version": "0.1.0",
+  "id": "sap_reltio_acquisition",
+  "context": {
+    "title": "SAP Acquires Reltio to Accelerate BDC Adoption via Cross-Enterprise MDM",
+    "core_question": "Can SAP transform BDC from a struggling product into a credible enterprise AI data backbone by integrating Reltio's MDM capability across heterogeneous data estates?",
+    "current_state": "BDC exists with Databricks partnership but suffers from 83% DSAG user unfamiliarity and painful mid-migration UX; Reltio acquisition adds AI entity resolution for cross-enterprise data harmonisation.",
+    "core_dilemma": "Does acquiring Reltio accelerate BDC adoption by solving the external data fragmentation problem, or does it add integration complexity that deepens the migration crisis for existing SAP customers?",
+    "key_decision_point": "Whether to position Reltio's MDM capability as a self-service data onboarding layer for BDC or as an internal harmonisation tool — each choice implies different go-to-market sequencing and customer risk.",
+    "target_outcomes": [
+      "Grow BDC adoption beyond early adopters to the broader SAP customer base",
+      "Establish SAP as the enterprise AI data backbone for hybrid SAP/non-SAP estates",
+      "Reduce customer migration friction and eliminate mid-migration billing pain"
+    ],
+    "hard_constraints": [
+      "Multi-year ERP migration timelines for existing S/4HANA customers",
+      "DSAG trust deficit: 83% BDC unfamiliarity rate creates a significant awareness and credibility gap",
+      "Enterprise data gravity — customers cannot migrate all data to SAP systems",
+      "Competitive pressure from Salesforce Data Cloud and Microsoft Fabric for the unified data platform narrative"
+    ],
+    "known_unknowns": [
+      "Whether Reltio's integration will simplify or compound BDC migration complexity",
+      "Speed of competitive response from Salesforce and Microsoft",
+      "Whether Databricks alliance strengthens or weakens as SAP internalises more data stack capability"
+    ],
+    "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json"
+  },
+  "signals": [
+    {
+      "id": "sig-sap-1-ai-entity-resolution-moat",
+      "name": "AI Entity Resolution as Integration Moat",
+      "domain": "tech",
+      "strength": 0.78,
+      "direction": "up",
+      "mapped_targets": [
+        {
+          "space": "TechSpace",
+          "element_key": "bdc_data_harmonisation_capability",
+          "impact_type": "driver",
+          "impact_strength": 0.8,
+          "mechanism_conditions": {
+            "activation_condition": "Reltio integration is complete and entity resolution pipelines are exposed via BDC APIs",
+            "expected_effect": "Elevates BDC from a SAP-data-only layer to a cross-enterprise AI data backbone, expanding addressable use cases."
+          }
+        }
+      ],
+      "cascade_rules": [
+        {
+          "trigger_condition": "Reltio MDM layer reaches general availability on BDC within 12 months",
+          "next_signal_id": "sig-sap-4-databricks-amplifier",
+          "expected_lag": "medium"
+        }
+      ],
+      "market_constraints": [
+        {
+          "constraint_key": "enterprise_mdm_vendor_lock_in_concerns",
+          "binding_strength": 0.55
+        }
+      ],
+      "mechanism_note": "Reltio's AI entity resolution produces a unified golden record from heterogeneous enterprise data. When embedded in BDC, this capability directly removes the primary technical barrier — data fragmentation — that has limited BDC adoption among enterprises with mixed SAP/non-SAP estates."
+    },
+    {
+      "id": "sig-sap-2-bdc-adoption-gap",
+      "name": "BDC Adoption Gap — DSAG Trust Deficit",
+      "domain": "market",
+      "strength": 0.82,
+      "direction": "down",
+      "mapped_targets": [
+        {
+          "space": "MarketSpace",
+          "element_key": "bdc_pipeline_growth",
+          "impact_type": "constraint",
+          "impact_strength": 0.75,
+          "mechanism_conditions": {
+            "binding_condition": "83% of DSAG members remain unfamiliar with BDC; customer trust anchors on existing ERP relationships",
+            "release_condition": "SAP demonstrates measurable migration simplification and cost reduction for at least 20% of BDC customers",
+            "expected_effect": "Constrains near-term BDC pipeline expansion until SAP closes the awareness and trust gap with its existing enterprise base."
+          }
+        }
+      ],
+      "cascade_rules": [
+        {
+          "trigger_condition": "DSAG awareness rate improves above 50% within 18 months post-acquisition",
+          "next_signal_id": "sig-sap-3-migration-friction-cost",
+          "expected_lag": "medium"
+        }
+      ],
+      "market_constraints": [
+        {
+          "constraint_key": "dsag_trust_deficit",
+          "binding_strength": 0.82
+        },
+        {
+          "constraint_key": "competitor_narrative_advantage_salesforce_microsoft",
+          "binding_strength": 0.6
+        }
+      ],
+      "mechanism_note": "The DSAG research establishes a hard market signal: SAP's core customer base is not engaged with BDC. This constrains the pipeline available for Reltio-enabled upsell and forces SAP to invest in re-education and migration support before the Reltio premium can be realised."
+    },
+    {
+      "id": "sig-sap-3-migration-friction-cost",
+      "name": "Mid-Migration Billing Friction — Churn Risk",
+      "domain": "market",
+      "strength": 0.7,
+      "direction": "down",
+      "mapped_targets": [
+        {
+          "space": "MarketSpace",
+          "element_key": "bdc_net_revenue_retention",
+          "impact_type": "dampener",
+          "impact_strength": 0.65,
+          "mechanism_conditions": {
+            "modulation_target": "bdc_pipeline_growth",
+            "modulation_condition": "Customers mid-migration are billed at full cloud rates for systems they cannot yet operationalise",
+            "modulation_factor": 0.6,
+            "expected_effect": "Dampens BDC expansion velocity by generating negative word-of-mouth and increasing churn risk among early BDC adopters."
+          }
+        }
+      ],
+      "no_cascade_reason": "direct local effect — billing friction is a steady-state constraint until SAP redesigns migration-phase pricing",
+      "cascade_rules": [],
+      "market_constraints": [
+        {
+          "constraint_key": "cloud_migration_billing_transparency",
+          "binding_strength": 0.7
+        }
+      ],
+      "mechanism_note": "Customers who are stuck mid-migration become involuntary proof-points against BDC adoption. The Binoy James quote ('that line is going to haunt SAP's sales deck') captures how this friction becomes a competitive liability that Reltio alone cannot fix."
+    },
+    {
+      "id": "sig-sap-4-databricks-amplifier",
+      "name": "Databricks Alliance as Ecosystem Amplifier",
+      "domain": "market",
+      "strength": 0.65,
+      "direction": "up",
+      "mapped_targets": [
+        {
+          "space": "MarketSpace",
+          "element_key": "bdc_data_ecosystem_reach",
+          "impact_type": "amplifier",
+          "impact_strength": 0.7,
+          "mechanism_conditions": {
+            "modulation_target": "sig-sap-1-ai-entity-resolution-moat",
+            "modulation_condition": "Reltio MDM capability is exposed via Databricks integration points, extending BDC reach to data-first enterprises outside the core SAP customer base",
+            "modulation_factor": 0.65,
+            "expected_effect": "Amplifies the AI entity resolution driver by extending its reach to Databricks-anchored enterprise data ecosystems."
+          }
+        }
+      ],
+      "cascade_rules": [
+        {
+          "trigger_condition": "Databricks and Reltio integration roadmap is jointly announced at Sapphire 2026",
+          "next_signal_id": "sig-sap-2-bdc-adoption-gap",
+          "expected_lag": "long"
+        }
+      ],
+      "market_constraints": [
+        {
+          "constraint_key": "databricks_competing_interests_in_open_data_formats",
+          "binding_strength": 0.45
+        }
+      ],
+      "mechanism_note": "The Databricks alliance pre-dates Reltio but is directly strengthened by it. If Reltio's entity resolution layer is surfaced through Databricks, SAP can approach data-first enterprises without requiring S/4HANA migration as a prerequisite — a significant strategic unlock."
+    }
+  ],
+  "tech_space_seed": [
+    {
+      "name": "bdc_data_harmonisation_capability"
+    },
+    {
+      "name": "reltio_entity_resolution_engine"
+    },
+    {
+      "name": "sap_one_domain_model"
+    }
+  ],
+  "market_space_seed": [
+    {
+      "name": "bdc_pipeline_growth"
+    },
+    {
+      "name": "bdc_net_revenue_retention"
+    },
+    {
+      "name": "bdc_data_ecosystem_reach"
+    },
+    {
+      "name": "enterprise_mdm_market_share"
+    }
+  ],
+  "uncertainty_space": {
+    "overall_confidence": 0.67,
+    "confidence_risk": 0.55,
+    "confidence_overall": 0.67,
+    "coverage_ratio": 0.5455,
+    "guardrail_applied": false,
+    "high_leverage_unknowns": [
+      "Whether Reltio's integration will simplify or compound BDC migration complexity",
+      "Speed of competitive response from Salesforce and Microsoft",
+      "Whether Databricks alliance strengthens or weakens as SAP internalises more data stack capability"
+    ],
+    "assumptions_explicit": [
+      {
+        "target_unknown": "Whether Reltio's integration will simplify or compound BDC migration complexity",
+        "assumption_text": "Reltio's cloud-native architecture (Spanner/Google Cloud migration in 2024) is assumed to be compatible with BDC's integration layer without requiring a full data model rewrite.",
+        "quality_score": 0.72,
+        "coverage_type": "direct"
+      },
+      {
+        "target_unknown": "Speed of competitive response from Salesforce and Microsoft",
+        "assumption_text": "Salesforce Data Cloud and Microsoft Fabric will respond within 12–18 months with MDM-adjacent features, but SAP's ERP data moat preserves a 12-month window of differentiation.",
+        "quality_score": 0.58,
+        "coverage_type": "partial"
+      },
+      {
+        "target_unknown": "Whether Databricks alliance strengthens or weakens as SAP internalises more data stack capability",
+        "assumption_text": "Databricks is assumed to remain a committed distribution partner as long as BDC does not directly compete with Databricks' core lakehouse offering.",
+        "quality_score": 0.6,
+        "coverage_type": "partial"
+      }
+    ],
+    "metrics": {
+      "known_unknowns_count": 3,
+      "assumptions_filled_count": 3,
+      "assumptions_quality_avg": 0.6333,
+      "cognitive_coverage": 0.5455,
+      "confidence_delta_cap": 0.5
+    }
+  },
+  "source_trace": [
+    {
+      "situation_id": "sap_reltio_acquisition",
+      "source_path": "data/scenarios/sap/situation.md"
+    }
+  ],
+  "source_meta": {
+    "source_path": "data/scenarios/sap/situation.md",
+    "generated_at": "2026-04-06T09:12:44.000000",
+    "pack_id": "sap_v1",
+    "pack_version": "0.1.0",
+    "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json"
+  }
+}

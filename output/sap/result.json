@@ -1,0 +1,270 @@
+{
+  "run_id": "det-sap-reltio-2026-04-06-001",
+  "run_timestamp": "2026-04-06T09:15:22.000000",
+  "actor_profile_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+  "scenario_pack_ref": "sap_v1",
+  "export_status": "success",
+  "reason_chain_ref": "data/scenarios/sap/traces/reason_chain.json",
+  "scenario_results": [
+    {
+      "scenario_key": "A",
+      "capability_dilemma_fit": {
+        "fit": "strong",
+        "scores": {
+          "ecosystem_control": 0.75,
+          "execution_velocity": 0.58
+        },
+        "fit_rationale": "SAP's ecosystem control score reflects strong leverage from the BDC-Databricks alliance and the Reltio acquisition adding MDM capability. Execution velocity is moderate, constrained by DSAG trust deficit and migration friction."
+      },
+      "selected_dimensions": {
+        "selected_dimension_keys": ["ecosystem_control", "data_harmonisation_capability"],
+        "rationale": "Scenario A's self-service onboarding thesis is most sensitive to ecosystem control (BDC reach) and the underlying MDM data harmonisation capability from Reltio."
+      },
+      "actor_derivation": {
+        "scenario_key": "A",
+        "actor_profile_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+        "decision_style": "offense_breakthrough",
+        "dominant_capability": "ecosystem_control",
+        "selected_dimensions": ["ecosystem_control", "data_harmonisation_capability"],
+        "objective_alignment": "Grow BDC adoption beyond early adopters to the broader SAP customer base",
+        "constraint_focus": [
+          "Multi-year ERP migration timelines for existing S/4HANA customers",
+          "DSAG trust deficit: 83% BDC unfamiliarity rate"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene A",
+          "Capability fit level: strong",
+          "Primary capability anchor: ecosystem_control"
+        ]
+      },
+      "resistance": {
+        "structural_conflict": 0.45,
+        "resource_reallocation_drag": 0.52,
+        "cultural_misalignment": 0.38,
+        "veto_node_intensity": 0.42,
+        "aggregate_resistance": 0.44
+      },
+      "scenario_conditions": {
+        "required": [
+          "SAP must launch a migration-phase pricing reform before Reltio capabilities go GA",
+          "Reltio MDM onboarding must be exposed via a low-friction API layer compatible with existing customer data architectures"
+        ],
+        "warning": [
+          "If DSAG trust deficit is not addressed within 18 months, competitive framing by Salesforce and Microsoft will deepen"
+        ],
+        "blocking": [
+          "Mid-migration billing friction must be resolved or Reltio premium pricing will be blocked by customer perception"
+        ]
+      },
+      "evidence_refs": [
+        {
+          "evidence_id": "required_1",
+          "bucket": "required",
+          "summary": "SAP must launch a migration-phase pricing reform before Reltio capabilities go GA",
+          "reason_step_ids": ["step_1.4", "step_1.5"],
+          "activation_step_ids": []
+        },
+        {
+          "evidence_id": "blocking_1",
+          "bucket": "blocking",
+          "summary": "Mid-migration billing friction blocks Reltio premium pricing",
+          "reason_step_ids": ["step_1.4"],
+          "activation_step_ids": ["step_1.2"]
+        }
+      ],
+      "confidence_level": "medium",
+      "derivation_trace": {
+        "scenario_key": "A",
+        "ontology_refs": ["objective", "constraints", "tradeoff_pressure", "resistance_assumptions"],
+        "selected_dimensions": ["ecosystem_control", "data_harmonisation_capability"],
+        "actor_derivation_refs": ["actor_derivation::A"],
+        "derivation_steps": [
+          "Scene objective aligned: Grow BDC adoption beyond early adopters to the broader SAP customer base",
+          "Scene constraints interpreted: Multi-year ERP migration timelines, DSAG trust deficit",
+          "Actor derivation selected dimensions: ecosystem_control, data_harmonisation_capability",
+          "Actor derivation fields observed: actor_profile_ref, constraint_focus, decision_style",
+          "Strategic condition projection: migration pricing reform, low-friction API layer"
+        ],
+        "missing_evidence_reasons": []
+      }
+    },
+    {
+      "scenario_key": "B",
+      "capability_dilemma_fit": {
+        "fit": "moderate",
+        "scores": {
+          "ecosystem_control": 0.5,
+          "execution_velocity": 0.72
+        },
+        "fit_rationale": "Scenario B requires high execution velocity to close a joint Databricks-Reltio integration roadmap before competitive window closes. Ecosystem control is moderate — Databricks partnership is pre-established but not deepened yet."
+      },
+      "selected_dimensions": {
+        "selected_dimension_keys": ["execution_velocity", "partner_channel_activation"],
+        "rationale": "Scenario B's Databricks channel thesis is most sensitive to SAP's ability to move quickly on joint go-to-market."
+      },
+      "actor_derivation": {
+        "scenario_key": "B",
+        "actor_profile_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+        "decision_style": "defense_resilience",
+        "dominant_capability": "execution_velocity",
+        "selected_dimensions": ["execution_velocity", "partner_channel_activation"],
+        "objective_alignment": "Establish SAP as the enterprise AI data backbone for hybrid SAP/non-SAP estates",
+        "constraint_focus": [
+          "Databricks competing interests in open data formats",
+          "No joint Reltio-Databricks integration roadmap announced"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene B",
+          "Capability fit level: moderate",
+          "Primary capability anchor: execution_velocity"
+        ]
+      },
+      "resistance": {
+        "structural_conflict": 0.35,
+        "resource_reallocation_drag": 0.48,
+        "cultural_misalignment": 0.3,
+        "veto_node_intensity": 0.38,
+        "aggregate_resistance": 0.38
+      },
+      "scenario_conditions": {
+        "required": [
+          "A joint SAP-Databricks announcement of Reltio integration is required at Sapphire 2026 for Scenario B to materialise"
+        ],
+        "warning": [
+          "If SAP over-proprietary-ises the Reltio MDM layer, Databricks may deprioritise the integration"
+        ],
+        "blocking": []
+      },
+      "evidence_refs": [
+        {
+          "evidence_id": "required_1",
+          "bucket": "required",
+          "summary": "Joint SAP-Databricks Reltio announcement at Sapphire 2026 is gating condition",
+          "reason_step_ids": ["step_2.4", "step_2.5"],
+          "activation_step_ids": []
+        }
+      ],
+      "confidence_level": "low",
+      "derivation_trace": {
+        "scenario_key": "B",
+        "ontology_refs": ["objective", "constraints", "tradeoff_pressure", "resistance_assumptions"],
+        "selected_dimensions": ["execution_velocity", "partner_channel_activation"],
+        "actor_derivation_refs": ["actor_derivation::B"],
+        "derivation_steps": [
+          "Scene objective aligned: Establish SAP as the enterprise AI data backbone for hybrid SAP/non-SAP estates",
+          "Scene constraints interpreted: Databricks competing interests, no joint roadmap",
+          "Actor derivation selected dimensions: execution_velocity, partner_channel_activation",
+          "Actor derivation fields observed: actor_profile_ref, constraint_focus, decision_style",
+          "Strategic condition projection: joint Sapphire 2026 announcement"
+        ],
+        "missing_evidence_reasons": ["No public Databricks integration commitment for Reltio at acquisition announcement"]
+      }
+    },
+    {
+      "scenario_key": "C",
+      "capability_dilemma_fit": {
+        "fit": "weak",
+        "scores": {
+          "ecosystem_control": 0.4,
+          "execution_velocity": 0.65
+        },
+        "fit_rationale": "Scenario C is an adverse outcome where adoption stalls. SAP's ecosystem control weakens as DSAG voices dominate the narrative. The blocking condition — unresolved migration friction — is the primary risk driver."
+      },
+      "selected_dimensions": {
+        "selected_dimension_keys": ["customer_trust_recovery", "migration_ux_simplification"],
+        "rationale": "Scenario C's stall dynamic is most sensitive to whether SAP can demonstrate migration simplification to existing BDC customers within 6 months."
+      },
+      "actor_derivation": {
+        "scenario_key": "C",
+        "actor_profile_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+        "decision_style": "confrontation_competition",
+        "dominant_capability": "execution_velocity",
+        "selected_dimensions": ["customer_trust_recovery", "migration_ux_simplification"],
+        "objective_alignment": "Reduce customer migration friction and eliminate mid-migration billing pain",
+        "constraint_focus": [
+          "DSAG trust deficit: 83% BDC unfamiliarity rate",
+          "Enterprise data gravity — customers cannot migrate all data to SAP systems"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene C",
+          "Capability fit level: weak",
+          "Primary capability anchor: execution_velocity"
+        ]
+      },
+      "resistance": {
+        "structural_conflict": 0.72,
+        "resource_reallocation_drag": 0.65,
+        "cultural_misalignment": 0.58,
+        "veto_node_intensity": 0.7,
+        "aggregate_resistance": 0.66
+      },
+      "scenario_conditions": {
+        "required": [],
+        "warning": [
+          "If SAP does not address mid-migration billing friction within 6 months, Scenario C's stall dynamic becomes difficult to reverse"
+        ],
+        "blocking": [
+          "Without a customer-facing simplification narrative and pricing reform, negative DSAG perception blocks BDC pipeline growth"
+        ]
+      },
+      "evidence_refs": [
+        {
+          "evidence_id": "blocking_1",
+          "bucket": "blocking",
+          "summary": "DSAG perception blocks BDC growth without simplification narrative",
+          "reason_step_ids": ["step_3.4", "step_3.5"],
+          "activation_step_ids": ["step_3.2"]
+        }
+      ],
+      "confidence_level": "medium",
+      "derivation_trace": {
+        "scenario_key": "C",
+        "ontology_refs": ["objective", "constraints", "tradeoff_pressure", "resistance_assumptions"],
+        "selected_dimensions": ["customer_trust_recovery", "migration_ux_simplification"],
+        "actor_derivation_refs": ["actor_derivation::C"],
+        "derivation_steps": [
+          "Scene objective aligned: Reduce customer migration friction and eliminate mid-migration billing pain",
+          "Scene constraints interpreted: DSAG trust deficit, enterprise data gravity",
+          "Actor derivation selected dimensions: customer_trust_recovery, migration_ux_simplification",
+          "Actor derivation fields observed: actor_profile_ref, constraint_focus, decision_style",
+          "Strategic condition projection: none (blocking condition dominates)"
+        ],
+        "missing_evidence_reasons": ["SAP has not announced a migration-phase pricing reform"]
+      }
+    }
+  ],
+  "scenario_comparison": {
+    "A_vs_B": {
+      "winner": "A",
+      "rationale": "Scenario A has stronger ecosystem control alignment and a clearer path to execution. Scenario B requires an unconfirmed Databricks commitment that is not yet public.",
+      "deltas": {
+        "ecosystem_control": 0.25,
+        "execution_velocity": -0.14,
+        "aggregate_resistance": 0.06
+      }
+    },
+    "A_vs_C": {
+      "winner": "A",
+      "rationale": "Scenario C is an adverse outcome dependent on SAP failing to address known migration friction. Scenario A requires action but has a path to resolution.",
+      "deltas": {
+        "aggregate_resistance": -0.22,
+        "confidence_level": "medium_vs_medium"
+      }
+    },
+    "B_vs_C": {
+      "winner": "B",
+      "rationale": "Scenario B is a conditional upside (requires Sapphire announcement). Scenario C is a structural downside risk. Both require proactive intervention.",
+      "deltas": {
+        "aggregate_resistance": -0.28
+      }
+    }
+  },
+  "recommendation_summary": "Scenario A (Reltio MDM as BDC Onboarding Accelerator) is the highest-confidence path, contingent on SAP addressing migration-phase pricing friction before Reltio capabilities reach GA. Scenario B offers incremental upside via the Databricks channel if a joint announcement is made at Sapphire 2026. Scenario C is the dominant risk path and should be treated as the primary downside scenario to monitor.",
+  "comparability": {
+    "comparable": true,
+    "blocking_reasons": [],
+    "actor_profile_version": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+    "scenario_pack_version": "0.1.0",
+    "calculation_policy_version": "deterministic_v1"
+  }
+}

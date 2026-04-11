@@ -13,6 +13,8 @@ def _mock_reason_chain_llm(*, config_path: str | None = None, user_prompt: str, 
                 "recommendation_summary": "建议优先走A路径，以约束激活结果设定推进节奏。",
                 "gap_summary": "当前状态与目标状态之间仍有执行落差，关键差距在阻断项尚未完全打通。",
                 "required_actions": "先逐项解锁阻断条件，再将预警项转化为可验证动作并建立周期复盘机制。",
+                "decision_point_response": "建议先执行低后悔度动作，并用短周期验证来收敛不确定性。",
+                "known_unknowns_response": [],
             },
             ensure_ascii=False,
         )
@@ -201,3 +203,5 @@ def test_smoke_deterministic_explain_cli(tmp_path: Path, monkeypatch) -> None:
     assert str(payload.get("recommendation_summary") or "").strip()
     assert str(payload.get("gap_summary") or "").strip()
     assert str(payload.get("required_actions") or "").strip()
+    assert str(payload.get("decision_point_response") or "").strip()
+    assert isinstance(payload.get("known_unknowns_response"), list)

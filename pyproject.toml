@@ -1,14 +1,10 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "omenai"
-version = "0.1.6"
-description = "The open-source strategic reasoning engine, driven by Explainable AI (XAI)."
+version = "0.1.7"
+description = "XAI-Powered Strategic Reasoning Engine"
 readme = "README.md"
 requires-python = ">=3.12"
-authors = [{ name = "StrategyLogic" }]
+authors = [{ name = "StrategyLogic", email = "open@strategylogic.ai" }]
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE", "NOTICE.md"]
 dependencies = [
@@ -43,6 +39,10 @@ dev = [
   "build>=1.2.2",
   "twine>=6.1.0",
 ]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

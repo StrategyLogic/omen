@@ -647,8 +647,15 @@ with tab_source:
         for item in unknowns:
             st.write(f"- {item}")
 
-    situation_md = Path(paths.get("situation_md") or "")
-    if situation_md.exists():
+    situation_md = None
+    RAW_SIT = str(paths.get("situation_md") or "").strip()
+    if RAW_SIT:
+        b_path = os.path.normpath(str(WORKSPACE_ROOT))
+        f_path = os.path.normpath(RAW_SIT) if os.path.isabs(RAW_SIT) else os.path.normpath(os.path.join(b_path, RAW_SIT))
+        if f_path.startswith(b_path):
+            situation_md = Path(f_path)
+
+    if situation_md and situation_md.exists():
         st.subheader("Context Details")
         st.markdown(_compact_brief_markdown(situation_md.read_text(encoding="utf-8")))
 
@@ -658,18 +665,25 @@ with tab_actor:
     actor_status = payloads.get("actor_status")
     persona_payload = payloads.get("persona") or {}
     has_persona_content = _render_persona_panel(persona_payload)
-    persona_path = Path(paths.get("persona") or "")
-    PERSONA_EXISTS = persona_path.exists()
+    persona_path = None
+    persona_exists = False
+    RAW_PER = str(paths.get("persona") or "").strip()
+    if RAW_PER:
+        b_path = os.path.normpath(str(WORKSPACE_ROOT))
+        f_path = os.path.normpath(RAW_PER) if os.path.isabs(RAW_PER) else os.path.normpath(os.path.join(b_path, RAW_PER))
+        if f_path.startswith(b_path):
+            persona_path = Path(f_path)
+            persona_exists = persona_path.exists()
     persona_payload_loaded = isinstance(persona_payload, dict) and bool(persona_payload)
 
     if not has_persona_content and actor_profile:
-        if PERSONA_EXISTS and persona_payload_loaded:
+        if persona_exists and persona_payload_loaded:
             st.warning(
                 "Persona artifact exists, but insight content is empty or unusable. "
                 "Run `omen analyze situation --doc <name> --force` to regenerate, "
                 "or run `omen analyze actor --doc <name> persona` directly."
             )
-        elif PERSONA_EXISTS and not persona_payload_loaded:
+        elif persona_exists and not persona_payload_loaded:
             st.warning("Persona artifact file exists but JSON is invalid/unreadable.")
         else:
             st.info("Persona insight artifact not found yet. Run `omen analyze situation --doc <name>` again to auto-generate it after actor enhancement.")

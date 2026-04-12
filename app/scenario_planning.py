@@ -20,6 +20,25 @@ st.set_page_config(page_title="Omen Strategic Reasoning", layout="wide")
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _normalize_pack_id(value: Any) -> str:
+    return Path(str(value or "")).stem.strip()
+
+
+def _resolve_safe_root(raw_value: str, default_rel: str) -> Path:
+    default_path = (WORKSPACE_ROOT / default_rel).resolve(strict=False)
+    candidate = Path(str(raw_value or "").strip())
+    if not str(candidate):
+        return default_path
+    if not candidate.is_absolute():
+        candidate = WORKSPACE_ROOT / candidate
+    candidate = candidate.resolve(strict=False)
+    try:
+        candidate.relative_to(WORKSPACE_ROOT)
+        return candidate
+    except ValueError:
+        return default_path
+
+
 def _render_json(path: str, payload: dict[str, Any] | None) -> None:
     st.caption(path)
     if payload is None:
@@ -28,10 +47,12 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
     st.json(payload, expanded=False)
 
 
-def _read_json_file(path: Path, *, allowed_roots: list[Path]) -> dict[str, Any] | None:
+def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str, Any] | None:
     try:
-        resolved_path = path.resolve(strict=False)
+        base = base_dir.resolve(strict=False)
         resolved_workspace = WORKSPACE_ROOT.resolve(strict=False)
+        safe_pack_id = _normalize_pack_id(pack_id)
+        resolved_path = (base / safe_pack_id / filename).resolve(strict=False)
     except Exception:
         return None
 
@@ -40,26 +61,12 @@ def _read_json_file(path: Path, *, allowed_roots: list[Path]) -> dict[str, Any] 
     except ValueError:
         return None
 
-    root_candidates: list[Path] = []
-    for root in allowed_roots:
-        try:
-            root_candidates.append(root.resolve(strict=False))
-        except Exception:
-            continue
-
-    if not root_candidates:
+    try:
+        resolved_path.relative_to(base)
+    except ValueError:
         return None
 
-    is_in_allowed_root = False
-    for root in root_candidates:
-        try:
-            resolved_path.relative_to(root)
-            is_in_allowed_root = True
-            break
-        except ValueError:
-            continue
-
-    if not is_in_allowed_root or not resolved_path.exists() or not resolved_path.is_file():
+    if not resolved_path.exists() or not resolved_path.is_file():
         return None
 
     try:
@@ -541,8 +548,10 @@ st.markdown(
 
 with st.sidebar:
     st.header("Data Source")
-    data_root = st.text_input("Data root", value="data/scenarios")
-    output_root = st.text_input("Output root", value="output")
+    data_root_raw = st.text_input("Data root", value="data/scenarios")
+    output_root_raw = st.text_input("Output root", value="output")
+    data_root = _resolve_safe_root(data_root_raw, "data/scenarios")
+    output_root = _resolve_safe_root(output_root_raw, "output")
 
     candidates = discover_spec8_pack_candidates(data_root=data_root, output_root=output_root)
     selected_pack = st.selectbox("Pack ID", options=candidates or [""], index=0)
@@ -552,13 +561,13 @@ if not selected_pack:
     st.info("No candidate pack found. Generate artifacts first via analyze/scenario/simulate/explain.")
     st.stop()
 
-allowed_artifact_roots = [Path(data_root), Path(output_root)]
+safe_pack_id = _normalize_pack_id(selected_pack)
 
 bundle = load_spec8_flow_artifacts(
-    pack_id=selected_pack,
+    pack_id=safe_pack_id,
     data_root=data_root,
     output_root=output_root,
-    output_pack_id=output_pack_override.strip() or None,
+    output_pack_id=_normalize_pack_id(output_pack_override.strip()) or None,
 )
 paths = dict(bundle.get("paths") or {})
 payloads = dict(bundle.get("payloads") or {})
@@ -663,8 +672,9 @@ with tab_scenario:
     scenario_pack_path = Path(paths.get("scenario_pack") or "")
     if scenario_pack_payload is None and str(scenario_pack_path):
         scenario_pack_payload = _read_json_file(
-            scenario_pack_path,
-            allowed_roots=allowed_artifact_roots,
+            base_dir=data_root,
+            pack_id=safe_pack_id,
+            filename="scenario_pack.json",
         )
 
     scenario_rows = _build_scenario_rows(scenario_pack_payload, slot_labels=slot_labels)

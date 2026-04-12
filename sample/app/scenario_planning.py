@@ -20,6 +20,10 @@ st.set_page_config(page_title="Omen Strategic Reasoning", layout="wide")
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _normalize_pack_id(value: Any) -> str:
+    return Path(str(value or "")).stem.strip()
+
+
 def _render_json(path: str, payload: dict[str, Any] | None) -> None:
     st.caption(path)
     if payload is None:
@@ -28,10 +32,12 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
     st.json(payload, expanded=False)
 
 
-def _read_json_file(path: Path, *, allowed_roots: list[Path]) -> dict[str, Any] | None:
+def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str, Any] | None:
     try:
-        resolved_path = path.resolve(strict=False)
+        base = base_dir.resolve(strict=False)
         resolved_workspace = WORKSPACE_ROOT.resolve(strict=False)
+        safe_pack_id = _normalize_pack_id(pack_id)
+        resolved_path = (base / safe_pack_id / filename).resolve(strict=False)
     except Exception:
         return None
 
@@ -40,26 +46,12 @@ def _read_json_file(path: Path, *, allowed_roots: list[Path]) -> dict[str, Any] 
     except ValueError:
         return None
 
-    root_candidates: list[Path] = []
-    for root in allowed_roots:
-        try:
-            root_candidates.append(root.resolve(strict=False))
-        except Exception:
-            continue
-
-    if not root_candidates:
+    try:
+        resolved_path.relative_to(base)
+    except ValueError:
         return None
 
-    is_in_allowed_root = False
-    for root in root_candidates:
-        try:
-            resolved_path.relative_to(root)
-            is_in_allowed_root = True
-            break
-        except ValueError:
-            continue
-
-    if not is_in_allowed_root or not resolved_path.exists() or not resolved_path.is_file():
+    if not resolved_path.exists() or not resolved_path.is_file():
         return None
 
     try:
@@ -70,8 +62,9 @@ def _read_json_file(path: Path, *, allowed_roots: list[Path]) -> dict[str, Any] 
 
 
 def _load_sample_actor_payloads(pack_id: str) -> dict[str, Any]:
-    actor_dir = Path("sample/data/actors") / str(pack_id).strip()
-    allowed_roots = [Path("sample/data/actors")]
+    safe_pack_id = _normalize_pack_id(pack_id)
+    actor_dir = Path("sample/data/actors") / safe_pack_id
+    actor_base = Path("sample/data/actors")
     actor_profile_path = actor_dir / "actor_ontology.json"
     persona_path = actor_dir / "analyze_persona.json"
     status_path = actor_dir / "analyze_status.json"
@@ -83,9 +76,9 @@ def _load_sample_actor_payloads(pack_id: str) -> dict[str, Any]:
             "actor_status": str(status_path),
         },
         "payloads": {
-            "actor_profile": _read_json_file(actor_profile_path, allowed_roots=allowed_roots),
-            "persona": _read_json_file(persona_path, allowed_roots=allowed_roots),
-            "actor_status": _read_json_file(status_path, allowed_roots=allowed_roots),
+            "actor_profile": _read_json_file(base_dir=actor_base, pack_id=safe_pack_id, filename="actor_ontology.json"),
+            "persona": _read_json_file(base_dir=actor_base, pack_id=safe_pack_id, filename="analyze_persona.json"),
+            "actor_status": _read_json_file(base_dir=actor_base, pack_id=safe_pack_id, filename="analyze_status.json"),
         },
     }
 
@@ -581,10 +574,10 @@ if not selected_pack:
     st.info("No candidate pack found. Generate artifacts first via analyze/scenario/simulate/explain.")
     st.stop()
 
-allowed_artifact_roots = [Path(DATA_ROOT), Path(OUTPUT_ROOT)]
+safe_pack_id = _normalize_pack_id(selected_pack)
 
 bundle = load_spec8_flow_artifacts(
-    pack_id=selected_pack,
+    pack_id=safe_pack_id,
     data_root=DATA_ROOT,
     output_root=OUTPUT_ROOT,
     output_pack_id=None,
@@ -593,7 +586,7 @@ paths = dict(bundle.get("paths") or {})
 payloads = dict(bundle.get("payloads") or {})
 slot_labels = _load_scenario_slot_labels()
 
-sample_actor = _load_sample_actor_payloads(selected_pack)
+sample_actor = _load_sample_actor_payloads(safe_pack_id)
 paths.update(dict(sample_actor.get("paths") or {}))
 payloads.update(dict(sample_actor.get("payloads") or {}))
 
@@ -696,8 +689,9 @@ with tab_scenario:
     scenario_pack_path = Path(paths.get("scenario_pack") or "")
     if scenario_pack_payload is None and str(scenario_pack_path):
         scenario_pack_payload = _read_json_file(
-            scenario_pack_path,
-            allowed_roots=allowed_artifact_roots,
+            base_dir=Path(DATA_ROOT),
+            pack_id=safe_pack_id,
+            filename="scenario_pack.json",
         )
 
     scenario_rows = _build_scenario_rows(scenario_pack_payload, slot_labels=slot_labels)

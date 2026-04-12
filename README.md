@@ -14,7 +14,7 @@
 
 > Analyze, Simulate, Explain.
 
-Omen **does not predict** future. It is a reasoning engine **built for complexity**. By decoding causal chains and logical dependencies, it generates replayable, comparable branching paths - revealing weak signals, critical points, and evolving ecosystems, helping decision-makers **gain clarity** in complexity:
+Omen **does not predict** the future. It is a reasoning engine **built for complexity**. By mapping causal chains and logical dependencies, it generates replayable, comparable branching paths - revealing weak signals, critical points, and evolving ecosystems, helping decision-makers **gain clarity** in complexity:
 
 *   🔄 **Substitution Logic**: Which technology will replace another under what critical conditions?
 *   🛡️ **Capability Evolution**: Which core capabilities will be enhanced first, and which will coexist long-term?
@@ -93,6 +93,19 @@ After `omen analyze situation`, read the generated brief:
 # Example brief path
 data/scenarios/sap/situation.md
 ```
+
+**Strategic Reasoning Flow**
+
+```bash
+streamlit run app/scenario_planning.py
+```
+
+Then select a pack in the sidebar to inspect the full chain:
+- source/brief (`situation.json` / `situation.md`)
+- actor profile + action preferences
+- scenario planning and A/B/C priors
+- deterministic result + reason-chain
+- explanation with decision-point and known-unknown closure
 
 ## 👥 Target Audience
 

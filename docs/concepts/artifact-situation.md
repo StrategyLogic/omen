@@ -1,11 +1,17 @@
 # 情势工件
 
-> **情势工件**（Situation Artifacts）是 Omen 的情势分析生成的资产集合，由情势案例、情势简报和情势工件三部分组成，分别对应不同的工作阶段和使用场景。
+> **情势工件**（Situation Artifacts）在 Omen 中承担前置定义层职责：把原始材料转成高质量、可复用的战略问题空间表达。
 
 在 Omen 的资产体系中，Artifacts 与 Ontology 有不同的定义：
 
 - Ontology 结构稳定、内聚性强，负责概念语义与关系建模。
 - Artifacts 结构松散、关联性强，负责阶段性产出与流程衔接。
+
+情势工件是 Omen 情势分析的生成物，由情势案例、情势简报和情势模型三个文件组成，分别对应不同的工作阶段和使用场景。生成过程勿需或仅需少量人工参与。
+
+## 设计哲学
+
+情势工件的设计完美体现了 Omen “人类决策优先”的设计哲学：机器负责把复杂现实信息压缩为可审计的简报，人类负责对意义、价值与行动方向做最终裁决。详见：[哲学与设计原则](../philosophy.md)。
 
 ## 核心价值
 
@@ -118,6 +124,18 @@ Omen 将 `known_unknowns` 定义为“已经识别到、但尚未被证据充分
 - 区分事实、判断和假设。
 - 给后续验证活动提供清晰边界。
 
+#### 示例片段
+
+摘自 SAP 收购 Reltio 的[情势模型](../../sample/data/scenarios/sap/situation.json)：
+
+```json
+"known_unknowns": [
+  "Whether the move will successfully boost adoption of SAP's Business Data Cloud",
+  "How customers will respond to SAP's sales messaging given the negative migration findings",
+  "The timeline for integrating Reltio's capabilities into SAP's AI platform"
+]
+```
+
 ### 假说补全
 
 Omen 将 `assumptions_explicit` 定义为针对关键未知给出的可检验假说。
@@ -129,11 +147,32 @@ Omen 将 `assumptions_explicit` 定义为针对关键未知给出的可检验假
 - 从风险感知推进到可验证状态。
 - 让置信度提升具备结构化依据。
 
+#### 示例片段
+
+摘自 SAP 收购 Reltio 的[情势模型](../../sample/data/scenarios/sap/situation.json)：
+
+```json
+"assumptions_explicit": [
+  {
+    "target_unknown": "Whether the move will successfully boost adoption of SAP's Business Data Cloud",
+    "assumption_text": "The acquisition ... is a necessary but not sufficient condition for overcoming BDC's adoption barriers.",
+    "quality_score": 0.8,
+    "coverage_type": "partial"
+  }
+]
+```
+
 ### 战略主体识别
 
 在将情势分析关联到 `StrategicActor` 时，Omen 采用启发式评分来稳定候选识别算法，避免反复向大模型提问“谁是 StrategicActor”导致答案漂移。
 
-代码片段：
+战略价值：
+
+- 同输入下识别结果更稳定。
+- 降低模型随机性导致的角色幻觉。
+- 为后续主体建模建立一致起点。
+
+#### 代码片段
 
 ```python
 if actor_type == "strategicactor":
@@ -144,21 +183,13 @@ if "founder/ceo/strategic" in actor_id:
   score += 40
 ```
 
-战略价值：
-
-- 同输入下识别结果更稳定。
-- 降低模型随机性导致的角色幻觉。
-- 为后续主体建模建立一致起点。
-
-## 使用边界
+## 文档边界
 
 本文档只说明情势工件（Situation Artifacts）的概念与设计，未展开以下内容：
 
 - 情景规划
 - 推理链路
 - 流程执行逻辑
-
-情势工件在 Omen 中承担的是“高质量前置定义层”职责：把原始材料转成可复用的战略问题空间表达。
 
 ### 参考样例
 - [情势案例：SAP 收购 Reltio](../../cases/situations/sap_reltio_acquisition.md)

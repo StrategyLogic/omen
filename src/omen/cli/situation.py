@@ -23,18 +23,6 @@ from omen.ingest.synthesizer.services.situation import (
 from omen.scenario.ingest_validator import DeferredScopeFeatureError
 
 
-def _resolve_situation_doc_path(raw_doc: str) -> Path:
-    raw = str(raw_doc).strip()
-    if "/" in raw:
-        candidate = Path(raw)
-        if not candidate.suffix:
-            candidate = candidate.with_suffix(".md")
-        return candidate
-
-    stem = raw[:-3] if raw.endswith(".md") else raw
-    return Path("cases/situations") / f"{stem}.md"
-
-
 def _derive_case_name_from_path(input_path: Path) -> str:
     stem = input_path.stem.strip().lower()
     if stem.endswith("_situation"):
@@ -54,31 +42,7 @@ def _derive_default_pack_id(input_path: Path, *, actor_ref: str | None) -> str:
     return f"{case_name}_v1"
 
 
-def _resolve_default_output_path(_input_path: Path, pack_id: str) -> Path:
-    return Path("data/scenarios") / pack_id / "situation.json"
-
-
-def _validate_explicit_actor_ref(actor_ref: str) -> str:
-    raw = str(actor_ref or "").strip()
-    if not raw:
-        raise ValueError("actor reference is empty")
-
-    candidate = Path(raw)
-    if candidate.exists():
-        return raw
-
-    # Backward compatibility: allow repo-relative actor refs like actors/*.md
-    cases_candidate = Path("cases") / raw
-    if cases_candidate.exists():
-        return str(cases_candidate)
-
-    raise ValueError(
-        "actor reference not found. Pass an existing actor artifact path with --actor, "
-        "or omit --actor to auto-build and link a strategic actor from the situation case"
-    )
-
-
-def _resolve_splitter_default_output_path(_situation_path: Path, pack_id: str) -> Path:
+def _resolve_splitter_default_output_path(pack_id: str) -> Path:
     return Path("data/scenarios") / pack_id / "scenario_pack.json"
 
 
@@ -430,7 +394,7 @@ def handle_scenario_command(args: Any) -> int:
         output_path_arg = (
             Path(args.output)
             if args.output
-            else _resolve_splitter_default_output_path(situation_path, pack_id)
+            else _resolve_splitter_default_output_path(pack_id)
         )
 
         ontology = from_situation(

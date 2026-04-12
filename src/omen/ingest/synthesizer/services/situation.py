@@ -24,6 +24,10 @@ from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME
 from omen.ingest.synthesizer.builders import situation as _builder
 
 
+def _contains_parent_traversal(path: Path) -> bool:
+    return any(part == ".." for part in path.parts)
+
+
 def _derive_case_name_from_path(input_path: Path) -> str:
     stem = input_path.stem.strip().lower()
     if stem.endswith("_situation"):
@@ -51,8 +55,12 @@ def _resolve_situation_doc_path(raw_doc: str) -> Path:
     raw = str(raw_doc).strip()
     if "/" in raw:
         candidate = Path(raw)
+        if _contains_parent_traversal(candidate):
+            raise ValueError("path traversal is not allowed in situation document path")
         if not candidate.suffix:
             candidate = candidate.with_suffix(".md")
+        if candidate.suffix.lower() != ".md":
+            raise ValueError("situation document path must end with .md")
         return candidate
 
     stem = raw[:-3] if raw.endswith(".md") else raw
@@ -65,6 +73,8 @@ def _validate_explicit_actor_ref(actor_ref: str) -> str:
         raise ValueError("actor reference is empty")
 
     candidate = Path(raw)
+    if _contains_parent_traversal(candidate):
+        raise ValueError("path traversal is not allowed in actor reference")
     if candidate.exists():
         return raw
 
@@ -278,7 +288,12 @@ def resolve_situation_artifact_ref(ref: str | Path) -> Path:
 
     # Explicit path input: path-like string or direct json filename.
     if "/" in raw or raw.endswith(".json"):
-        return Path(raw)
+        candidate = Path(raw)
+        if _contains_parent_traversal(candidate):
+            raise ValueError("path traversal is not allowed in situation reference")
+        if candidate.suffix.lower() != ".json":
+            raise ValueError("explicit situation reference must end with .json")
+        return candidate
 
     # Pack-id input: resolve to pack root situation artifact.
     return Path("data/scenarios") / raw / "situation.json"

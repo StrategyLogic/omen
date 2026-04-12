@@ -4,7 +4,6 @@ from omen.cli.situation import (
     _derive_case_name_from_path,
     _derive_default_pack_id,
     _derive_pack_id_from_situation_artifact,
-    _resolve_default_output_path,
     _resolve_splitter_default_output_path,
     _resolve_scenario_generation_trace_path,
 )
@@ -36,16 +35,8 @@ def test_scenario_pack_id_infers_actor_context_from_situation_artifact() -> None
 
 
 def test_default_output_paths_follow_pack_id() -> None:
-    analyze_output = _resolve_default_output_path(
-        Path("cases/situations/nokia-elop-2010.md"),
-        "nokia_v1",
-    )
-    scenario_output = _resolve_splitter_default_output_path(
-        Path("data/scenarios/nokia_v1/situation.json"),
-        "nokia_v1",
-    )
+    scenario_output = _resolve_splitter_default_output_path("nokia_v1")
 
-    assert analyze_output == Path("data/scenarios/nokia_v1/situation.json")
     assert scenario_output == Path("data/scenarios/nokia_v1/scenario_pack.json")
 
 

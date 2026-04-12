@@ -163,7 +163,7 @@ def test_handle_scenario_command_writes_non_json_llm_output(monkeypatch, tmp_pat
     monkeypatch.setattr(
         situation_cli,
         "_resolve_splitter_default_output_path",
-        lambda situation_path, pack_id: scenario_output_path,
+        lambda pack_id: scenario_output_path,
     )
     monkeypatch.setattr(
         situation_cli,
@@ -220,7 +220,7 @@ def test_handle_scenario_command_writes_output_for_generic_validation_failure(
     monkeypatch.setattr(
         situation_cli,
         "_resolve_splitter_default_output_path",
-        lambda situation_path, pack_id: scenario_output_path,
+        lambda pack_id: scenario_output_path,
     )
     monkeypatch.setattr(
         situation_cli,

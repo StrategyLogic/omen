@@ -222,6 +222,29 @@ def test_resolve_situation_artifact_ref_keeps_explicit_json_path() -> None:
     assert resolved == Path("data/scenarios/sap_v1/situation.json")
 
 
+def test_resolve_situation_artifact_ref_rejects_path_traversal() -> None:
+    with pytest.raises(ValueError, match="path traversal"):
+        situation_service.resolve_situation_artifact_ref("../secret.json")
+
+
+def test_resolve_situation_artifact_ref_rejects_non_json_explicit_path() -> None:
+    with pytest.raises(ValueError, match="must end with .json"):
+        situation_service.resolve_situation_artifact_ref("data/scenarios/sap_v1/situation.md")
+
+
+def test_run_situation_analysis_rejects_doc_path_traversal() -> None:
+    with pytest.raises(ValueError, match="path traversal"):
+        situation_service.run_situation_analysis(
+            doc="../outside",
+            input_alias=None,
+            url=None,
+            actor=None,
+            output=None,
+            pack_id=None,
+            pack_version="1.0.0",
+        )
+
+
 def test_save_auxiliary_json_writes_parent_dirs(tmp_path: Path) -> None:
     output = tmp_path / "x" / "y" / "log.json"
     written = situation_service.save_auxiliary_json(output, {"ok": True})

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import html
 import json
 from pathlib import Path
 import textwrap
@@ -65,25 +66,105 @@ def _scenario_display_key(scenario_key: Any, slot_labels: dict[str, str]) -> str
     return f"{key} - {label}" if label else key
 
 
+def _table_cell(value: Any, *, wrap: bool = False, align: str | None = None) -> dict[str, Any]:
+    return {"value": value, "wrap": bool(wrap), "align": align}
+
+
 def _render_wrapped_dataframe(rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
 
+    columns = list(rows[0].keys())
+
+    def _decode_cell(value: Any) -> tuple[Any, bool, str]:
+        if isinstance(value, dict) and "value" in value:
+            raw_value = value.get("value")
+            wrap = bool(value.get("wrap", False))
+            align = str(value.get("align") or "").strip().lower()
+            if align not in {"left", "right", "center"}:
+                align = "right" if isinstance(raw_value, (int, float)) else "left"
+            return raw_value, wrap, align
+        auto_align = "right" if isinstance(value, (int, float)) else "left"
+        return value, False, auto_align
+
+    def _cell_text(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, float):
+            return f"{value:.3f}".rstrip("0").rstrip(".")
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False)
+        return str(value)
+
+    header_html = "".join(f"<th>{html.escape(str(col))}</th>" for col in columns)
+    body_rows: list[str] = []
+    for row in rows:
+        cell_html: list[str] = []
+        for col in columns:
+            raw_value, should_wrap, align = _decode_cell(row.get(col))
+            cell_text = html.escape(_cell_text(raw_value))
+            cell_class = "wrap" if should_wrap else "nowrap"
+            cell_html.append(f"<td class=\"{cell_class} align-{align}\">{cell_text}</td>")
+        cells = "".join(cell_html)
+        body_rows.append(f"<tr>{cells}</tr>")
+    body_html = "".join(body_rows)
+
     st.markdown(
-        """
+        f"""
         <style>
-        [data-testid="stDataFrame"] div[role="gridcell"] {
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-            word-break: break-word !important;
-            line-height: 1.3 !important;
-        }
+        .omen-wrap-table {{
+            width: 100%;
+            overflow-x: auto;
+        }}
+        .omen-wrap-table table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }}
+        .omen-wrap-table th, .omen-wrap-table td {{
+            border: 1px solid #E5E7EB;
+            padding: 8px 10px;
+            vertical-align: top;
+            text-align: left;
+            line-height: 1.35;
+        }}
+        .omen-wrap-table th {{
+            background: #F9FAFB;
+            word-break: normal;
+            white-space: nowrap;
+            font-weight: 600;
+        }}
+        .omen-wrap-table td.nowrap {{
+            white-space: nowrap;
+            word-break: normal;
+            overflow-wrap: normal;
+        }}
+        .omen-wrap-table td.wrap {{
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            line-height: 1.35;
+        }}
+        .omen-wrap-table td.align-left {{
+            text-align: left;
+        }}
+        .omen-wrap-table td.align-right {{
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }}
+        .omen-wrap-table td.align-center {{
+            text-align: center;
+        }}
         </style>
+        <div class="omen-wrap-table">
+          <table>
+            <thead><tr>{header_html}</tr></thead>
+            <tbody>{body_html}</tbody>
+          </table>
+        </div>
         """,
         unsafe_allow_html=True,
     )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 def _compact_brief_markdown(markdown_text: str) -> str:
@@ -151,9 +232,9 @@ def _build_scenario_rows(
         rows.append(
             {
                 "Scenario": _scenario_display_key(scenario.get("scenario_key"), slot_labels),
-                "Title": str(scenario.get("title") or ""),
-                "Long-term Goal": str(scenario.get("goal") or ""),
-                "Short-term Objective": str(scenario.get("objective") or ""),
+                "Title": _table_cell(str(scenario.get("title") or ""), wrap=True),
+                "Long-term Goal": _table_cell(str(scenario.get("goal") or ""), wrap=True),
+                "Short-term Objective": _table_cell(str(scenario.get("objective") or ""), wrap=True),
                 "Constraints": len(list(scenario.get("constraints") or [])),
                 "Tradeoffs": len(list(scenario.get("tradeoff_pressure") or [])),
             }
@@ -546,9 +627,9 @@ with tab_scenario:
         derivation_rows.append(
             {
                 "Scenario": _scenario_display_key(scenario_key, slot_labels),
-                "Dominant Capability": derivation.get("dominant_capability"),
+                "Dominant Capability": _table_cell(derivation.get("dominant_capability"), wrap=True),
                 "Action Prior Probabilities": prior_item.get("score"),
-                "Explain": prior_item.get("explain"),
+                "Explain": _table_cell(prior_item.get("explain"), wrap=True),
             }
         )
     if derivation_rows:
@@ -573,18 +654,16 @@ with tab_reason:
         chain = dict((row or {}).get("reason_chain") or {})
         steps = [item for item in list(chain.get("steps") or []) if isinstance(item, dict)]
         if steps:
-            st.dataframe(
+            _render_wrapped_dataframe(
                 [
                     {
                         "Step ID": s.get("step_id"),
                         "Step Type": s.get("step_type"),
-                        "Summary": s.get("summary"),
+                        "Summary": _table_cell(s.get("summary"), wrap=True),
                         "Confidence": s.get("confidence"),
                     }
                     for s in steps
-                ],
-                use_container_width=True,
-                hide_index=True,
+                ]
             )
         conclusions = dict(chain.get("conclusions") or {})
         st.markdown(
@@ -610,15 +689,15 @@ with tab_explain:
                 continue
             rows.append(
                 {
-                    "Unknown": item.get("unknown"),
-                    "Analysis": item.get("analysis"),
-                    "Recommended Action": item.get("recommended_action"),
+                    "Unknown": _table_cell(item.get("unknown"), wrap=True),
+                    "Analysis": _table_cell(item.get("analysis"), wrap=True),
+                    "Recommended Action": _table_cell(item.get("recommended_action"), wrap=True),
                     "Confidence": item.get("confidence"),
                 }
             )
         if rows:
             st.markdown("### Known Unknown Responses")
-            st.dataframe(rows, use_container_width=True, hide_index=True)
+            _render_wrapped_dataframe(rows)
 
 with st.expander("Artifact payloads (raw JSON)"):
     c1, c2 = st.columns(2)

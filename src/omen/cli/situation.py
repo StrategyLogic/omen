@@ -236,6 +236,51 @@ def _write_scenario_failure_trace(
     return trace_path
 
 
+def _update_situation_brief_completion_status(*, situation_ref: Path, completed_at: datetime) -> Path | None:
+    brief_path = situation_ref.with_suffix(".md")
+    if not brief_path.exists():
+        return None
+
+    status_line = (
+        "**Status**: Completed. Deterministic A/B/C scenarios were generated at "
+        f"{completed_at.strftime('%Y-%m-%d %H:%M')}."
+    )
+
+    original = brief_path.read_text(encoding="utf-8")
+    lines = original.splitlines()
+    updated: list[str] = []
+    replaced = False
+    skip_next = False
+
+    for index, line in enumerate(lines):
+        if skip_next:
+            skip_next = False
+            continue
+
+        normalized = line.strip().lower().replace("**", "")
+        if normalized.startswith("status:"):
+            updated.append(status_line)
+            replaced = True
+            if index + 1 < len(lines):
+                next_normalized = lines[index + 1].strip().lower().replace("**", "")
+                if next_normalized.startswith("next step:"):
+                    skip_next = True
+            continue
+
+        if replaced and normalized.startswith("next step:"):
+            continue
+
+        updated.append(line)
+
+    if not replaced:
+        if updated and updated[-1].strip():
+            updated.append("")
+        updated.append(status_line)
+
+    brief_path.write_text("\n".join(updated).rstrip() + "\n", encoding="utf-8")
+    return brief_path
+
+
 def _derive_pack_id_from_situation_artifact(situation_artifact: dict[str, Any], situation_path: Path) -> str:
     source_meta = situation_artifact.get("source_meta") or {}
     actor_ref = source_meta.get("actor_ref")
@@ -404,9 +449,15 @@ def handle_scenario_command(args: Any) -> int:
             decomposition_quality=ontology.get("decomposition_quality"),
             planner_trace=planner_trace,
         )
+        status_updated_path = _update_situation_brief_completion_status(
+            situation_ref=situation_path,
+            completed_at=datetime.now(),
+        )
         print(f"Saved scenario planning artifact to {output_path}")
         print(f"Saved scenario planning summary to {markdown_path}")
         print(f"Updated generation trace with scenario decomposition quality: {scenario_trace_path}")
+        if status_updated_path is not None:
+            print(f"Updated situation brief status: {status_updated_path}")
         return 0
     except Exception as exc:
         output_path_arg = locals().get("output_path_arg")

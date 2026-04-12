@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -232,6 +233,30 @@ def generate_persona_insight(
             "consistency_score": consistency_score,
         },
     }
+
+
+def generate_and_save_persona_insight(
+    *,
+    case_id: str,
+    actor_ontology: dict[str, Any],
+    strategy_ontology: dict[str, Any] | None,
+    config_path: str,
+    output_path: str | Path,
+    output_language: str = "en",
+) -> Path:
+    payload = generate_persona_insight(
+        case_id=case_id,
+        actor_ontology=actor_ontology,
+        strategy_ontology=strategy_ontology,
+        config_path=config_path,
+        output_language=output_language,
+    )
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Saved analyze persona payload to {path}")
+    return path
 
 
 def map_major_conclusions_to_evidence(

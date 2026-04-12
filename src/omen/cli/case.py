@@ -165,10 +165,8 @@ def handle_case_command(args: Any) -> int:
 
         if args.analyze_command == "persona":
             try:
-                from omen.analysis.actor.insight import generate_persona_insight
-                from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+                from omen.ingest.synthesizer.services.actor import generate_persona_artifact
 
-                ensure_analyze_prompt_available("persona")
                 case_id = normalize_case_id(args.case_id)
                 case_dir, strategy_payload, founder_payload = _load_analysis_artifacts(case_id, args.output_dir)
             except Exception as exc:
@@ -176,22 +174,18 @@ def handle_case_command(args: Any) -> int:
                 return 2
 
             try:
-                persona_payload = generate_persona_insight(
+                output_path = Path(args.output) if args.output else case_dir / "analyze_persona.json"
+                generate_persona_artifact(
                     case_id=case_id,
-                    actor_ontology=founder_payload,
-                    strategy_ontology=strategy_payload,
+                    case_dir=case_dir,
+                    strategy_payload=strategy_payload,
+                    actor_payload=founder_payload,
                     config_path=args.config,
+                    output_path=output_path,
                 )
             except Exception as exc:
                 print(f"Analyze persona failed: {exc}")
                 return 2
-
-            output_path = Path(args.output) if args.output else case_dir / "analyze_persona.json"
-            output_path.write_text(
-                json.dumps(persona_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            print(f"Saved analyze persona payload to {output_path}")
             return 0
 
         print(f"Analyze command `{args.analyze_command}` is not implemented yet.")

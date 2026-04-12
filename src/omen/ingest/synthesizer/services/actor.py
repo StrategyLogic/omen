@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from omen.ingest.synthesizer.assembler import attach_actor_ref, attach_timeline_events
 from omen.ingest.synthesizer.config import load_llm_config
@@ -17,6 +17,7 @@ from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME, STRATEGY_ONTOLOGY_FILENAM
 from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_known_outcome
 
 LogFn = Callable[[str, str, str], None]
+PERSONA_INSIGHT_FILENAME = "analyze_persona.json"
 
 
 def _resolve_doc_path(doc: str) -> Path:
@@ -98,6 +99,91 @@ def ensure_actor_artifacts(
         encoding="utf-8",
     )
     return case_id, case_dir
+
+
+def _load_json_dict(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"invalid json object: {path}")
+    return payload
+
+
+def generate_persona_artifact(
+    *,
+    case_id: str,
+    case_dir: Path,
+    strategy_payload: dict[str, Any] | None,
+    actor_payload: dict[str, Any],
+    config_path: str,
+    output_path: str | Path | None = None,
+) -> Path:
+    from omen.analysis.actor.insight import generate_and_save_persona_insight
+    from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+
+    ensure_analyze_prompt_available("persona")
+    target_path = Path(output_path) if output_path else case_dir / PERSONA_INSIGHT_FILENAME
+
+    return generate_and_save_persona_insight(
+        case_id=case_id,
+        actor_ontology=actor_payload,
+        strategy_ontology=strategy_payload,
+        config_path=config_path,
+        output_path=target_path,
+    )
+
+
+def ensure_persona_artifact_if_missing(
+    *,
+    case_id: str,
+    case_dir: Path,
+    config_path: str,
+) -> Path:
+    persona_path = case_dir / PERSONA_INSIGHT_FILENAME
+    if persona_path.exists():
+        return persona_path
+
+    strategy_path = case_dir / STRATEGY_ONTOLOGY_FILENAME
+    actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
+    if not actor_path.exists():
+        raise FileNotFoundError(f"missing actor artifact: {actor_path}")
+
+    actor_payload = _load_json_dict(actor_path)
+    strategy_payload = _load_json_dict(strategy_path) if strategy_path.exists() else None
+    if strategy_payload is None:
+        raise FileNotFoundError(f"missing strategy artifact: {strategy_path}")
+
+    return generate_persona_artifact(
+        case_id=case_id,
+        case_dir=case_dir,
+        strategy_payload=strategy_payload,
+        actor_payload=actor_payload,
+        config_path=config_path,
+        output_path=persona_path,
+    )
+
+
+def ensure_persona_artifact_for_actor_ref(
+    *,
+    actor_ref: str,
+    config_path: str,
+) -> Path | None:
+    raw = str(actor_ref or "").strip()
+    if not raw:
+        return None
+
+    actor_path = Path(raw)
+    if not actor_path.is_absolute():
+        actor_path = Path.cwd() / actor_path
+    if not actor_path.exists() or actor_path.name != ACTOR_ONTOLOGY_FILENAME:
+        return None
+
+    case_dir = actor_path.parent
+    case_id = case_dir.name
+    return ensure_persona_artifact_if_missing(
+        case_id=case_id,
+        case_dir=case_dir,
+        config_path=config_path,
+    )
 
 
 def generate_actor_and_events_from_document(

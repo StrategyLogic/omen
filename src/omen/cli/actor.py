@@ -133,19 +133,15 @@ def _run_persona(
   actor_payload: dict[str, Any],
   config_path: str,
 ) -> None:
-  from omen.analysis.actor.insight import generate_persona_insight
-  from omen.ingest.synthesizer.prompts.registry import ensure_analyze_prompt_available
+  from omen.ingest.synthesizer.services.actor import generate_persona_artifact
 
-  ensure_analyze_prompt_available("persona")
-  persona_payload = generate_persona_insight(
+  generate_persona_artifact(
     case_id=case_id,
-    actor_ontology=actor_payload,
-    strategy_ontology=strategy_payload,
+    case_dir=case_dir,
+    strategy_payload=strategy_payload,
+    actor_payload=actor_payload,
     config_path=config_path,
   )
-  output_path = case_dir / "analyze_persona.json"
-  output_path.write_text(json.dumps(persona_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-  print(f"Saved analyze persona payload to {output_path}")
 
 
 def handle_analyze_command(args: Any) -> int:

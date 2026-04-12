@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
-from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
+from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts, ensure_persona_artifact_for_actor_ref
 from omen.ingest.writer.markdown import save_situation_brief, save_situation_case_from_source
 from omen.ingest.validators.situation import validate_situation_artifact_or_raise
 from omen.ingest.validators.situation import validate_situation_source_or_raise
@@ -171,6 +171,7 @@ def run_situation_analysis(
     output: str | None,
     pack_id: str | None,
     pack_version: str,
+    force: bool = False,
 ) -> None:
     if url and (doc or input_alias):
         raise ValueError("use either --doc or --url, not both")
@@ -203,6 +204,24 @@ def run_situation_analysis(
     effective_pack_id = str(pack_id) if pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
     output_path = Path(output) if output else _resolve_default_output_path(effective_pack_id)
 
+    actor_path = Path(effective_actor_ref)
+    if not actor_path.is_absolute():
+        actor_path = Path.cwd() / actor_path
+    persona_path = actor_path.parent / "analyze_persona.json"
+
+    if not force:
+        has_situation = output_path.exists()
+        has_actor = actor_path.exists()
+        has_persona = persona_path.exists()
+
+        print(
+            "Local artifact check: "
+            f"situation={has_situation}, actor={has_actor}, persona={has_persona}"
+        )
+        if has_situation and has_actor and has_persona:
+            print("Local-first: all required artifacts already exist, skip LLM generation.")
+            return
+
     _analyze_and_save_situation(
         situation_file=input_path,
         actor_ref=effective_actor_ref,
@@ -210,6 +229,14 @@ def run_situation_analysis(
         pack_version=pack_version,
         output_path=output_path,
     )
+
+    # Persona insight must run after situation analysis completes, so actor-enhanced context is ready.
+    persona_path = ensure_persona_artifact_for_actor_ref(
+        actor_ref=effective_actor_ref,
+        config_path="config/llm.toml",
+    )
+    if persona_path is not None:
+        print(f"Persona insight ensured: {persona_path}")
 
 
 def save_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:

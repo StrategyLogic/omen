@@ -286,6 +286,11 @@ def register_situation_analyze_commands(analyze_subparsers: Any) -> None:
         default="1.0.0",
         help="Deterministic pack version",
     )
+    situation.add_argument(
+        "--force",
+        action="store_true",
+        help="Force regenerate situation artifacts even if local artifacts already exist",
+    )
 
 
 def register_scenario_command(subparsers: Any) -> None:
@@ -333,6 +338,7 @@ def handle_situation_analyze_command(args: Any) -> int:
             output=args.output,
             pack_id=str(args.pack_id) if args.pack_id else None,
             pack_version=str(args.pack_version),
+            force=bool(args.force),
         )
         print("Situation analysis completed")
         return 0

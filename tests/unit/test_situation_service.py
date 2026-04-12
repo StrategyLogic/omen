@@ -228,3 +228,165 @@ def test_save_auxiliary_json_writes_parent_dirs(tmp_path: Path) -> None:
 
     assert written == output
     assert output.exists()
+
+
+def test_run_situation_analysis_local_first_skips_when_persona_is_usable(monkeypatch, tmp_path: Path) -> None:
+    doc_path = tmp_path / "cases" / "situations" / "case.md"
+    doc_path.parent.mkdir(parents=True, exist_ok=True)
+    doc_path.write_text("content", encoding="utf-8")
+
+    actor_path = tmp_path / "output" / "actors" / "case" / "actor_ontology.json"
+    actor_path.parent.mkdir(parents=True, exist_ok=True)
+    actor_path.write_text("{}", encoding="utf-8")
+    persona_path = actor_path.parent / "analyze_persona.json"
+    persona_path.write_text(
+        '{"persona_insight": {"narrative": "usable", "key_traits": [], "consistency_score": 0.8}}',
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "data" / "scenarios" / "pack" / "situation.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("{}", encoding="utf-8")
+
+    status_path = actor_path.parent / "analyze_status.json"
+    status_path.write_text('{"timeline": [{"id": "e1"}], "summary": {"ok": true}}', encoding="utf-8")
+
+    called = {"analyze": False, "ensure_status": False}
+
+    monkeypatch.setattr(situation_service, "validate_situation_source_or_raise", lambda p: None)
+    monkeypatch.setattr(
+        situation_service,
+        "_resolve_actor_ref_for_analysis",
+        lambda *, actor, input_path: str(actor_path),
+    )
+    monkeypatch.setattr(
+        situation_service,
+        "_analyze_and_save_situation",
+        lambda **kwargs: called.__setitem__("analyze", True),
+    )
+    monkeypatch.setattr(
+        situation_service,
+        "ensure_status_artifact_for_actor_ref",
+        lambda *, actor_ref: called.__setitem__("ensure_status", True),
+    )
+
+    situation_service.run_situation_analysis(
+        doc=str(doc_path),
+        input_alias=None,
+        url=None,
+        actor=None,
+        output=str(output_path),
+        pack_id="pack",
+        pack_version="1.0.0",
+        force=False,
+    )
+
+    assert called["analyze"] is False
+    assert called["ensure_status"] is True
+
+
+def test_run_situation_analysis_does_not_skip_when_persona_is_empty(monkeypatch, tmp_path: Path) -> None:
+    doc_path = tmp_path / "cases" / "situations" / "case.md"
+    doc_path.parent.mkdir(parents=True, exist_ok=True)
+    doc_path.write_text("content", encoding="utf-8")
+
+    actor_path = tmp_path / "output" / "actors" / "case" / "actor_ontology.json"
+    actor_path.parent.mkdir(parents=True, exist_ok=True)
+    actor_path.write_text("{}", encoding="utf-8")
+    persona_path = actor_path.parent / "analyze_persona.json"
+    persona_path.write_text(
+        '{"persona_insight": {"narrative": "", "key_traits": [], "consistency_score": 0.0}}',
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "data" / "scenarios" / "pack" / "situation.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("{}", encoding="utf-8")
+
+    called = {"analyze": False, "ensure_persona": False, "ensure_status": False}
+
+    monkeypatch.setattr(situation_service, "validate_situation_source_or_raise", lambda p: None)
+    monkeypatch.setattr(
+        situation_service,
+        "_resolve_actor_ref_for_analysis",
+        lambda *, actor, input_path: str(actor_path),
+    )
+    monkeypatch.setattr(
+        situation_service,
+        "_analyze_and_save_situation",
+        lambda **kwargs: called.__setitem__("analyze", True),
+    )
+    monkeypatch.setattr(
+        situation_service,
+        "ensure_persona_artifact_for_actor_ref",
+        lambda *, actor_ref, config_path: called.__setitem__("ensure_persona", True),
+    )
+    monkeypatch.setattr(
+        situation_service,
+        "ensure_status_artifact_for_actor_ref",
+        lambda *, actor_ref: called.__setitem__("ensure_status", True),
+    )
+
+    situation_service.run_situation_analysis(
+        doc=str(doc_path),
+        input_alias=None,
+        url=None,
+        actor=None,
+        output=str(output_path),
+        pack_id="pack",
+        pack_version="1.0.0",
+        force=False,
+    )
+
+    assert called["analyze"] is True
+    assert called["ensure_persona"] is True
+    assert called["ensure_status"] is True
+
+
+def test_run_situation_analysis_generates_status_when_missing(monkeypatch, tmp_path: Path) -> None:
+    doc_path = tmp_path / "cases" / "situations" / "case.md"
+    doc_path.parent.mkdir(parents=True, exist_ok=True)
+    doc_path.write_text("content", encoding="utf-8")
+
+    actor_path = tmp_path / "output" / "actors" / "case" / "actor_ontology.json"
+    actor_path.parent.mkdir(parents=True, exist_ok=True)
+    actor_path.write_text("{}", encoding="utf-8")
+    persona_path = actor_path.parent / "analyze_persona.json"
+    persona_path.write_text(
+        '{"persona_insight": {"narrative": "usable", "key_traits": [], "consistency_score": 0.8}}',
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "data" / "scenarios" / "pack" / "situation.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("{}", encoding="utf-8")
+
+    called = {"analyze": False, "ensure_status": False}
+
+    monkeypatch.setattr(situation_service, "validate_situation_source_or_raise", lambda p: None)
+    monkeypatch.setattr(
+        situation_service,
+        "_resolve_actor_ref_for_analysis",
+        lambda *, actor, input_path: str(actor_path),
+    )
+    monkeypatch.setattr(
+        situation_service,
+        "_analyze_and_save_situation",
+        lambda **kwargs: called.__setitem__("analyze", True),
+    )
+    monkeypatch.setattr(
+        situation_service,
+        "ensure_status_artifact_for_actor_ref",
+        lambda *, actor_ref: called.__setitem__("ensure_status", True),
+    )
+
+    situation_service.run_situation_analysis(
+        doc=str(doc_path),
+        input_alias=None,
+        url=None,
+        actor=None,
+        output=str(output_path),
+        pack_id="pack",
+        pack_version="1.0.0",
+        force=False,
+    )
+
+    assert called["analyze"] is False
+    assert called["ensure_status"] is True

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 from pathlib import Path
 import textwrap
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any
 import streamlit as st
 
 from omen.scenario.loader import discover_spec8_pack_candidates, load_spec8_flow_artifacts
+from omen.ui.actor_graph import build_actor_graph_figure
 
 
 st.set_page_config(page_title="Omen Strategic Reasoning", layout="wide")
@@ -21,6 +23,16 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
         st.warning("Artifact not found or invalid JSON")
         return
     st.json(payload, expanded=False)
+
+
+def _read_json_file(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _compact_brief_markdown(markdown_text: str) -> str:
@@ -68,7 +80,6 @@ def _compact_brief_markdown(markdown_text: str) -> str:
             continue
 
         if stripped.startswith("# "):
-            # Hide document H1 in UI to avoid overlapping with Streamlit section title.
             continue
         if stripped.startswith("## "):
             compact_lines.append(f"{prefix}#### {stripped[3:]}")
@@ -77,46 +88,93 @@ def _compact_brief_markdown(markdown_text: str) -> str:
     return "\n".join(compact_lines)
 
 
-def _build_scenario_rows(
-    scenario_pack: dict[str, Any] | None,
-    prior_snapshot: dict[str, Any] | None,
-    result_payload: dict[str, Any] | None,
-) -> list[dict[str, Any]]:
-    prior_by_key = {
-        str(item.get("scenario_key") or ""): item.get("score")
-        for item in list((prior_snapshot or {}).get("normalized_priors") or [])
-        if isinstance(item, dict)
-    }
-    result_by_key = {
-        str(item.get("scenario_key") or ""): item
-        for item in list((result_payload or {}).get("scenario_results") or [])
-        if isinstance(item, dict)
-    }
-
+def _build_scenario_rows(scenario_pack: dict[str, Any] | None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for scenario in list((scenario_pack or {}).get("scenarios") or []):
         if not isinstance(scenario, dict):
             continue
-        key = str(scenario.get("scenario_key") or "")
-        result_row = result_by_key.get(key, {})
-        conditions = dict(result_row.get("scenario_conditions") or {})
-        fit = str((result_row.get("capability_dilemma_fit") or {}).get("fit") or "")
-        confidence = str(result_row.get("confidence_level") or "")
-        resistance = float((result_row.get("resistance") or {}).get("aggregate_resistance") or 0.0)
         rows.append(
             {
-                "Scenario": key,
+                "Scenario": str(scenario.get("scenario_key") or ""),
                 "Title": str(scenario.get("title") or ""),
-                "Prior": prior_by_key.get(key),
-                "Fit": fit,
-                "Confidence": confidence,
-                "Resistance": resistance,
-                "Required": len(list(conditions.get("required") or [])),
-                "Warning": len(list(conditions.get("warning") or [])),
-                "Blocking": len(list(conditions.get("blocking") or [])),
+                "Goal": str(scenario.get("goal") or ""),
+                "Objective": str(scenario.get("objective") or ""),
+                "Constraints": len(list(scenario.get("constraints") or [])),
+                "Tradeoffs": len(list(scenario.get("tradeoff_pressure") or [])),
             }
         )
     return rows
+
+
+def _render_trait_cards(key_traits: Any) -> None:
+    if not isinstance(key_traits, list) or not key_traits:
+        st.caption("No key traits available.")
+        return
+
+    for item in key_traits:
+        trait_name = ""
+        evidence_summary = ""
+        if isinstance(item, dict):
+            trait_name = str(item.get("trait") or item.get("name") or "").strip()
+            evidence_summary = str(item.get("evidence_summary") or item.get("evidence") or "").strip()
+        else:
+            trait_name = str(item).strip()
+
+        if not trait_name:
+            continue
+
+        with st.container(border=True):
+            st.markdown(f"**{trait_name}**")
+            if evidence_summary:
+                st.caption(evidence_summary)
+
+
+def _render_persona_panel(persona_payload: dict[str, Any] | None) -> bool:
+    if not isinstance(persona_payload, dict):
+        return False
+
+    insight = persona_payload.get("persona_insight")
+    if not isinstance(insight, dict):
+        return False
+
+    left_col, right_col = st.columns([1.0, 1.0])
+
+    with left_col:
+        st.markdown("#### Background story")
+        narrative = str(insight.get("narrative") or "").strip()
+        st.write(narrative or "No narrative available.")
+
+        score_raw = insight.get("consistency_score")
+        score_text = ""
+        try:
+            if score_raw is not None:
+                score = float(score_raw)
+                score = max(0.0, min(1.0, score))
+                score_text = f"{score:.2f}"
+        except Exception:
+            score_text = ""
+
+        if score_text:
+            st.write(f"**Consistency score:** {score_text}")
+        else:
+            st.caption("No consistency score available.")
+
+    with right_col:
+        st.markdown("#### Key Traits")
+        _render_trait_cards(insight.get("key_traits"))
+
+    return bool(str(insight.get("narrative") or "").strip() or list(insight.get("key_traits") or []))
+
+
+def _render_actor_graph(status_payload: dict[str, Any] | None, actor_payload: dict[str, Any] | None) -> None:
+    graph_source = status_payload if isinstance(status_payload, dict) else actor_payload
+    if not isinstance(graph_source, dict):
+        st.info("Strategic Actor Graph unavailable: missing actor/status artifact.")
+        return
+
+    figure = build_actor_graph_figure(graph_source)
+    figure.update_layout(title="Strategic Actor Graph")
+    st.plotly_chart(figure, use_container_width=True)
 
 
 def _build_flow_dot(payloads: dict[str, Any]) -> str:
@@ -125,6 +183,7 @@ def _build_flow_dot(payloads: dict[str, Any]) -> str:
     prior_snapshot = payloads.get("prior_snapshot") or {}
     result_payload = payloads.get("result") or {}
     explanation = payloads.get("explanation") or {}
+    generation_trace = payloads.get("generation_trace") or {}
 
     priors = {
         str(item.get("scenario_key") or ""): float(item.get("score") or 0.0)
@@ -136,6 +195,48 @@ def _build_flow_dot(payloads: dict[str, Any]) -> str:
         for item in list(result_payload.get("scenario_results") or [])
         if isinstance(item, dict)
     }
+
+    confidence: dict[str, Any] = {}
+    if isinstance(generation_trace.get("confidence"), dict):
+        confidence = dict(generation_trace.get("confidence") or {})
+    risk_raw = confidence.get("confidence_risk")
+    overall_raw = confidence.get("confidence_overall")
+    if overall_raw is None:
+        overall_raw = confidence.get("overall_confidence")
+
+    confidence_transition = "-"
+    try:
+        if risk_raw is not None and overall_raw is not None:
+            confidence_transition = f"{float(risk_raw):.2f} -> {float(overall_raw):.2f}"
+    except Exception:
+        confidence_transition = "-"
+
+    selected_dimensions: list[str] = []
+    for row in list(result_payload.get("scenario_results") or []):
+        if not isinstance(row, dict):
+            continue
+        selected = row.get("selected_dimensions")
+        if isinstance(selected, dict):
+            for item in list(selected.get("selected_dimension_keys") or []):
+                token = str(item or "").strip()
+                if token and token not in selected_dimensions:
+                    selected_dimensions.append(token)
+        derivation = row.get("actor_derivation")
+        if isinstance(derivation, dict):
+            for item in list(derivation.get("selected_dimensions") or []):
+                token = str(item or "").strip()
+                if token and token not in selected_dimensions:
+                    selected_dimensions.append(token)
+
+    def _dimensions_label(items: list[str], *, max_items: int = 6) -> str:
+        if not items:
+            return "-"
+        lines = [f"- {item}" for item in items[:max_items]]
+        if len(items) > max_items:
+            lines.append("- ...")
+        return "\\n".join(lines)
+
+    dimensions_label = _dimensions_label(selected_dimensions)
 
     def _auto_wrap_text(value: str, *, width: int = 26, max_lines: int = 3) -> str:
         text = " ".join(str(value or "").split())
@@ -155,14 +256,14 @@ def _build_flow_dot(payloads: dict[str, Any]) -> str:
     def _scenario_label(key: str) -> str:
         item = dict(scenario_results.get(key) or {})
         fit = str((item.get("capability_dilemma_fit") or {}).get("fit") or "-")
-        confidence = str(item.get("confidence_level") or "-")
+        conf = str(item.get("confidence_level") or "-")
         resistance = float((item.get("resistance") or {}).get("aggregate_resistance") or 0.0)
         prior = priors.get(key)
         prior_txt = f"{prior:.2f}" if isinstance(prior, float) else "-"
         return (
             f"Scenario {key}\\n"
             f"prior={prior_txt} | fit={fit}\\n"
-            f"conf={confidence} | resistance={resistance:.2f}"
+            f"conf={conf} | resistance={resistance:.2f}"
         )
 
     title = str(context.get("title") or "Strategic Situation").replace('"', "'")
@@ -179,12 +280,12 @@ digraph Spec8Flow {{
   edge [color="#4B4F56", penwidth=1.4, arrowsize=0.8];
 
   source [label="Source Events\\n(cases/situations/*.md)", fillcolor="#EAF4FF"];
-    brief [label="Strategic Brief\\n{brief_label}", fillcolor="#EAF4FF", fixedsize=true, width=2.5, height=0.95];
-  actor [label="StrategicActor + Context Enhance\\nDecision Point + Known Unknowns({unknown_count})", fillcolor="#EEF7EC"];
-  planning [label="Scenario Planning\\nA/B/C branch generation", fillcolor="#FFF4E8"];
-  prior [label="Action Prior Probabilities\\nprior_snapshot.json", fillcolor="#FFF4E8"];
+  brief [label="Strategic Brief\\n{brief_label}", fillcolor="#EAF4FF", fixedsize=true, width=2.5, height=0.95];
+  actor [label="Situation Analysis\\nconfidence: {confidence_transition}\\nKnown Unknowns({unknown_count})", fillcolor="#EEF7EC"];
+  planning [label="Scenario Planning\\nA/B/C branching", fillcolor="#FFF4E8"];
+  prior [label="Action Prior Probabilities\\nSelected dimensions:\\n{dimensions_label}", fillcolor="#FFF4E8"];
   concl [label="Conclusions\\nrequired / warning / blocking", fillcolor="#F3EEFF"];
-    explain [label="Explanation Insights\\n{rec_label}", fillcolor="#FFEFF2", fixedsize=true, width=2.5, height=0.95];
+  explain [label="Explanation Insights\\n{rec_label}", fillcolor="#FFEFF2", fixedsize=true, width=2.5, height=0.95];
 
   scenA [label="{_scenario_label('A')}", fillcolor="#FFFDF2"];
   scenB [label="{_scenario_label('B')}", fillcolor="#FFFDF2"];
@@ -194,10 +295,10 @@ digraph Spec8Flow {{
   prior -> scenA;
   prior -> scenB;
   prior -> scenC;
-    scenA -> concl;
-    scenB -> concl;
-    scenC -> concl;
-    concl -> explain;
+  scenA -> concl;
+  scenB -> concl;
+  scenC -> concl;
+  concl -> explain;
 }}
 """
 
@@ -214,7 +315,7 @@ def _render_flow_fallback(payloads: dict[str, Any]) -> None:
             [
                 "Source (events)",
                 "  -> Strategic Brief",
-                "    -> StrategicActor & Situation Enhance",
+                "    -> Situation Analysis",
                 "      -> Scenario Planning (branch)",
                 f"         -> A (prior={priors.get('A', 0.0):.2f})",
                 f"         -> B (prior={priors.get('B', 0.0):.2f})",
@@ -228,18 +329,18 @@ def _render_flow_fallback(payloads: dict[str, Any]) -> None:
 
 
 st.markdown(
-        """
-        <div style="padding: 0.2rem 0 0.4rem 0;">
-            <div style="font-size: 2rem; font-weight: 700; line-height: 1.2; color: #1f2937;">
-                Omen Strategic Reasoning Flow
-            </div>
-            <div style="margin-top: 0.4rem; font-size: 1.02rem; color: #4b5563; max-width: 980px;">
-                A deterministic, auditable view of the full reasoning chain: from source signals to scenario branching,
-                prior-weighted paths, conclusions, and decision-ready explanation.
-            </div>
+    """
+    <div style="padding: 0.2rem 0 0.4rem 0;">
+        <div style="font-size: 2rem; font-weight: 700; line-height: 1.2; color: #1f2937;">
+            Omen Strategic Reasoning Flow
         </div>
-        """,
-        unsafe_allow_html=True,
+        <div style="margin-top: 0.4rem; font-size: 1.02rem; color: #4b5563; max-width: 980px;">
+            A deterministic, auditable view of the full reasoning chain: from source signals to scenario branching,
+            prior-weighted paths, conclusions, and decision-ready explanation.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 with st.sidebar:
@@ -265,15 +366,15 @@ paths = dict(bundle.get("paths") or {})
 payloads = dict(bundle.get("payloads") or {})
 
 st.markdown(
-        """
-        <div style="margin-top: 0.35rem; margin-bottom: 0.25rem;">
-            <span style="font-size: 1.1rem; font-weight: 650; color: #111827;">End-to-End Flow</span>
-            <span style="margin-left: 0.55rem; font-size: 0.92rem; color: #6b7280;">
-                Source -> Brief -> Actor Enhance -> Planning -> Prior -> A/B/C -> Conclusions -> Explanation
-            </span>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    """
+    <div style="margin-top: 0.35rem; margin-bottom: 0.25rem;">
+        <span style="font-size: 1.1rem; font-weight: 650; color: #111827;">End-to-End Flow</span>
+        <span style="margin-left: 0.55rem; font-size: 0.92rem; color: #6b7280;">
+            Source -> Brief -> Situation Analysis -> Planning -> Prior -> A/B/C -> Conclusions -> Explanation
+        </span>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 flow_dot = _build_flow_dot(payloads)
 try:
@@ -289,8 +390,8 @@ st.caption(
 tab_source, tab_actor, tab_scenario, tab_reason, tab_explain = st.tabs(
     [
         "📝 Source & Brief",
-        "👤 Actor Profile",
-        "🔀 Scenario Planning + A/B/C",
+        "👤 Strategic Actor",
+        "🔀 Scenario Planning",
         "🧩 Reason Chain",
         "🗣️ Explanation",
     ]
@@ -317,32 +418,62 @@ with tab_source:
         st.markdown(_compact_brief_markdown(situation_md.read_text(encoding="utf-8")))
 
 with tab_actor:
-    st.subheader("Actor Profile & Action Preferences")
+    st.subheader("Strategic Persona")
     actor_profile = payloads.get("actor_profile")
+    actor_status = payloads.get("actor_status")
     persona_payload = payloads.get("persona") or {}
     if actor_profile:
         profile = dict(actor_profile.get("profile") or {})
         strategic_style = dict(profile.get("strategic_style") or {})
         action_prefs = list(profile.get("action_preferences") or [])
 
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown(f"**Actor ID**: {actor_profile.get('actor_id', '')}")
-            st.markdown(f"**Actor Name**: {actor_profile.get('actor_name', '')}")
-            st.markdown(f"**Profile Version**: {actor_profile.get('profile_version', '')}")
-        with c2:
-            if strategic_style:
-                st.write("Strategic style")
-                st.json(strategic_style, expanded=False)
-            if action_prefs:
-                st.write("Action preferences")
-                st.json(action_prefs, expanded=False)
+        if strategic_style:
+            st.write("Strategic style")
+            st.json(strategic_style, expanded=False)
+        if action_prefs:
+            st.write("Action preferences")
+            st.json(action_prefs, expanded=False)
     else:
         st.info("Actor profile artifact unavailable. Showing derivation from simulation output.")
 
-    scenario_results = list((payloads.get("result") or {}).get("scenario_results") or [])
+    has_persona_content = _render_persona_panel(persona_payload)
+    persona_path = Path(paths.get("persona") or "")
+    persona_exists = persona_path.exists()
+    persona_payload_loaded = isinstance(persona_payload, dict) and bool(persona_payload)
+
+    if not has_persona_content and actor_profile:
+        if persona_exists and persona_payload_loaded:
+            st.warning(
+                "Persona artifact exists, but insight content is empty or unusable. "
+                "Run `omen analyze situation --doc <name> --force` to regenerate, "
+                "or run `omen analyze actor --doc <name> persona` directly."
+            )
+        elif persona_exists and not persona_payload_loaded:
+            st.warning("Persona artifact file exists but JSON is invalid/unreadable.")
+        else:
+            st.info("Persona insight artifact not found yet. Run `omen analyze situation --doc <name>` again to auto-generate it after actor enhancement.")
+
+    st.divider()
+    st.subheader("Influence Graph")
+    _render_actor_graph(actor_status if isinstance(actor_status, dict) else None, actor_profile if isinstance(actor_profile, dict) else None)
+
+with tab_scenario:
+    st.subheader("Deterministic Planning")
+    scenario_pack_payload = payloads.get("scenario_pack") if isinstance(payloads.get("scenario_pack"), dict) else None
+
+    scenario_pack_path = Path(paths.get("scenario_pack") or "")
+    if scenario_pack_payload is None and str(scenario_pack_path):
+        scenario_pack_payload = _read_json_file(scenario_pack_path)
+
+    scenario_rows = _build_scenario_rows(scenario_pack_payload)
+    if scenario_rows:
+        st.dataframe(scenario_rows, use_container_width=True, hide_index=True)
+    else:
+        st.warning("Scenario pack artifact missing or invalid.")
+
+    result_payload = payloads.get("result") if isinstance(payloads.get("result"), dict) else None
     derivation_rows: list[dict[str, Any]] = []
-    for row in scenario_results:
+    for row in list((result_payload or {}).get("scenario_results") or []):
         if not isinstance(row, dict):
             continue
         derivation = dict(row.get("actor_derivation") or {})
@@ -355,60 +486,8 @@ with tab_actor:
             }
         )
     if derivation_rows:
+        st.markdown("### Decision Style Derivation")
         st.dataframe(derivation_rows, use_container_width=True, hide_index=True)
-
-    persona_insight = dict(persona_payload.get("persona_insight") or {})
-    NARRATIVE = str(persona_insight.get("narrative") or "").strip()
-    key_traits = [item for item in list(persona_insight.get("key_traits") or []) if isinstance(item, dict)]
-    consistency_score = persona_insight.get("consistency_score")
-
-    if NARRATIVE or key_traits:
-        st.subheader("Persona Insight")
-        if NARRATIVE:
-            st.markdown(NARRATIVE)
-        if key_traits:
-            st.markdown("**Key Traits**")
-            for item in key_traits:
-                trait = str(item.get("trait") or "").strip()
-                evidence = str(item.get("evidence_summary") or "").strip()
-                if trait and evidence:
-                    st.write(f"- **{trait}**: {evidence}")
-        if isinstance(consistency_score, (int, float)):
-            st.caption(f"Consistency score: {float(consistency_score):.2f}")
-    elif actor_profile:
-        st.info("Persona insight artifact not found yet. Run `omen analyze situation --doc <name>` again to auto-generate it after actor enhancement.")
-
-with tab_scenario:
-    st.subheader("A/B/C Planning and Deterministic Outcomes")
-    scenario_rows = _build_scenario_rows(
-        payloads.get("scenario_pack"),
-        payloads.get("prior_snapshot"),
-        payloads.get("result"),
-    )
-    if scenario_rows:
-        st.dataframe(scenario_rows, use_container_width=True, hide_index=True)
-    else:
-        st.warning("Scenario pack or result artifact missing.")
-
-    result_payload = payloads.get("result") or {}
-    for item in list(result_payload.get("scenario_results") or []):
-        if not isinstance(item, dict):
-            continue
-        key = str(item.get("scenario_key") or "")
-        with st.expander(f"Scenario {key} details"):
-            fit = dict(item.get("capability_dilemma_fit") or {})
-            conditions = dict(item.get("scenario_conditions") or {})
-            st.markdown(f"**Fit**: {fit.get('fit', '')}")
-            st.markdown(f"**Selected dimensions**: {', '.join(list((item.get('selected_dimensions') or {}).get('selected_dimension_keys') or []))}")
-            st.markdown("**Required**")
-            for text in list(conditions.get("required") or []):
-                st.write(f"- {text}")
-            st.markdown("**Warning**")
-            for text in list(conditions.get("warning") or []):
-                st.write(f"- {text}")
-            st.markdown("**Blocking**")
-            for text in list(conditions.get("blocking") or []):
-                st.write(f"- {text}")
 
 with tab_reason:
     st.subheader("Reason Chain Trace")

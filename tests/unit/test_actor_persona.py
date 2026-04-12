@@ -191,3 +191,63 @@ def test_generate_persona_insight_prefers_llm_when_available() -> None:
 
   assert result["run_meta"]["mode"] == "skeleton-deterministic"
   assert len(result["persona_insight"]["key_traits"]) >= 3
+
+
+def test_generate_persona_insight_falls_back_when_llm_payload_is_empty() -> None:
+  payload = {
+    "actors": [
+      {
+        "id": "a1",
+        "name": "Muhammad Alam",
+        "type": "StrategicActor",
+        "profile": {
+          "background_facts": {
+            "key_experiences": ["Led acquisition decisions for platform adoption."],
+          },
+          "strategic_style": {
+            "decision_style": "platform-centric acquisition",
+            "value_proposition": "integrated data foundation for AI adoption",
+            "decision_preferences": ["alliances", "external data integration"],
+            "non_negotiables": ["must improve adoption outcomes"],
+          },
+        },
+      }
+    ],
+    "events": [
+      {
+        "id": "e1",
+        "name": "SAP announces acquisition of Reltio",
+        "date": "2026-03",
+        "actors_involved": ["a1"],
+      }
+    ],
+  }
+
+  strategy_payload = {
+    "meta": {
+      "case_id": "sap_reltio_acquisition",
+      "domain": "enterprise_software_ai_platforms",
+      "strategy": "acquisition_to_overcome_adoption_resistance",
+    },
+    "known_outcome": "SAP acquires Reltio to address BDC adoption resistance",
+  }
+
+  class _Response:
+    content = '{"persona_insight": {"narrative": "", "key_traits": [], "consistency_score": 0.0}}'
+
+  class _Chat:
+    def invoke(self, _prompt: str):
+      return _Response()
+
+  result = generate_persona_insight(
+    case_id="sap_reltio_acquisition",
+    actor_ontology=payload,
+    strategy_ontology=strategy_payload,
+    llm_client=_Chat(),
+    output_language="en",
+  )
+
+  insight = result["persona_insight"]
+  assert str(insight["narrative"]).strip()
+  assert len(list(insight["key_traits"])) >= 1
+  assert float(insight["consistency_score"]) > 0

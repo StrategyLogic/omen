@@ -7,7 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
-from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts, ensure_persona_artifact_for_actor_ref
+from omen.ingest.synthesizer.services.actor import (
+    ensure_actor_artifacts,
+    ensure_persona_artifact_for_actor_ref,
+    ensure_status_artifact_for_actor_ref,
+    load_persona_payload,
+    load_status_payload,
+    persona_payload_has_usable_content,
+    status_payload_has_usable_content,
+)
 from omen.ingest.writer.markdown import save_situation_brief, save_situation_case_from_source
 from omen.ingest.validators.situation import validate_situation_artifact_or_raise
 from omen.ingest.validators.situation import validate_situation_source_or_raise
@@ -208,27 +216,36 @@ def run_situation_analysis(
     if not actor_path.is_absolute():
         actor_path = Path.cwd() / actor_path
     persona_path = actor_path.parent / "analyze_persona.json"
+    status_path = actor_path.parent / "analyze_status.json"
+
+    skip_llm = False
 
     if not force:
         has_situation = output_path.exists()
         has_actor = actor_path.exists()
-        has_persona = persona_path.exists()
+        has_persona_file = persona_path.exists()
+        has_persona = persona_payload_has_usable_content(load_persona_payload(persona_path))
+        has_status_file = status_path.exists()
+        has_status = status_payload_has_usable_content(load_status_payload(status_path))
 
         print(
             "Local artifact check: "
-            f"situation={has_situation}, actor={has_actor}, persona={has_persona}"
+            f"situation={has_situation}, actor={has_actor}, "
+            f"persona_file={has_persona_file}, persona_usable={has_persona}, "
+            f"status_file={has_status_file}, status_usable={has_status}"
         )
         if has_situation and has_actor and has_persona:
             print("Local-first: all required artifacts already exist, skip LLM generation.")
-            return
+            skip_llm = True
 
-    _analyze_and_save_situation(
-        situation_file=input_path,
-        actor_ref=effective_actor_ref,
-        pack_id=effective_pack_id,
-        pack_version=pack_version,
-        output_path=output_path,
-    )
+    if not skip_llm:
+        _analyze_and_save_situation(
+            situation_file=input_path,
+            actor_ref=effective_actor_ref,
+            pack_id=effective_pack_id,
+            pack_version=pack_version,
+            output_path=output_path,
+        )
 
     # Persona insight must run after situation analysis completes, so actor-enhanced context is ready.
     persona_path = ensure_persona_artifact_for_actor_ref(
@@ -237,6 +254,11 @@ def run_situation_analysis(
     )
     if persona_path is not None:
         print(f"Persona insight ensured: {persona_path}")
+
+    # Analyze status is mounted after persona step with reuse-first behavior.
+    status_path = ensure_status_artifact_for_actor_ref(actor_ref=effective_actor_ref)
+    if status_path is not None:
+        print(f"Status insight ensured: {status_path}")
 
 
 def save_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:

@@ -18,6 +18,7 @@ from omen.ui.case_catalog import case_display_title, normalize_case_id, suggest_
 
 LogFn = Callable[[str, str, str], None]
 PERSONA_INSIGHT_FILENAME = "analyze_persona.json"
+STATUS_INSIGHT_FILENAME = "analyze_status.json"
 
 
 def _resolve_doc_path(doc: str) -> Path:
@@ -108,6 +109,62 @@ def _load_json_dict(path: Path) -> dict[str, Any]:
     return payload
 
 
+def persona_payload_has_usable_content(payload: dict[str, Any] | None) -> bool:
+    if not isinstance(payload, dict):
+        return False
+
+    insight = payload.get("persona_insight") if isinstance(payload.get("persona_insight"), dict) else payload
+    if not isinstance(insight, dict):
+        return False
+
+    narrative = str(insight.get("narrative") or "").strip()
+    if narrative:
+        return True
+
+    key_traits = insight.get("key_traits")
+    if isinstance(key_traits, list):
+        for item in key_traits:
+            if not isinstance(item, dict):
+                continue
+            trait = str(item.get("trait") or item.get("name") or "").strip()
+            evidence = str(item.get("evidence_summary") or item.get("evidence") or "").strip()
+            if trait and evidence:
+                return True
+    return False
+
+
+def load_persona_payload(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def status_payload_has_usable_content(payload: dict[str, Any] | None) -> bool:
+    if not isinstance(payload, dict):
+        return False
+
+    timeline = payload.get("timeline")
+    if isinstance(timeline, list) and len(timeline) > 0:
+        return True
+
+    summary = payload.get("summary")
+    return isinstance(summary, dict) and bool(summary)
+
+
+def load_status_payload(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
 def generate_persona_artifact(
     *,
     case_id: str,
@@ -139,8 +196,12 @@ def ensure_persona_artifact_if_missing(
     config_path: str,
 ) -> Path:
     persona_path = case_dir / PERSONA_INSIGHT_FILENAME
-    if persona_path.exists():
+
+    existing_payload = load_persona_payload(persona_path)
+    if persona_payload_has_usable_content(existing_payload):
         return persona_path
+    if persona_path.exists():
+        print(f"Persona insight exists but is empty/unusable, regenerating: {persona_path}")
 
     strategy_path = case_dir / STRATEGY_ONTOLOGY_FILENAME
     actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
@@ -184,6 +245,73 @@ def ensure_persona_artifact_for_actor_ref(
         case_dir=case_dir,
         config_path=config_path,
     )
+
+
+def generate_status_artifact(
+    *,
+    case_dir: Path,
+    strategy_payload: dict[str, Any],
+    actor_payload: dict[str, Any],
+    output_path: str | Path | None = None,
+) -> Path:
+    from omen.analysis.actor.query import build_events_snapshot
+
+    target_path = Path(output_path) if output_path else case_dir / STATUS_INSIGHT_FILENAME
+    status_payload = build_events_snapshot(
+        strategy_ontology=strategy_payload,
+        actor_ontology=actor_payload,
+        year=None,
+        date=None,
+    )
+    target_path.write_text(json.dumps(status_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return target_path
+
+
+def ensure_status_artifact_if_missing(
+    *,
+    case_dir: Path,
+) -> Path | None:
+    status_path = case_dir / STATUS_INSIGHT_FILENAME
+
+    existing_payload = load_status_payload(status_path)
+    if status_payload_has_usable_content(existing_payload):
+        return status_path
+    if status_path.exists():
+        print(f"Status insight exists but is empty/unusable, regenerating: {status_path}")
+
+    strategy_path = case_dir / STRATEGY_ONTOLOGY_FILENAME
+    actor_path = case_dir / ACTOR_ONTOLOGY_FILENAME
+    if not actor_path.exists():
+        return None
+    if not strategy_path.exists():
+        return None
+
+    actor_payload = _load_json_dict(actor_path)
+    strategy_payload = _load_json_dict(strategy_path)
+    return generate_status_artifact(
+        case_dir=case_dir,
+        strategy_payload=strategy_payload,
+        actor_payload=actor_payload,
+        output_path=status_path,
+    )
+
+
+def ensure_status_artifact_for_actor_ref(
+    *,
+    actor_ref: str,
+) -> Path | None:
+    raw = str(actor_ref or "").strip()
+    if not raw:
+        return None
+
+    actor_path = Path(raw)
+    if not actor_path.is_absolute():
+        actor_path = Path.cwd() / actor_path
+    if not actor_path.exists() or actor_path.name != ACTOR_ONTOLOGY_FILENAME:
+        return None
+
+    case_dir = actor_path.parent
+    return ensure_status_artifact_if_missing(case_dir=case_dir)
 
 
 def generate_actor_and_events_from_document(

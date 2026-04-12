@@ -66,6 +66,7 @@ def load_spec8_flow_artifacts(
     prior_snapshot = _read_json(data_pack / "traces" / "prior_snapshot.json")
     planning_query = _read_json(data_pack / "traces" / "planning_query.json")
     reason_chain = _read_json(data_pack / "traces" / "reason_chain.json")
+    generation_trace = _read_json(data_pack / "generation" / "log.json")
 
     resolved_output_pack = output_pack_id or pack_id
     result = _read_json(output_base / resolved_output_pack / "result.json")
@@ -84,13 +85,21 @@ def load_spec8_flow_artifacts(
 
     actor_profile_payload: dict[str, Any] | None = None
     persona_payload: dict[str, Any] | None = None
+    status_payload: dict[str, Any] | None = None
+    resolved_actor_profile_ref = ""
+    resolved_persona_ref = ""
+    resolved_status_ref = ""
     actor_profile_ref = str((situation or {}).get("context", {}).get("actor_ref") or "").strip()
     if actor_profile_ref:
         actor_path = Path(actor_profile_ref)
         if not actor_path.is_absolute():
             actor_path = Path.cwd() / actor_path
+        resolved_actor_profile_ref = str(actor_path)
+        resolved_persona_ref = str(actor_path.parent / "analyze_persona.json")
+        resolved_status_ref = str(actor_path.parent / "analyze_status.json")
         actor_profile_payload = _read_json(actor_path)
         persona_payload = _read_json(actor_path.parent / "analyze_persona.json")
+        status_payload = _read_json(actor_path.parent / "analyze_status.json")
 
     return {
         "pack_id": pack_id,
@@ -102,10 +111,12 @@ def load_spec8_flow_artifacts(
             "prior_snapshot": str(data_pack / "traces" / "prior_snapshot.json"),
             "planning_query": str(data_pack / "traces" / "planning_query.json"),
             "reason_chain": str(data_pack / "traces" / "reason_chain.json"),
+            "generation_trace": str(data_pack / "generation" / "log.json"),
             "result": str(output_base / resolved_output_pack / "result.json"),
             "explanation": str(output_base / resolved_output_pack / "explanation.json"),
-            "actor_profile": actor_profile_ref,
-            "persona": str((Path(actor_profile_ref).parent / "analyze_persona.json") if actor_profile_ref else ""),
+            "actor_profile": resolved_actor_profile_ref,
+            "persona": resolved_persona_ref,
+            "actor_status": resolved_status_ref,
         },
         "payloads": {
             "situation": situation,
@@ -113,9 +124,11 @@ def load_spec8_flow_artifacts(
             "prior_snapshot": prior_snapshot,
             "planning_query": planning_query,
             "reason_chain": reason_chain,
+            "generation_trace": generation_trace,
             "result": result,
             "explanation": explanation,
             "actor_profile": actor_profile_payload,
             "persona": persona_payload,
+            "actor_status": status_payload,
         },
     }

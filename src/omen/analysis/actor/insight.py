@@ -136,11 +136,127 @@ def _normalize_traits(value: Any) -> list[dict[str, str]]:
     return traits
 
 
+def _has_substantive_persona_content(*, narrative: str, traits: list[dict[str, str]]) -> bool:
+    if str(narrative).strip():
+        return True
+    return any(str(item.get("trait") or "").strip() for item in traits if isinstance(item, dict))
+
+
+def _summarize_strategy_context(strategy_ontology: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(strategy_ontology, dict):
+        return {}
+
+    meta = strategy_ontology.get("meta") if isinstance(strategy_ontology.get("meta"), dict) else {}
+    summary = {
+        "case_id": str(meta.get("case_id") or "").strip(),
+        "domain": str(meta.get("domain") or "").strip(),
+        "strategy": str(meta.get("strategy") or "").strip(),
+        "known_outcome": str(strategy_ontology.get("known_outcome") or "").strip(),
+    }
+    return {k: v for k, v in summary.items() if v}
+
+
+def _build_fallback_persona(
+    *,
+    actor_name: str,
+    profile: dict[str, Any],
+    events: list[dict[str, Any]],
+    strategy_summary: dict[str, Any],
+    output_language: str,
+) -> tuple[str, list[dict[str, str]], float]:
+    strategic_style = profile.get("strategic_style") if isinstance(profile.get("strategic_style"), dict) else {}
+    decision_style = str(strategic_style.get("decision_style") or "").strip()
+    value_prop = str(strategic_style.get("value_proposition") or "").strip()
+    preferences = [str(item).strip() for item in list(strategic_style.get("decision_preferences") or []) if str(item).strip()]
+    non_negotiables = [str(item).strip() for item in list(strategic_style.get("non_negotiables") or []) if str(item).strip()]
+
+    event_lines: list[str] = []
+    for event in events[:3]:
+        if not isinstance(event, dict):
+            continue
+        name = str(event.get("name") or event.get("event") or "").strip()
+        date = str(event.get("date") or event.get("time") or "").strip()
+        if name:
+            event_lines.append(f"{date}: {name}" if date else name)
+
+    strategy_hint = str(strategy_summary.get("strategy") or "").strip()
+    outcome_hint = str(strategy_summary.get("known_outcome") or "").strip()
+
+    if output_language == "zh":
+        narrative_parts = [f"{actor_name}的战略画像显示其决策逻辑高度围绕执行可落地性与平台目标一致性。"]
+        if decision_style:
+            narrative_parts.append(f"其决策风格偏向{decision_style}。")
+        if value_prop:
+            narrative_parts.append(f"核心价值主张是{value_prop}。")
+        if preferences:
+            narrative_parts.append(f"常见偏好包括：{'；'.join(preferences[:3])}。")
+        if non_negotiables:
+            narrative_parts.append(f"不可妥协项包括：{'；'.join(non_negotiables[:2])}。")
+        if event_lines:
+            narrative_parts.append(f"关键事件轨迹：{'；'.join(event_lines)}。")
+        if strategy_hint or outcome_hint:
+            combo = "；".join(item for item in [strategy_hint, outcome_hint] if item)
+            narrative_parts.append(f"与案例战略脉络保持一致：{combo}。")
+        narrative = "".join(narrative_parts).strip()
+    else:
+        narrative_parts = [
+            f"{actor_name} shows a strategy persona anchored in execution feasibility and platform-level coherence."
+        ]
+        if decision_style:
+            narrative_parts.append(f"The dominant decision style is {decision_style}.")
+        if value_prop:
+            narrative_parts.append(f"The recurring value proposition is {value_prop}.")
+        if preferences:
+            narrative_parts.append(f"Observed preferences include {', '.join(preferences[:3])}.")
+        if non_negotiables:
+            narrative_parts.append(f"Non-negotiables include {', '.join(non_negotiables[:2])}.")
+        if event_lines:
+            narrative_parts.append(f"Key event trajectory: {'; '.join(event_lines)}.")
+        if strategy_hint or outcome_hint:
+            combo = "; ".join(item for item in [strategy_hint, outcome_hint] if item)
+            narrative_parts.append(f"This aligns with the case strategy context: {combo}.")
+        narrative = " ".join(narrative_parts).strip()
+
+    traits: list[dict[str, str]] = []
+    if decision_style:
+        traits.append(
+            {
+                "trait": "Decision Style",
+                "evidence_summary": decision_style,
+            }
+        )
+    if preferences:
+        traits.append(
+            {
+                "trait": "Decision Preferences",
+                "evidence_summary": "; ".join(preferences[:3]),
+            }
+        )
+    if non_negotiables:
+        traits.append(
+            {
+                "trait": "Non-negotiables",
+                "evidence_summary": "; ".join(non_negotiables[:2]),
+            }
+        )
+
+    if not traits and event_lines:
+        traits.append(
+            {
+                "trait": "Event-grounded behavior",
+                "evidence_summary": "; ".join(event_lines[:2]),
+            }
+        )
+
+    return narrative, traits, 0.72
+
+
 def _build_persona_prompt(
     *,
     actor_name: str,
     profile: dict[str, Any],
     events: list[dict[str, Any]],
+    strategy_summary: dict[str, Any],
     output_language: str,
 ) -> str:
     base_prompt = build_persona_insight_prompt().format(
@@ -173,6 +289,8 @@ def _build_persona_prompt(
         for item in events[:10]
     ]
     prompt += "\n\nRelated strategic events (JSON):\n" + json.dumps(event_view, ensure_ascii=False)
+    if strategy_summary:
+        prompt += "\n\nCase strategy context (JSON):\n" + json.dumps(strategy_summary, ensure_ascii=False)
     return prompt
 
 
@@ -185,13 +303,12 @@ def generate_persona_insight(
     config_path: str | None = None,
     output_language: str = "en",
 ) -> dict[str, Any]:
-    del strategy_ontology
-
     actor = _pick_primary_actor(actor_ontology)
     actor_name = str(actor.get("name") or "Strategic Actor").strip() or "Strategic Actor"
     actor_id = str(actor.get("id") or "").strip()
     profile = actor.get("profile") or {}
     events = _events_for_actor(actor_ontology, actor_id)
+    strategy_summary = _summarize_strategy_context(strategy_ontology)
 
     runtime_client = llm_client
     if runtime_client is None:
@@ -200,10 +317,11 @@ def generate_persona_insight(
 
     language = _normalize_output_language(output_language)
     prompt = _build_persona_prompt(
-      actor_name=actor_name,
-      profile=profile,
-      events=events,
-      output_language=language,
+                actor_name=actor_name,
+                profile=profile,
+                events=events,
+                strategy_summary=strategy_summary,
+                output_language=language,
     )
     payload = _invoke_json_prompt(runtime_client, prompt)
 
@@ -219,6 +337,18 @@ def generate_persona_insight(
     except Exception:
         consistency_score = 0.85
     consistency_score = max(0.0, min(1.0, consistency_score))
+
+    if not _has_substantive_persona_content(narrative=narrative, traits=traits):
+        fallback_narrative, fallback_traits, fallback_score = _build_fallback_persona(
+            actor_name=actor_name,
+            profile=profile if isinstance(profile, dict) else {},
+            events=events,
+            strategy_summary=strategy_summary,
+            output_language=language,
+        )
+        narrative = fallback_narrative
+        traits = fallback_traits
+        consistency_score = fallback_score
 
     return {
         "query": {"type": "persona", "case_id": case_id},

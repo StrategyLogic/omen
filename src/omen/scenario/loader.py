@@ -83,12 +83,14 @@ def load_spec8_flow_artifacts(
             explanation = _read_json(output_base / resolved_output_pack / "explanation.json")
 
     actor_profile_payload: dict[str, Any] | None = None
+    persona_payload: dict[str, Any] | None = None
     actor_profile_ref = str((situation or {}).get("context", {}).get("actor_ref") or "").strip()
     if actor_profile_ref:
         actor_path = Path(actor_profile_ref)
         if not actor_path.is_absolute():
             actor_path = Path.cwd() / actor_path
         actor_profile_payload = _read_json(actor_path)
+        persona_payload = _read_json(actor_path.parent / "analyze_persona.json")
 
     return {
         "pack_id": pack_id,
@@ -103,6 +105,7 @@ def load_spec8_flow_artifacts(
             "result": str(output_base / resolved_output_pack / "result.json"),
             "explanation": str(output_base / resolved_output_pack / "explanation.json"),
             "actor_profile": actor_profile_ref,
+            "persona": str((Path(actor_profile_ref).parent / "analyze_persona.json") if actor_profile_ref else ""),
         },
         "payloads": {
             "situation": situation,
@@ -113,5 +116,6 @@ def load_spec8_flow_artifacts(
             "result": result,
             "explanation": explanation,
             "actor_profile": actor_profile_payload,
+            "persona": persona_payload,
         },
     }

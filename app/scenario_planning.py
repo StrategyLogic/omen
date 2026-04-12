@@ -320,6 +320,7 @@ with tab_source:
 with tab_actor:
     st.subheader("Actor Profile & Action Preferences")
     actor_profile = payloads.get("actor_profile")
+    persona_payload = payloads.get("persona") or {}
     if actor_profile:
         profile = dict(actor_profile.get("profile") or {})
         strategic_style = dict(profile.get("strategic_style") or {})
@@ -356,6 +357,27 @@ with tab_actor:
         )
     if derivation_rows:
         st.dataframe(derivation_rows, use_container_width=True, hide_index=True)
+
+    persona_insight = dict(persona_payload.get("persona_insight") or {})
+    narrative = str(persona_insight.get("narrative") or "").strip()
+    key_traits = [item for item in list(persona_insight.get("key_traits") or []) if isinstance(item, dict)]
+    consistency_score = persona_insight.get("consistency_score")
+
+    if narrative or key_traits:
+        st.subheader("Persona Insight")
+        if narrative:
+            st.markdown(narrative)
+        if key_traits:
+            st.markdown("**Key Traits**")
+            for item in key_traits:
+                trait = str(item.get("trait") or "").strip()
+                evidence = str(item.get("evidence_summary") or "").strip()
+                if trait and evidence:
+                    st.write(f"- **{trait}**: {evidence}")
+        if isinstance(consistency_score, (int, float)):
+            st.caption(f"Consistency score: {float(consistency_score):.2f}")
+    elif actor_profile:
+        st.info("Persona insight artifact not found yet. Run `omen analyze situation --doc <name>` again to auto-generate it after actor enhancement.")
 
 with tab_scenario:
     st.subheader("A/B/C Planning and Deterministic Outcomes")

@@ -579,6 +579,7 @@ prompts:
     {
       "step_id": "step_1",
       "step_type": "seed_inference",
+      "summary": "Short step summary (<=100 words) describing the mapping process and what seed conclusion it produced",
       "inputs": ["scenario.variables", "planning_query.signals"],
       "intermediate": {
         "dimension_mapping": [],
@@ -625,6 +626,7 @@ prompts:
     {
       "step_id": "step_2",
       "step_type": "constraint_activation",
+      "summary": "Short step summary (<=100 words) describing activation checks and the resulting constraint conclusion",
       "inputs": ["scenario.constraints", "step_1.outputs"],
       "intermediate": {
         "activation_decisions": []
@@ -665,6 +667,7 @@ prompts:
     {
       "step_id": "step_3",
       "step_type": "target_derivation",
+      "summary": "Short step summary (<=100 words) describing target derivation process and resulting target profile",
       "inputs": ["scenario.objective", "scenario.variables"],
       "intermediate": {
         "parsed_targets": []
@@ -698,6 +701,7 @@ prompts:
     {
       "step_id": "step_4",
       "step_type": "gap_analysis",
+      "summary": "Short step summary (<=100 words) describing gap calculation process and blocking/feasible conclusion",
       "inputs": ["step_1.outputs", "step_2.outputs", "step_3.outputs"],
       "intermediate": {
         "raw_gaps": [],
@@ -733,6 +737,7 @@ prompts:
     {
       "step_id": "step_5",
       "step_type": "strategic_conditions",
+      "summary": "Short step summary (<=100 words) describing condition derivation process and final required/warning/blocking conclusion",
       "inputs": ["step_4.outputs", "actor_profile.non_negotiables"],
       "intermediate": {
         "condition_derivations": []
@@ -777,6 +782,7 @@ prompts:
     6. Output MUST be a raw JSON object only (single root object).
     7. Do NOT wrap output in markdown/code fences such as ```json.
     8. Do NOT prepend or append any explanation text before/after JSON.
+    9. Each step MUST include a meaningful `summary` under 100 English words; it MUST describe both process and conclusion, and MUST NOT repeat the `step_type` string alone.
 
   action_suggestion_prompt: |
     You are a strategic decision writing assistant for Omen deterministic simulation.

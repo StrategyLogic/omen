@@ -1,0 +1,87 @@
+{
+  "artifact_type": "situation_generation_trace",
+  "situation_id": "sap_reltio_acquisition",
+  "situation_artifact_path": "data/scenarios/sap/situation.json",
+  "source_path": "cases/situations/sap_reltio_acquisition.md",
+  "pack_id": "sap",
+  "pack_version": "1.0.0",
+  "generated_at": "2026-04-12T12:23:29.498395",
+  "validation_passed": true,
+  "validation_issues": [],
+  "confidence": {
+    "confidence_risk": 0.25,
+    "confidence_overall": 0.7,
+    "overall_confidence": 0.7,
+    "coverage_ratio": 0.34,
+    "guardrail_applied": false
+  },
+  "metrics": {
+    "known_unknowns_count": 5,
+    "assumptions_filled_count": 2,
+    "assumptions_quality_avg": 0.85,
+    "cognitive_coverage": 0.34,
+    "confidence_delta_cap": 0.5
+  },
+  "assumptions_explicit": [
+    {
+      "target_unknown": "Whether the move will successfully boost adoption of SAP's Business Data Cloud",
+      "assumption_text": "The acquisition of a best-in-class external data integration capability is a necessary but not sufficient condition for overcoming BDC's adoption barriers.",
+      "quality_score": 0.8,
+      "coverage_type": "partial"
+    },
+    {
+      "target_unknown": "How customers will respond to SAP's sales messaging given the negative migration findings",
+      "assumption_text": "The negative sentiment around 'pay-during-migration' fees will persist as a market constraint until SAP demonstrably changes its migration approach and communicates this effectively.",
+      "quality_score": 0.9,
+      "coverage_type": "high"
+    }
+  ],
+  "trace_history": [
+    {
+      "stage": "scenario_decomposition",
+      "status": "ok",
+      "generated_at": "2026-04-12T15:15:10.635054",
+      "scenario_artifact_path": "data/scenarios/sap/scenario_pack.json",
+      "situation_ref": "data/scenarios/sap/situation.json",
+      "schema_completeness_percent": 100.0,
+      "logic_usable": true,
+      "retries": 0
+    },
+    {
+      "stage": "scenario_decomposition",
+      "status": "ok",
+      "generated_at": "2026-04-12T16:04:08.679138",
+      "scenario_artifact_path": "data/scenarios/sap/scenario_pack.json",
+      "situation_ref": "data/scenarios/sap/situation.json",
+      "schema_completeness_percent": 100.0,
+      "logic_usable": true,
+      "retries": 0
+    }
+  ],
+  "scenario_decomposition": {
+    "scenario_artifact_path": "data/scenarios/sap/scenario_pack.json",
+    "situation_ref": "data/scenarios/sap/situation.json",
+    "generated_at": "2026-04-12T16:04:08.679077",
+    "schema_completeness_percent": 100.0,
+    "logic_usable": true,
+    "retries": 0,
+    "validation_issues": [],
+    "logic_issues": []
+  },
+  "scenario_planner": {
+    "actor_style_enhancement": {
+      "stage": "scenario_enhance_prompt",
+      "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+      "admissible_before": true,
+      "enhanced": false,
+      "status": "noop",
+      "reason": "strategic actor already admissible"
+    },
+    "prior_scoring": {
+      "stage": "scenario_prior_prompt",
+      "status": "ok",
+      "reason": "scenario_prior_prompt scored A/B/C with explanations",
+      "scoring_source": "llm"
+    }
+  }
+}

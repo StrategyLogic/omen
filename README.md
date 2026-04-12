@@ -6,15 +6,15 @@
 ![Codecov](https://img.shields.io/codecov/c/github/StrategyLogic/omen) ![Package](https://img.shields.io/github/actions/workflow/status/StrategyLogic/omen/package.yml) ![License](https://img.shields.io/pypi/l/omenai) ![Downloads](https://img.shields.io/pepy/dt/omenai) ![PyPI Version](https://img.shields.io/pypi/v/omenai)
 </div>
 
-[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source strategic reasoning engine, powered by **Explainable AI** (XAI). It combines ontological modeling of strategic phenomena with counterfactual analysis of uncertainty - delivering verifiable, traceable, and explainable insights for decision-makers.
+[**Omen**](https://github.com/StrategyLogic/omen) (Chinese: 爻) is an open-source strategic reasoning engine powered by **Explainable AI** (XAI). It combines ontological modeling of strategic phenomena with counterfactual analysis of uncertainty, delivering verifiable, traceable, and explainable insights for decision-makers.
 
-[Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) |  [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
+[Concepts](docs/concepts.md) | [Quick Start](docs/quick-start.md) | [Case Templates](docs/case-template.md) | [Roadmap](docs/roadmap.md)
 
 ## 🪄 Capabilities
 
 > Analyze, Simulate, Explain.
 
-Omen **does not predict** the future. It is a reasoning engine **built for complexity**. By mapping causal chains and logical dependencies, it generates replayable, comparable branching paths - revealing weak signals, critical points, and evolving ecosystems, helping decision-makers **gain clarity** in complexity:
+Omen **does not predict** the future. It is a reasoning engine **built for complexity**. By mapping causal chains and logical dependencies, it generates replayable, comparable branching paths, revealing weak signals, critical points, and evolving ecosystems, and helping decision-makers **gain clarity** in complexity:
 
 *   🔄 **Substitution Logic**: Which technology will replace another under what critical conditions?
 *   🛡️ **Capability Evolution**: Which core capabilities will be enhanced first, and which will coexist long-term?
@@ -23,7 +23,7 @@ Omen **does not predict** the future. It is a reasoning engine **built for compl
 
 Through explainable reasoning chains, Omen reveals how technological evolution reshapes markets, helping strategic decisions **decode the omens** from the chaos.
 
-##  ✨ Core Features
+## ✨ Core Features
 
 | Feature Module | Description |
 | :--- | :--- |
@@ -44,9 +44,11 @@ A complete reasoning session typically answers the following questions:
 *   **Strategy Effectiveness?** Under what circumstances is an "open ecosystem" superior to "vertical integration"?
 *   **Endgame Form?** Does it move towards monopoly, oligarchic balance, or fragmented coexistence?
 
+---
+
 ## 🚀 Quick Start
 
-### Installation
+### 🏗️ Installation
 
 Environment requirements: Python 3.12+ with `pip` package manager.
 
@@ -57,55 +59,86 @@ pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
-### Run Example
+### 🌰 View Example
+
+If you want to quickly see Omen in action, a visualized sample case and its results are available in the `sample` directory. Run:
+
 ```bash
-# Step 1. analyze situation from a built-in case
+streamlit run sample/app/scenario_planning.py
+```
+
+Then open `http://localhost:8501` in your browser to explore the full strategic reasoning flow.
+
+### 🎵 Run Built-in Case
+
+If you want to run a complete end-to-end workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. The case document is `cases/sap_reltio_acquisition.md`, and it can be run end-to-end with the following commands:
+
+#### Step 1. Analyze
+
+Omen's Analyze module combines strategy methodology and the data pipeline, allowing you to generate strategic insights and machine input artifacts from the source document with a single command.
+
+##### Situation Analysis
+
+```bash
+# analyze the built-in case and pack it as "sap" alias
 omen analyze situation --doc sap_reltio_acquisition --pack-id sap
-# Step 2. generate scenario planning artifact from situation
+```
+
+This step generates the Situation Artifact and creates a package named `sap` for consistent use in subsequent steps.
+
+##### Scenario Planning
+
+Omen `v0.1.9` provides deterministic A/B/C scenario planning capabilities.
+
+- Scenario A: Offensive branch
+- Scenario B: Defensive branch
+- Scenario C: Confrontational branch
+
+You can directly use the `sap` alias to locate the generated situation artifact from the previous step:
+
+```bash
 omen scenario --situation sap
-# Step 3. run deterministic simulation
+```
+
+This step generates the scenario pack artifact under `data/scenarios/sap/` for simulation.
+
+#### Step 2. Simulate
+
+Omen's simulation engine can reason across different scenarios. Use the scenario pack generated in the previous step to run simulation:
+
+```bash
 omen simulate --scenario data/scenarios/sap/scenario_pack.json
-# Step 4. explain simulation result
+```
+
+This step generates reasoning traces and writes the deterministic result to `output/sap/result.json`.
+
+#### Step 3. Explain
+
+Omen's explanation module interprets simulation outcomes and traces back key decision points and risk items (known unknowns) from the situation artifact to generate decision-ready insights and recommendations:
+
+```bash
 omen explain --pack-id sap
 ```
 
-Deterministic outputs are written by default to:
+This step generates a structured explanation artifact at `output/sap/explanation.json`.
 
-- `output/<pack-id>/result.json`
-- `output/<pack-id>/comparison.json`
-- `output/<pack-id>/explanation.json`
+### Launch UI
 
-### View Results
-
-**Strategic Actor Persona UI**
-
-```bash
-streamlit run app/strategic_actor.py
-```
-
-Then open `http://localhost:8501` and select a case from `cases/actors/` to view persona narrative, graph, and timeline.
-
-**Strategic Situation Brief**
-
-After `omen analyze situation`, read the generated brief:
-
-```bash
-# Example brief path
-data/scenarios/sap/situation.md
-```
-
-**Strategic Reasoning Flow**
+Omen also provides a Streamlit-based UI application for visualizing the full strategic reasoning flow.
 
 ```bash
 streamlit run app/scenario_planning.py
 ```
 
-Then select a pack in the sidebar to inspect the full chain:
-- source/brief (`situation.json` / `situation.md`)
-- actor profile + action preferences
-- scenario planning and A/B/C priors
-- deterministic result + reason-chain
-- explanation with decision-point and known-unknown closure
+#### End-to-End Flow
+
+![End-to-End Flow](docs/assets/images/streamlit-strategic-reason-flow.png)
+
+#### More details
+
+You can click on each panel on the page to inspect the full chain of outputs from source document to situation artifact, scenario artifact, simulation result, and explanation artifact.
+
+![Scenario Planning](docs/assets/images/streamlit-scenario-planning.png)
 
 ## 👥 Target Audience
 
@@ -116,11 +149,21 @@ Omen is built for the following roles:
 *   Open Source Ecosystem Observers
 *   Investors & Industry Analysts
 
-## 🎬 Show Cases
+## 🎬 Showcase
 
-We have built-in classic reasoning:
-*   [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
-*   [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
+### Strategic Actor Analyze
+
+*  [👤 Elon Musk](cases/actors/elon-musk.md)
+*  [👤 Jeff Bezos](cases/actors/jeff-bezos.md)
+*  [👤 Steve Jobs](cases/actors/steve-jobs.md)
+*  [👤 Jack Ma](cases/actors/jack-ma.md)
+*  [👤 Chen Jiaxing (me)](cases/actors/chen-jiaxing.md)
+
+### Strategic Reasoning Cases
+
+*  [🧩 Acquisition: SAP vs Reltio](cases/situations/sap_reltio_acquisition.md)
+*  [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
+*  [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
 
 More scenarios are under development (contributions welcome):
 *   `Agent Infrastructure` vs `Workflow Platforms`
@@ -139,10 +182,10 @@ Omen is under [AGPL-3.0-or-later](LICENSE), the project is developed and maintai
 
 Omen aims to become an **open strategic reasoning workstation**:
 > It does not output a single answer, but helps people systematically understand **how the future branches**;
-> Understand **which conditions shape the outcome**;
-> Understand **which actions can change the path**.
+> and understand **which conditions shape the outcome**;
+> and understand **which actions can change the path**.
 
-If you are interested in technological evolution, market substitution, strategic modeling, or multi-agent reasoning, welcome to join us in interpreting the **omens** of this chaotic world together.
+If you are interested in technological evolution, market substitution, strategic modeling, or multi-agent reasoning, you are welcome to join us in interpreting the **omens** of this chaotic world together.
 
 ---
 *Simulate the Signs. Reveal the Chaos.*

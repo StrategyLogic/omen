@@ -1,0 +1,357 @@
+{
+  "query": {
+    "type": "status",
+    "year": null,
+    "date": null
+  },
+  "timeline": [
+    {
+      "id": "event_1",
+      "event_id": "event_1",
+      "time": "2024",
+      "name": "Reltio migrates database to Spanner",
+      "event": "other",
+      "description": "Reltio migrated its underlying database from Cassandra to Spanner on Google Cloud.",
+      "content": "Reltio migrated its underlying database from Cassandra to Spanner on Google Cloud.",
+      "evidence": "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt",
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "strategic": true,
+      "is_strategy_related": true
+    },
+    {
+      "id": "event_2",
+      "event_id": "event_2",
+      "time": "2025-02",
+      "name": "SAP launches Business Data Cloud",
+      "event": "launch",
+      "description": "SAP launched its Business Data Cloud (BDC) service in alliance with Databricks.",
+      "content": "SAP launched its Business Data Cloud (BDC) service in alliance with Databricks.",
+      "evidence": "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt",
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "strategic": true,
+      "is_strategy_related": true
+    },
+    {
+      "id": "event_3",
+      "event_id": "event_3",
+      "time": "2025-12",
+      "name": "DSAG research reveals low BDC familiarity and migration issues",
+      "event": "other",
+      "description": "Research from DSAG found 83% of its members were only slightly familiar with or not familiar at all with BDC, and that customers stuck mid-migration were paying full cloud fees for an unusable system.",
+      "content": "Research from DSAG found 83% of its members were only slightly familiar with or not familiar at all with BDC, and that customers stuck mid-migration were paying full cloud fees for an unusable system.",
+      "evidence": "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt",
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "strategic": true,
+      "is_strategy_related": true
+    },
+    {
+      "id": "event_4",
+      "event_id": "event_4",
+      "time": "2026-03",
+      "name": "SAP announces acquisition of Reltio",
+      "event": "other",
+      "description": "SAP announced its acquisition of master data management and data integration specialist Reltio to integrate non-SAP data into its AI platform and boost BDC adoption.",
+      "content": "SAP announced its acquisition of master data management and data integration specialist Reltio to integrate non-SAP data into its AI platform and boost BDC adoption.",
+      "evidence": "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt",
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "strategic": true,
+      "is_strategy_related": true
+    }
+  ],
+  "actor_graph": {
+    "nodes": [
+      {
+        "id": "actor-ceo-muhammad-alam",
+        "label": "Muhammad Alam",
+        "node_type": "strategic_actor",
+        "actor_type": "StrategicActor",
+        "role": "board executive",
+        "is_strategic_actor": true
+      },
+      {
+        "id": "actor-customer-dsag-members",
+        "label": "DSAG Members",
+        "node_type": "actor",
+        "actor_type": "Actor",
+        "role": "customer user group",
+        "is_strategic_actor": false
+      },
+      {
+        "id": "actor-competitor-databricks",
+        "label": "Databricks",
+        "node_type": "actor",
+        "actor_type": "Actor",
+        "role": "competitor partner",
+        "is_strategic_actor": false
+      },
+      {
+        "id": "actor-analyst-tony-baer",
+        "label": "Tony Baer",
+        "node_type": "actor",
+        "actor_type": "Actor",
+        "role": "industry analyst",
+        "is_strategic_actor": false
+      },
+      {
+        "id": "actor-consultant-binoy-james",
+        "label": "Binoy James",
+        "node_type": "actor",
+        "actor_type": "Actor",
+        "role": "consultant",
+        "is_strategic_actor": false
+      },
+      {
+        "id": "actor-customer-pfizer",
+        "label": "Pfizer",
+        "node_type": "customer",
+        "actor_type": "Actor",
+        "role": "customer",
+        "is_strategic_actor": false
+      },
+      {
+        "id": "actor-customer-radisson",
+        "label": "Radisson",
+        "node_type": "customer",
+        "actor_type": "Actor",
+        "role": "customer",
+        "is_strategic_actor": false
+      },
+      {
+        "id": "actor-customer-warner-bros",
+        "label": "Warner Bros",
+        "node_type": "customer",
+        "actor_type": "Actor",
+        "role": "customer",
+        "is_strategic_actor": false
+      },
+      {
+        "id": "product-sap-bdc",
+        "label": "SAP Business Data Cloud (BDC)",
+        "node_type": "product"
+      },
+      {
+        "id": "product-reltio-mdm",
+        "label": "Reltio Master Data Management",
+        "node_type": "product"
+      },
+      {
+        "id": "product-sap-ai-platform",
+        "label": "SAP AI Platform",
+        "node_type": "product"
+      },
+      {
+        "id": "product-strategic-sap-board",
+        "label": "SAP Board (Product & Engineering)",
+        "node_type": "product"
+      },
+      {
+        "id": "event_1",
+        "label": "Reltio migrates database to Spanner",
+        "node_type": "event",
+        "description": "Reltio migrated its underlying database from Cassandra to Spanner on Google Cloud."
+      },
+      {
+        "id": "event_2",
+        "label": "SAP launches Business Data Cloud",
+        "node_type": "event",
+        "description": "SAP launched its Business Data Cloud (BDC) service in alliance with Databricks."
+      },
+      {
+        "id": "event_3",
+        "label": "DSAG research reveals low BDC familiarity and migration issues",
+        "node_type": "event",
+        "description": "Research from DSAG found 83% of its members were only slightly familiar with or not familiar at all with BDC, and that customers stuck mid-migration were paying full cloud fees for an unusable system."
+      },
+      {
+        "id": "event_4",
+        "label": "SAP announces acquisition of Reltio",
+        "node_type": "event",
+        "description": "SAP announced its acquisition of master data management and data integration specialist Reltio to integrate non-SAP data into its AI platform and boost BDC adoption."
+      }
+    ],
+    "edges": [
+      {
+        "source": "actor-competitor-databricks",
+        "target": "event_2",
+        "label": "involved_in",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-customer-dsag-members",
+        "target": "event_3",
+        "label": "involved_in",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-consultant-binoy-james",
+        "target": "event_3",
+        "label": "involved_in",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-ceo-muhammad-alam",
+        "target": "event_4",
+        "label": "involved_in",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-ceo-muhammad-alam",
+        "target": "product-sap-bdc",
+        "label": "builds",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-ceo-muhammad-alam",
+        "target": "product-reltio-mdm",
+        "label": "builds",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-ceo-muhammad-alam",
+        "target": "product-sap-ai-platform",
+        "label": "builds",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-ceo-muhammad-alam",
+        "target": "product-strategic-sap-board",
+        "label": "builds",
+        "weight": 1.0
+      },
+      {
+        "source": "event_1",
+        "target": "product-sap-bdc",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_1",
+        "target": "product-reltio-mdm",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_1",
+        "target": "product-sap-ai-platform",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_1",
+        "target": "product-strategic-sap-board",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-competitor-databricks",
+        "target": "event_2",
+        "label": "participates_in",
+        "weight": 1.0
+      },
+      {
+        "source": "event_2",
+        "target": "product-sap-bdc",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_2",
+        "target": "product-reltio-mdm",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_2",
+        "target": "product-sap-ai-platform",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_2",
+        "target": "product-strategic-sap-board",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-customer-dsag-members",
+        "target": "event_3",
+        "label": "participates_in",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-consultant-binoy-james",
+        "target": "event_3",
+        "label": "participates_in",
+        "weight": 1.0
+      },
+      {
+        "source": "event_3",
+        "target": "product-sap-bdc",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_3",
+        "target": "product-reltio-mdm",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_3",
+        "target": "product-sap-ai-platform",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_3",
+        "target": "product-strategic-sap-board",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "actor-ceo-muhammad-alam",
+        "target": "event_4",
+        "label": "participates_in",
+        "weight": 1.0
+      },
+      {
+        "source": "event_4",
+        "target": "product-sap-bdc",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_4",
+        "target": "product-reltio-mdm",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_4",
+        "target": "product-sap-ai-platform",
+        "label": "affects",
+        "weight": 1.0
+      },
+      {
+        "source": "event_4",
+        "target": "product-strategic-sap-board",
+        "label": "affects",
+        "weight": 1.0
+      }
+    ]
+  },
+  "summary": {
+    "timeline_event_count": 4,
+    "actor_event_count": 4,
+    "actor_node_count": 16,
+    "actor_edge_count": 28
+  }
+}

@@ -1,0 +1,171 @@
+{
+  "situation_id": "sap_reltio_acquisition",
+  "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+  "space_inputs": [
+    {
+      "name": "Enterprise AI adoption shifting from model-first to data-context-first",
+      "kind": "signal",
+      "signal_id": "Enterprise AI adoption shifting from model-first to data-context-first",
+      "domain": "market",
+      "direction": "up",
+      "mechanism_note": "The signal reflects a market-wide recognition that AI's potential is gated by data fragmentation, not just model sophistication. This creates a structural driver for solutions that unify data context across enterprise silos.",
+      "strength": 0.8,
+      "mapped_targets": [
+        {
+          "space": "MarketSpace",
+          "element_key": "demand_for_integrated_data_context",
+          "impact_type": "driver",
+          "impact_strength": 0.8,
+          "mechanism_conditions": {
+            "expected_effect": "Increases enterprise willingness to invest in data integration and master data management solutions that provide unified context for AI.",
+            "activation_condition": "AI projects require clean, harmonized data across business units and platforms to deliver reliable business value."
+          }
+        }
+      ],
+      "market_constraints": [
+        {
+          "constraint_key": "Must integrate data from outside SAP's broad application portfolio",
+          "binding_strength": 0.6
+        },
+        {
+          "constraint_key": "Must address customer concerns about paying for unusable systems during migration",
+          "binding_strength": 0.6
+        }
+      ]
+    },
+    {
+      "name": "AI-native entity resolution and golden record creation replacing traditional MDM",
+      "kind": "signal",
+      "signal_id": "AI-native entity resolution and golden record creation replacing traditional MDM",
+      "domain": "tech",
+      "direction": "up",
+      "mechanism_note": "This is a technological evolution within the MDM domain, moving from rigid, schema-first approaches to adaptive, AI-driven entity resolution. It enables real-time harmonization of data from diverse applications.",
+      "strength": 0.7,
+      "mapped_targets": [
+        {
+          "space": "TechSpace",
+          "element_key": "adoption_of_ai_based_mdm",
+          "impact_type": "driver",
+          "impact_strength": 0.7,
+          "mechanism_conditions": {
+            "expected_effect": "Accelerates the replacement of traditional MDM with systems that use AI for entity resolution, improving accuracy and reducing manual effort.",
+            "activation_condition": "Cloud-native, AI-based systems can automate the discovery and merging of related records across disparate sources more effectively than rule-based legacy MDM."
+          }
+        }
+      ],
+      "market_constraints": [
+        {
+          "constraint_key": "Must integrate data from outside SAP's broad application portfolio",
+          "binding_strength": 0.6
+        },
+        {
+          "constraint_key": "Must address customer concerns about paying for unusable systems during migration",
+          "binding_strength": 0.6
+        }
+      ]
+    },
+    {
+      "name": "Customer tolerance for 'pay-during-migration' fees for unusable systems is decreasing",
+      "kind": "signal",
+      "signal_id": "Customer tolerance for 'pay-during-migration' fees for unusable systems is decreasing",
+      "domain": "market",
+      "direction": "down",
+      "mechanism_note": "This is a powerful market sentiment shift. Negative experiences with migration penalties create lasting reputational damage and become a primary objection in sales cycles, independent of any specific vendor's product.",
+      "strength": 0.9,
+      "mapped_targets": [
+        {
+          "space": "MarketSpace",
+          "element_key": "willingness_to_accept_migration_risk",
+          "impact_type": "constraint",
+          "impact_strength": 0.9,
+          "mechanism_conditions": {
+            "expected_effect": "Strongly inhibits adoption of new data platforms where migration risk is perceived as high or poorly managed.",
+            "binding_condition": "Customers are financially penalized during complex data platform migrations if they get stuck, paying for a system that delivers no value.",
+            "release_condition": "Vendors adopt migration models that de-risk the process (e.g., phased payments, success-based fees, guaranteed timelines)."
+          }
+        }
+      ],
+      "market_constraints": [
+        {
+          "constraint_key": "current_market_adoption_and_coordination_frictions_remain_binding",
+          "binding_strength": 0.9
+        }
+      ]
+    },
+    {
+      "name": "Strategic alliances between enterprise software giants and data platform vendors are intensifying",
+      "kind": "signal",
+      "signal_id": "Strategic alliances between enterprise software giants and data platform vendors are intensifying",
+      "domain": "market",
+      "direction": "up",
+      "mechanism_note": "This is a structural market trend where ERP vendors, data lakehouses, and AI platforms must interoperate. It validates strategies focused on exposing data as products to external partners.",
+      "strength": 0.75,
+      "mapped_targets": [
+        {
+          "space": "MarketSpace",
+          "element_key": "pressure_for_ecosystem_interoperability",
+          "impact_type": "driver",
+          "impact_strength": 0.75,
+          "mechanism_conditions": {
+            "expected_effect": "Drives formation of partnerships and standards to enable data sharing and AI model portability across previously walled gardens.",
+            "activation_condition": "No single vendor dominates the entire enterprise data stack, forcing cooperation to provide complete solutions."
+          }
+        }
+      ],
+      "market_constraints": [
+        {
+          "constraint_key": "Must integrate data from outside SAP's broad application portfolio",
+          "binding_strength": 0.6
+        },
+        {
+          "constraint_key": "Must address customer concerns about paying for unusable systems during migration",
+          "binding_strength": 0.6
+        }
+      ]
+    }
+  ],
+  "constraint_signals": [
+    {
+      "name": "Must integrate data from outside SAP's broad application portfolio",
+      "kind": "constraint"
+    },
+    {
+      "name": "Must address customer concerns about paying for unusable systems during migration",
+      "kind": "constraint"
+    },
+    {
+      "name": "Must overcome low customer familiarity with BDC (83% of DSAG members)",
+      "kind": "constraint"
+    },
+    {
+      "name": "Must maintain Reltio's cloud-native approach to data integration and MDM",
+      "kind": "constraint"
+    },
+    {
+      "name": "Must leverage Reltio's AI-based entity resolution system for golden records",
+      "kind": "constraint"
+    }
+  ],
+  "similarity_scores": [
+    {
+      "scenario_key": "A",
+      "score": 0.4,
+      "source": "planning_template_default"
+    },
+    {
+      "scenario_key": "B",
+      "score": 0.35,
+      "source": "planning_template_default"
+    },
+    {
+      "scenario_key": "C",
+      "score": 0.25,
+      "source": "planning_template_default"
+    }
+  ],
+  "query_version": "planning_query_v1",
+  "graph_stats": {
+    "nodes": 6,
+    "edges": 5
+  }
+}

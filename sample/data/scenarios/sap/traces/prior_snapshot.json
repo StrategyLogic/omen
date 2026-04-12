@@ -1,0 +1,42 @@
+{
+  "pack_id": "sap",
+  "pack_version": "1.0.0",
+  "situation_id": "sap_reltio_acquisition",
+  "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+  "raw_prior_scores": [
+    {
+      "scenario_key": "A",
+      "score": 0.65,
+      "explain": "Aligns strongly with platform-centric acquisition style, accelerating core platform adoption through strategic data asset integration to create an asymmetric AI advantage."
+    },
+    {
+      "scenario_key": "B",
+      "score": 0.25,
+      "explain": "Fits the 'addressing customer adoption signals' preference but is a defensive, risk-mitigation play, less aligned with the proactive, strategic platform vision."
+    },
+    {
+      "scenario_key": "C",
+      "score": 0.1,
+      "explain": "Direct feature competition is a distraction from the core goal of strengthening SAP's AI data foundation; misaligned with the strategic, platform-centric style."
+    }
+  ],
+  "normalized_priors": [
+    {
+      "scenario_key": "A",
+      "score": 0.65,
+      "explain": "Aligns strongly with platform-centric acquisition style, accelerating core platform adoption through strategic data asset integration to create an asymmetric AI advantage."
+    },
+    {
+      "scenario_key": "B",
+      "score": 0.25,
+      "explain": "Fits the 'addressing customer adoption signals' preference but is a defensive, risk-mitigation play, less aligned with the proactive, strategic platform vision."
+    },
+    {
+      "scenario_key": "C",
+      "score": 0.09999999999999998,
+      "explain": "Direct feature competition is a distraction from the core goal of strengthening SAP's AI data foundation; misaligned with the strategic, platform-centric style."
+    }
+  ],
+  "planning_query_ref": "data/scenarios/sap/traces/planning_query.json",
+  "snapshot_version": "prior_snapshot_v1"
+}

@@ -1,0 +1,370 @@
+{
+  "meta": {
+    "version": "v0.1.0-actor",
+    "case_id": "sap_reltio_acquisition"
+  },
+  "actors": [
+    {
+      "id": "actor-ceo-muhammad-alam",
+      "name": "Muhammad Alam",
+      "type": "StrategicActor",
+      "role": "board executive",
+      "profile": {
+        "background_facts": {
+          "birth_year": null,
+          "origin": null,
+          "education": [],
+          "career_trajectory": [],
+          "key_experiences": [
+            "SAP announced its acquisition of master data management and data integration specialist Reltio to integrate non-SAP data into its AI platform and boost BDC adoption."
+          ]
+        },
+        "strategic_style": {
+          "decision_style": "platform-centric acquisition",
+          "value_proposition": "accelerating core platform adoption through strategic data asset integration",
+          "decision_preferences": [
+            "alliances with complementary data/AI players",
+            "cloud-native technology migrations",
+            "addressing non-SAP data integration gaps",
+            "responding to low customer adoption signals"
+          ],
+          "non_negotiables": [
+            "must strengthen SAP's AI platform data foundation",
+            "must maintain cloud architecture standards",
+            "must address customer migration pain points"
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor-customer-dsag-members",
+      "name": "DSAG Members",
+      "type": "Actor",
+      "role": "customer user group",
+      "profile": {
+        "interest": "Understanding and effectively using SAP products, avoiding migration pitfalls",
+        "influence_level": "high",
+        "alignment_with_strategic_actor": "neutral_to_negative"
+      }
+    },
+    {
+      "id": "actor-competitor-databricks",
+      "name": "Databricks",
+      "type": "Actor",
+      "role": "competitor partner",
+      "profile": {
+        "interest": "Data lake and AI platform market share, alliance benefits",
+        "influence_level": "medium",
+        "alignment_with_strategic_actor": "partial"
+      }
+    },
+    {
+      "id": "actor-analyst-tony-baer",
+      "name": "Tony Baer",
+      "type": "Actor",
+      "role": "industry analyst",
+      "profile": {
+        "interest": "Analyzing enterprise data strategy shifts",
+        "influence_level": "medium",
+        "alignment_with_strategic_actor": "neutral"
+      }
+    },
+    {
+      "id": "actor-consultant-binoy-james",
+      "name": "Binoy James",
+      "type": "Actor",
+      "role": "consultant",
+      "profile": {
+        "interest": "Client success, practical implementation risks",
+        "influence_level": "medium",
+        "alignment_with_strategic_actor": "critical"
+      }
+    },
+    {
+      "id": "actor-customer-pfizer",
+      "name": "Pfizer",
+      "type": "Actor",
+      "role": "customer",
+      "profile": {
+        "interest": "Reliable master data management",
+        "influence_level": "low",
+        "alignment_with_strategic_actor": "indirect"
+      }
+    },
+    {
+      "id": "actor-customer-radisson",
+      "name": "Radisson",
+      "type": "Actor",
+      "role": "customer",
+      "profile": {
+        "interest": "Reliable master data management",
+        "influence_level": "low",
+        "alignment_with_strategic_actor": "indirect"
+      }
+    },
+    {
+      "id": "actor-customer-warner-bros",
+      "name": "Warner Bros",
+      "type": "Actor",
+      "role": "customer",
+      "profile": {
+        "interest": "Reliable master data management",
+        "influence_level": "low",
+        "alignment_with_strategic_actor": "indirect"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "event_1",
+      "name": "Reltio migrates database to Spanner",
+      "type": "technical_migration",
+      "date": "2024",
+      "description": "Reltio migrated its underlying database from Cassandra to Spanner on Google Cloud.",
+      "actors_involved": [],
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "is_strategy_related": true
+    },
+    {
+      "id": "event_2",
+      "name": "SAP launches Business Data Cloud",
+      "type": "product_launch",
+      "date": "2025-02",
+      "description": "SAP launched its Business Data Cloud (BDC) service in alliance with Databricks.",
+      "actors_involved": [
+        "actor-strategic-sap-board",
+        "actor-competitor-databricks"
+      ],
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "is_strategy_related": true
+    },
+    {
+      "id": "event_3",
+      "name": "DSAG research reveals low BDC familiarity and migration issues",
+      "type": "research_finding",
+      "date": "2025-12",
+      "description": "Research from DSAG found 83% of its members were only slightly familiar with or not familiar at all with BDC, and that customers stuck mid-migration were paying full cloud fees for an unusable system.",
+      "actors_involved": [
+        "actor-customer-dsag-members",
+        "actor-consultant-binoy-james"
+      ],
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "is_strategy_related": true
+    },
+    {
+      "id": "event_4",
+      "name": "SAP announces acquisition of Reltio",
+      "type": "acquisition",
+      "date": "2026-03",
+      "description": "SAP announced its acquisition of master data management and data integration specialist Reltio to integrate non-SAP data into its AI platform and boost BDC adoption.",
+      "actors_involved": [
+        "actor-strategic-sap-board",
+        "actor-ceo-muhammad-alam"
+      ],
+      "evidence_refs": [
+        "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+      ],
+      "is_strategy_related": true
+    }
+  ],
+  "products": [
+    {
+      "id": "product-sap-bdc",
+      "name": "SAP Business Data Cloud (BDC)",
+      "type": "product",
+      "description": "Service launched in alliance with Databricks to build 'insight apps' using analytics and AI models on real-time application data.",
+      "attributes": {}
+    },
+    {
+      "id": "product-reltio-mdm",
+      "name": "Reltio Master Data Management",
+      "type": "product",
+      "description": "Cloud-native master data management and data integration platform using AI-based entity resolution to create 'golden records'.",
+      "attributes": {}
+    },
+    {
+      "id": "product-sap-ai-platform",
+      "name": "SAP AI Platform",
+      "type": "platform",
+      "description": "SAP's business AI platform requiring integrated and harmonized data from SAP and non-SAP sources.",
+      "attributes": {}
+    },
+    {
+      "id": "product-strategic-sap-board",
+      "name": "SAP Board (Product & Engineering)",
+      "type": "product",
+      "description": "",
+      "attributes": {}
+    }
+  ],
+  "influences": [
+    {
+      "source": "actor-ceo-muhammad-alam",
+      "target": "product-sap-bdc",
+      "type": "builds",
+      "description": "Founder/lead actor builds and steers the core product asset."
+    },
+    {
+      "source": "actor-ceo-muhammad-alam",
+      "target": "product-reltio-mdm",
+      "type": "builds",
+      "description": "Founder/lead actor builds and steers the core product asset."
+    },
+    {
+      "source": "actor-ceo-muhammad-alam",
+      "target": "product-sap-ai-platform",
+      "type": "builds",
+      "description": "Founder/lead actor builds and steers the core product asset."
+    },
+    {
+      "source": "actor-ceo-muhammad-alam",
+      "target": "product-strategic-sap-board",
+      "type": "builds",
+      "description": "Founder/lead actor builds and steers the core product asset."
+    },
+    {
+      "source": "event_1",
+      "target": "product-sap-bdc",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_1",
+      "target": "product-reltio-mdm",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_1",
+      "target": "product-sap-ai-platform",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_1",
+      "target": "product-strategic-sap-board",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "actor-strategic-sap-board",
+      "target": "event_2",
+      "type": "participates_in",
+      "description": "Actor participates in strategic decision/event."
+    },
+    {
+      "source": "actor-competitor-databricks",
+      "target": "event_2",
+      "type": "participates_in",
+      "description": "Actor participates in strategic decision/event."
+    },
+    {
+      "source": "event_2",
+      "target": "product-sap-bdc",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_2",
+      "target": "product-reltio-mdm",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_2",
+      "target": "product-sap-ai-platform",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_2",
+      "target": "product-strategic-sap-board",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "actor-customer-dsag-members",
+      "target": "event_3",
+      "type": "participates_in",
+      "description": "Actor participates in strategic decision/event."
+    },
+    {
+      "source": "actor-consultant-binoy-james",
+      "target": "event_3",
+      "type": "participates_in",
+      "description": "Actor participates in strategic decision/event."
+    },
+    {
+      "source": "event_3",
+      "target": "product-sap-bdc",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_3",
+      "target": "product-reltio-mdm",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_3",
+      "target": "product-sap-ai-platform",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_3",
+      "target": "product-strategic-sap-board",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "actor-strategic-sap-board",
+      "target": "event_4",
+      "type": "participates_in",
+      "description": "Actor participates in strategic decision/event."
+    },
+    {
+      "source": "actor-ceo-muhammad-alam",
+      "target": "event_4",
+      "type": "participates_in",
+      "description": "Actor participates in strategic decision/event."
+    },
+    {
+      "source": "event_4",
+      "target": "product-sap-bdc",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_4",
+      "target": "product-reltio-mdm",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_4",
+      "target": "product-sap-ai-platform",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    },
+    {
+      "source": "event_4",
+      "target": "product-strategic-sap-board",
+      "type": "affects",
+      "description": "Strategic decision affects the core product lifecycle."
+    }
+  ],
+  "query_skeleton": {
+    "query_types": [
+      "status",
+      "persona"
+    ]
+  }
+}

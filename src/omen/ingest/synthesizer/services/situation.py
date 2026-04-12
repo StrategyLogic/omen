@@ -7,13 +7,25 @@ from pathlib import Path
 from typing import Any
 
 from omen.ingest.processor import fetch_url_text, save_url_source_text
-from omen.ingest.synthesizer.services.actor import ensure_actor_artifacts
+from omen.ingest.synthesizer.services.actor import (
+    ensure_actor_artifacts,
+    ensure_persona_artifact_for_actor_ref,
+    ensure_status_artifact_for_actor_ref,
+    load_persona_payload,
+    load_status_payload,
+    persona_payload_has_usable_content,
+    status_payload_has_usable_content,
+)
 from omen.ingest.writer.markdown import save_situation_brief, save_situation_case_from_source
 from omen.ingest.validators.situation import validate_situation_artifact_or_raise
 from omen.ingest.validators.situation import validate_situation_source_or_raise
 from omen.ui.artifacts import ACTOR_ONTOLOGY_FILENAME
 
 from omen.ingest.synthesizer.builders import situation as _builder
+
+
+def _contains_parent_traversal(path: Path) -> bool:
+    return any(part == ".." for part in path.parts)
 
 
 def _derive_case_name_from_path(input_path: Path) -> str:
@@ -43,8 +55,12 @@ def _resolve_situation_doc_path(raw_doc: str) -> Path:
     raw = str(raw_doc).strip()
     if "/" in raw:
         candidate = Path(raw)
+        if _contains_parent_traversal(candidate):
+            raise ValueError("path traversal is not allowed in situation document path")
         if not candidate.suffix:
             candidate = candidate.with_suffix(".md")
+        if candidate.suffix.lower() != ".md":
+            raise ValueError("situation document path must end with .md")
         return candidate
 
     stem = raw[:-3] if raw.endswith(".md") else raw
@@ -57,6 +73,8 @@ def _validate_explicit_actor_ref(actor_ref: str) -> str:
         raise ValueError("actor reference is empty")
 
     candidate = Path(raw)
+    if _contains_parent_traversal(candidate):
+        raise ValueError("path traversal is not allowed in actor reference")
     if candidate.exists():
         return raw
 
@@ -171,6 +189,7 @@ def run_situation_analysis(
     output: str | None,
     pack_id: str | None,
     pack_version: str,
+    force: bool = False,
 ) -> None:
     if url and (doc or input_alias):
         raise ValueError("use either --doc or --url, not both")
@@ -203,13 +222,53 @@ def run_situation_analysis(
     effective_pack_id = str(pack_id) if pack_id else _derive_default_pack_id(input_path, actor_ref=effective_actor_ref)
     output_path = Path(output) if output else _resolve_default_output_path(effective_pack_id)
 
-    _analyze_and_save_situation(
-        situation_file=input_path,
+    actor_path = Path(effective_actor_ref)
+    if not actor_path.is_absolute():
+        actor_path = Path.cwd() / actor_path
+    persona_path = actor_path.parent / "analyze_persona.json"
+    status_path = actor_path.parent / "analyze_status.json"
+
+    skip_llm = False
+
+    if not force:
+        has_situation = output_path.exists()
+        has_actor = actor_path.exists()
+        has_persona_file = persona_path.exists()
+        has_persona = persona_payload_has_usable_content(load_persona_payload(persona_path))
+        has_status_file = status_path.exists()
+        has_status = status_payload_has_usable_content(load_status_payload(status_path))
+
+        print(
+            "Local artifact check: "
+            f"situation={has_situation}, actor={has_actor}, "
+            f"persona_file={has_persona_file}, persona_usable={has_persona}, "
+            f"status_file={has_status_file}, status_usable={has_status}"
+        )
+        if has_situation and has_actor and has_persona:
+            print("Local-first: all required artifacts already exist, skip LLM generation.")
+            skip_llm = True
+
+    if not skip_llm:
+        _analyze_and_save_situation(
+            situation_file=input_path,
+            actor_ref=effective_actor_ref,
+            pack_id=effective_pack_id,
+            pack_version=pack_version,
+            output_path=output_path,
+        )
+
+    # Persona insight must run after situation analysis completes, so actor-enhanced context is ready.
+    persona_path = ensure_persona_artifact_for_actor_ref(
         actor_ref=effective_actor_ref,
-        pack_id=effective_pack_id,
-        pack_version=pack_version,
-        output_path=output_path,
+        config_path="config/llm.toml",
     )
+    if persona_path is not None:
+        print(f"Persona insight ensured: {persona_path}")
+
+    # Analyze status is mounted after persona step with reuse-first behavior.
+    status_path = ensure_status_artifact_for_actor_ref(actor_ref=effective_actor_ref)
+    if status_path is not None:
+        print(f"Status insight ensured: {status_path}")
 
 
 def save_auxiliary_json(path: str | Path, payload: dict[str, Any]) -> Path:
@@ -229,7 +288,12 @@ def resolve_situation_artifact_ref(ref: str | Path) -> Path:
 
     # Explicit path input: path-like string or direct json filename.
     if "/" in raw or raw.endswith(".json"):
-        return Path(raw)
+        candidate = Path(raw)
+        if _contains_parent_traversal(candidate):
+            raise ValueError("path traversal is not allowed in situation reference")
+        if candidate.suffix.lower() != ".json":
+            raise ValueError("explicit situation reference must end with .json")
+        return candidate
 
     # Pack-id input: resolve to pack root situation artifact.
     return Path("data/scenarios") / raw / "situation.json"

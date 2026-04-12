@@ -19,31 +19,12 @@ from omen.ui.actor_graph import build_actor_graph_figure
 
 
 st.set_page_config(page_title="Omen Strategic Reasoning", layout="wide")
-WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _normalize_pack_id(value: Any) -> str:
     raw = Path(str(value or "")).stem.strip()
-    # Keep only conservative filename-safe characters for folder keys.
     return re.sub(r"[^A-Za-z0-9_.-]", "", raw)
-
-
-def _resolve_safe_root(raw_value: str, default_rel: str) -> Path:
-    workspace_base = os.path.normpath(str(WORKSPACE_ROOT))
-    default_path = Path(os.path.normpath(os.path.join(workspace_base, default_rel)))
-
-    raw = str(raw_value or "").strip()
-    if not raw:
-        return default_path
-
-    if not os.path.isabs(raw):
-        fullpath = os.path.normpath(os.path.join(workspace_base, raw))
-    else:
-        fullpath = os.path.normpath(raw)
-
-    if not fullpath.startswith(workspace_base):
-        return default_path
-    return Path(fullpath)
 
 
 def _render_json(path: str, payload: dict[str, Any] | None) -> None:
@@ -79,9 +60,37 @@ def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str,
         return None
 
 
+def _load_sample_actor_payloads(pack_id: str) -> dict[str, Any]:
+    safe_pack_id = _normalize_pack_id(pack_id)
+    actor_dir = Path("sample/data/actors") / safe_pack_id
+    actor_base = Path("sample/data/actors")
+    actor_profile_path = actor_dir / "actor_ontology.json"
+    persona_path = actor_dir / "analyze_persona.json"
+    status_path = actor_dir / "analyze_status.json"
+
+    return {
+        "paths": {
+            "actor_profile": str(actor_profile_path),
+            "persona": str(persona_path),
+            "actor_status": str(status_path),
+        },
+        "payloads": {
+            "actor_profile": _read_json_file(base_dir=actor_base, pack_id=safe_pack_id, filename="actor_ontology.json"),
+            "persona": _read_json_file(base_dir=actor_base, pack_id=safe_pack_id, filename="analyze_persona.json"),
+            "actor_status": _read_json_file(base_dir=actor_base, pack_id=safe_pack_id, filename="analyze_status.json"),
+        },
+    }
+
+
 def _load_scenario_slot_labels() -> dict[str, str]:
-    template_path = Path(__file__).resolve().parents[1] / "config" / "templates" / "planning.yaml"
-    if not template_path.exists():
+    file_path = Path(__file__).resolve()
+    candidate_paths = [
+        file_path.parents[1] / "config" / "templates" / "planning.yaml",
+        file_path.parents[2] / "config" / "templates" / "planning.yaml",
+    ]
+
+    template_path = next((path for path in candidate_paths if path.exists()), None)
+    if template_path is None:
         return {}
 
     try:
@@ -244,7 +253,7 @@ def _compact_brief_markdown(markdown_text: str) -> str:
         prefix_len = len(line) - len(stripped)
         prefix = line[:prefix_len]
 
-        if stripped.startswith("**ID:**") or stripped.startswith("**Version:**") or stripped.startswith("**Source:**") or stripped.startswith("**Core Topic:**"):
+        if stripped.startswith("**ID:**") or stripped.startswith("**Version:**") or stripped.startswith("**Core Topic:**"):
             continue
 
         if stripped.startswith("**Generated:**"):
@@ -574,15 +583,15 @@ st.markdown(
 )
 
 with st.sidebar:
-    st.header("Data Source")
-    data_root_raw = st.text_input("Data root", value="data/scenarios")
-    output_root_raw = st.text_input("Output root", value="output")
-    data_root = _resolve_safe_root(data_root_raw, "data/scenarios")
-    output_root = _resolve_safe_root(output_root_raw, "output")
+    st.header("Sample Data Source")
+    st.warning("Demo mode: this app reads bundled sample artifacts only.")
+    DATA_ROOT = "sample/data/scenarios"
+    OUTPUT_ROOT = "sample/output"
+    st.caption(f"Data root: {DATA_ROOT}")
+    st.caption(f"Output root: {OUTPUT_ROOT}")
 
-    candidates = discover_spec8_pack_candidates(data_root=data_root, output_root=output_root)
+    candidates = discover_spec8_pack_candidates(data_root=DATA_ROOT, output_root=OUTPUT_ROOT)
     selected_pack = st.selectbox("Pack ID", options=candidates or [""], index=0)
-    output_pack_override = st.text_input("Output pack override (optional)", value="")
 
 if not selected_pack:
     st.info("No candidate pack found. Generate artifacts first via analyze/scenario/simulate/explain.")
@@ -592,13 +601,17 @@ safe_pack_id = _normalize_pack_id(selected_pack)
 
 bundle = load_spec8_flow_artifacts(
     pack_id=safe_pack_id,
-    data_root=data_root,
-    output_root=output_root,
-    output_pack_id=_normalize_pack_id(output_pack_override.strip()) or None,
+    data_root=DATA_ROOT,
+    output_root=OUTPUT_ROOT,
+    output_pack_id=None,
 )
 paths = dict(bundle.get("paths") or {})
 payloads = dict(bundle.get("payloads") or {})
 slot_labels = _load_scenario_slot_labels()
+
+sample_actor = _load_sample_actor_payloads(safe_pack_id)
+paths.update(dict(sample_actor.get("paths") or {}))
+payloads.update(dict(sample_actor.get("payloads") or {}))
 
 st.markdown(
     """
@@ -699,7 +712,7 @@ with tab_scenario:
     scenario_pack_path = Path(paths.get("scenario_pack") or "")
     if scenario_pack_payload is None and str(scenario_pack_path):
         scenario_pack_payload = _read_json_file(
-            base_dir=data_root,
+            base_dir=Path(DATA_ROOT),
             pack_id=safe_pack_id,
             filename="scenario_pack.json",
         )

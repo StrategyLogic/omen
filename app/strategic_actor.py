@@ -512,7 +512,7 @@ def _render_persona(persona_payload: dict[str, Any] | None) -> None:
             score_text = ""
 
         if score_text:
-            st.caption(f"{_t('consistency_score')}: {score_text}")
+            st.write(f"**{_t('consistency_score')}:** {score_text}")
         else:
             st.caption(_t("no_consistency_score"))
 

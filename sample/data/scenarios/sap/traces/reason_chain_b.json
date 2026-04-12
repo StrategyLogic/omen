@@ -1,0 +1,315 @@
+{
+  "artifact_type": "reason_chain",
+  "version": "reason_chain_v1",
+  "run_id": "det-0385b830a8f5",
+  "scenario_pack_ref": "sap",
+  "scenario_chains": [
+    {
+      "run_id": "det-0385b830a8f5",
+      "scenario_key": "B",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_1",
+            "step_type": "seed_inference",
+            "summary": "Mapped scenario variables to TechSpace and MarketSpace dimensions using pattern matching. 'Migration guarantee scope' maps to adoption_friction (MarketSpace). 'Reltio feature integration prioritization' is unmapped as it describes a strategic choice, not a market/tech state. 'Customer communication intensity' maps to adoption_friction (MarketSpace). Inferred current values from variable descriptions, assigning moderate levels due to the focus on addressing existing friction.",
+            "inputs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ],
+            "intermediate": {
+              "dimension_mapping": [
+                {
+                  "variable": "Migration guarantee scope",
+                  "pattern": "migration_*",
+                  "space": "MarketSpace",
+                  "dimension": "adoption_friction",
+                  "reason": "Variable describes contractual protections against migration pain, directly related to friction."
+                },
+                {
+                  "variable": "Reltio feature integration prioritization",
+                  "pattern": "none",
+                  "space": "unmapped",
+                  "dimension": "N/A",
+                  "reason": "Describes a prioritization strategy; does not fit a clear market or technology state dimension pattern."
+                },
+                {
+                  "variable": "Customer communication intensity",
+                  "pattern": "none",
+                  "space": "MarketSpace",
+                  "dimension": "adoption_friction",
+                  "reason": "Transparent updates aim to reduce uncertainty and perceived risk during migration, thus reducing friction."
+                }
+              ],
+              "value_calculation": [
+                {
+                  "dimension": "adoption_friction",
+                  "rule_applied": "B",
+                  "reason": "No direct signals. Scenario goal is to reduce migration pain points, implying current friction is high. However, the variable descriptions focus on mitigations, not stating current level. Using moderate baseline.",
+                  "value": 0.5,
+                  "confidence": 0.4
+                }
+              ]
+            },
+            "outputs": {
+              "tech_space_seed": [],
+              "market_space_seed": [
+                {
+                  "dimension": "adoption_friction",
+                  "value": 0.5,
+                  "confidence": 0.4,
+                  "validation_needed": true
+                }
+              ]
+            },
+            "confidence": 0.4,
+            "input_refs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ]
+          },
+          {
+            "step_id": "step_2",
+            "step_type": "constraint_activation",
+            "summary": "All three scenario constraints are activated as they are explicitly listed and the scenario has tradeoff_pressure, indicating they are binding assumptions. No signal conditions were provided to override this. Binding strength is set to default 0.7 for scenario assumptions.",
+            "inputs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ],
+            "intermediate": {
+              "activation_decisions": [
+                {
+                  "constraint": "Must address customer concerns about paying for unusable systems during migration",
+                  "condition_check": "No binding_condition signal. Present in scenario.constraints and scenario has tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must overcome low customer familiarity with BDC (83% of DSAG members)",
+                  "condition_check": "No binding_condition signal. Present in scenario.constraints and scenario has tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must integrate data from outside SAP's broad application portfolio",
+                  "condition_check": "No binding_condition signal. Present in scenario.constraints and scenario has tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                }
+              ]
+            },
+            "outputs": {
+              "activated_constraints": [
+                {
+                  "description": "Must address customer concerns about paying for unusable systems during migration",
+                  "binding_strength": 0.7,
+                  "reason": "scenario_assumption"
+                },
+                {
+                  "description": "Must overcome low customer familiarity with BDC (83% of DSAG members)",
+                  "binding_strength": 0.7,
+                  "reason": "scenario_assumption"
+                },
+                {
+                  "description": "Must integrate data from outside SAP's broad application portfolio",
+                  "binding_strength": 0.7,
+                  "reason": "scenario_assumption"
+                }
+              ],
+              "blocking_constraints": []
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ]
+          },
+          {
+            "step_id": "step_3",
+            "step_type": "target_derivation",
+            "summary": "Parsed the objective 'Reduce customer-reported migration pain points by 80% while maintaining BDC revenue stability.' This implies a target to significantly reduce adoption_friction. An 80% reduction suggests moving from a high pain state to a low one. Using the pattern 'resolve X% of...' maps to adoption_friction with a target value of 0.30. Variables also support reducing friction.",
+            "inputs": [
+              "scenario.objective",
+              "scenario.variables"
+            ],
+            "intermediate": {
+              "parsed_targets": [
+                {
+                  "source": "objective",
+                  "text": "Reduce customer-reported migration pain points by 80%",
+                  "pattern": "resolve 100% of ...",
+                  "interpretation": "80% reduction in pain points equates to resolving most friction.",
+                  "dimension": "adoption_friction",
+                  "direction": "down",
+                  "target_value": 0.3,
+                  "reason": "Target is to move friction from high towards low. 0.3 represents low friction (70% reduction from baseline 0.5 approximates 80% goal)."
+                },
+                {
+                  "source": "variable",
+                  "variable": "Migration guarantee scope",
+                  "interpretation": "Increasing scope reduces friction.",
+                  "dimension": "adoption_friction",
+                  "direction": "down",
+                  "target_value": 0.35,
+                  "reason": "Default for 'down' direction."
+                },
+                {
+                  "source": "variable",
+                  "variable": "Customer communication intensity",
+                  "interpretation": "Increasing communication reduces friction.",
+                  "dimension": "adoption_friction",
+                  "direction": "down",
+                  "target_value": 0.35,
+                  "reason": "Default for 'down' direction."
+                }
+              ]
+            },
+            "outputs": {
+              "target_profile": [
+                {
+                  "dimension": "adoption_friction",
+                  "target_value": 0.3,
+                  "reason": "Aggressive target from objective (80% reduction) overrides variable defaults.",
+                  "confidence": 0.7
+                }
+              ]
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "scenario.objective",
+              "scenario.variables"
+            ]
+          },
+          {
+            "step_id": "step_4",
+            "step_type": "gap_analysis",
+            "summary": "Calculated raw gap for adoption_friction: target 0.3 - current 0.5 = -0.2. All activated constraints have binding_strength 0.7. The constraints about addressing payment concerns and low familiarity directly limit friction reduction by imposing requirements (guarantees, education) that may be costly or slow, potentially restricting the speed/magnitude of improvement. Adjusted max reachable is current_value + (allowed_movement * (1 - 0.7)) = 0.5 + (-0.2 * 0.3) = 0.44. Target 0.3 is less than 0.44, so the gap is BLOCKED by constraints.",
+            "inputs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ],
+            "intermediate": {
+              "raw_gaps": [
+                {
+                  "dimension": "adoption_friction",
+                  "current_value": 0.5,
+                  "target_value": 0.3,
+                  "raw_gap": -0.2
+                }
+              ],
+              "constraint_adjustments": [
+                {
+                  "dimension": "adoption_friction",
+                  "constraints_applied": [
+                    "Must address customer concerns...",
+                    "Must overcome low customer familiarity..."
+                  ],
+                  "binding_strength": 0.7,
+                  "allowed_movement_factor": 0.3,
+                  "max_reachable": 0.44,
+                  "target_reachable": false,
+                  "reason": "High binding strength from scenario constraints limits the feasible reduction in friction. Target value 0.3 is beyond the constrained reachable limit of 0.44."
+                }
+              ]
+            },
+            "outputs": {
+              "dimension_gaps": [
+                {
+                  "dimension": "adoption_friction",
+                  "current_value": 0.5,
+                  "target_value": 0.3,
+                  "raw_gap": -0.2,
+                  "feasible_gap": -0.06,
+                  "max_reachable": 0.44,
+                  "is_blocked": true,
+                  "blocking_reason": "Activated constraints with high binding strength (0.7) limit the maximum feasible reduction in adoption_friction."
+                }
+              ],
+              "blocking_gaps": [
+                "adoption_friction"
+              ]
+            },
+            "confidence": 0.6,
+            "input_refs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ]
+          },
+          {
+            "step_id": "step_5",
+            "step_type": "strategic_conditions",
+            "summary": "From the blocked adoption_friction gap, derived a REQUIRED condition to relax the binding constraints, specifically the financial/legal risk from migration guarantees. Also derived a WARNING condition about the risk of missing the 80% reduction goal if execution is suboptimal on communication and integration. No actor non-negotiable conflicts were identified.",
+            "inputs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ],
+            "intermediate": {
+              "condition_derivations": [
+                {
+                  "source": "blocking_gap",
+                  "gap": "adoption_friction",
+                  "analysis": "To achieve target friction of 0.3, the constraints limiting financial risk (from tradeoff_pressure) and requiring customer education must be mitigated.",
+                  "derived_condition": "required",
+                  "text": "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+                },
+                {
+                  "source": "high_gap",
+                  "gap": "adoption_friction",
+                  "raw_gap_magnitude": 0.2,
+                  "analysis": "Even if unblocked, a 0.2 point reduction is significant. Suboptimal execution on communication or external data integration could prevent goal achievement.",
+                  "derived_condition": "warning",
+                  "text": "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed."
+                }
+              ]
+            },
+            "outputs": {
+              "required": [
+                "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+              ],
+              "warning": [
+                "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed."
+              ],
+              "blocking": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ]
+          }
+        ],
+        "intermediate": {},
+        "conclusions": {
+          "strategic_freedom": {
+            "required": [
+              "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+            ],
+            "warning": [
+              "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed."
+            ],
+            "blocking": []
+          },
+          "gap_summary": {
+            "dimensions": [
+              {
+                "dimension": "adoption_friction",
+                "status": "blocked",
+                "gap": -0.2
+              }
+            ],
+            "blocking": [
+              "adoption_friction"
+            ]
+          }
+        }
+      },
+      "llm_status": "ok"
+    }
+  ],
+  "prompt_token": "base.scenario_reason_chain_prompt@1.0.0"
+}

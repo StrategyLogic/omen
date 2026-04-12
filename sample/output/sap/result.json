@@ -1,0 +1,352 @@
+{
+  "run_id": "det-0385b830a8f5",
+  "run_timestamp": "2026-04-12T15:16:16.708593",
+  "actor_profile_ref": "actor_profile_v1",
+  "scenario_pack_ref": "sap",
+  "scenario_results": [
+    {
+      "scenario_key": "A",
+      "capability_dilemma_fit": {
+        "scenario_key": "A",
+        "fit": "medium",
+        "capability_scores": {
+          "ecosystem_control": 0.75,
+          "execution_velocity": 0.58
+        }
+      },
+      "selected_dimensions": {
+        "scenario_key": "A",
+        "selected_dimension_keys": [
+          "ecosystem_control",
+          "execution_velocity"
+        ],
+        "selection_rationale": [
+          "Prioritize offense dimensions from planned scene objective and constraints",
+          "Objective alignment: Achieve >50% market share in AI-ready master data management within SAP's customer base within 24 months.",
+          "Selected highest-capability dimensions: ecosystem_control, execution_velocity"
+        ]
+      },
+      "actor_derivation": {
+        "scenario_key": "A",
+        "actor_profile_ref": "actor_profile_v1",
+        "decision_style": "offense_breakthrough",
+        "dominant_capability": "ecosystem_control",
+        "selected_dimensions": [
+          "ecosystem_control",
+          "execution_velocity"
+        ],
+        "objective_alignment": "Achieve >50% market share in AI-ready master data management within SAP's customer base within 24 months.",
+        "constraint_focus": [
+          "Must maintain Reltio's cloud-native approach to data integration and MDM",
+          "Must leverage Reltio's AI-based entity resolution system for golden records"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene A",
+          "Capability fit level: medium",
+          "Primary capability anchor: ecosystem_control"
+        ]
+      },
+      "resistance": {
+        "structural_conflict": 0.7,
+        "resource_reallocation_drag": 0.6,
+        "cultural_misalignment": 0.8,
+        "veto_node_intensity": 0.5,
+        "aggregate_resistance": 0.65
+      },
+      "scenario_conditions": {
+        "required": [
+          "Must secure 'extensive' level external ecosystem partnerships within 18 months to drive market share from 0.5 to 0.51."
+        ],
+        "warning": [
+          "Risk of missing adoption targets if success-based migration pricing models are not fully implemented and marketed within 12 months."
+        ],
+        "blocking": []
+      },
+      "derivation_trace": {
+        "scenario_key": "A",
+        "ontology_refs": [
+          "objective",
+          "constraints",
+          "tradeoff_pressure",
+          "resistance_assumptions"
+        ],
+        "selected_dimensions": [
+          "ecosystem_control",
+          "execution_velocity"
+        ],
+        "actor_derivation_refs": [
+          "actor_derivation::A"
+        ],
+        "derivation_steps": [
+          "Scene objective aligned: Achieve >50% market share in AI-ready master data management within SAP's customer base within 24 months.",
+          "Scene constraints interpreted: Must maintain Reltio's cloud-native approach to data integration and MDM, Must leverage Reltio's AI-based entity resolution system for golden records",
+          "Actor derivation selected dimensions: ecosystem_control, execution_velocity",
+          "Actor derivation fields observed: actor_profile_ref, constraint_focus, decision_style",
+          "Strategic condition projection: Must secure 'extensive' level external ecosystem partnerships within 18 months to drive market share from 0.5 to 0.51."
+        ],
+        "missing_evidence_reasons": []
+      },
+      "evidence_refs": [
+        {
+          "evidence_id": "required_1",
+          "bucket": "required",
+          "summary": "Must secure 'extensive' level external ecosystem partnerships within 18 months to drive market share from 0.5 to 0.51.",
+          "reason_step_ids": [
+            "step_5"
+          ],
+          "activation_step_ids": []
+        },
+        {
+          "evidence_id": "warning_1",
+          "bucket": "warning",
+          "summary": "Risk of missing adoption targets if success-based migration pricing models are not fully implemented and marketed within 12 months.",
+          "reason_step_ids": [
+            "step_5"
+          ],
+          "activation_step_ids": []
+        }
+      ],
+      "confidence_level": "full-confidence"
+    },
+    {
+      "scenario_key": "B",
+      "capability_dilemma_fit": {
+        "scenario_key": "B",
+        "fit": "medium",
+        "capability_scores": {
+          "ecosystem_control": 0.5,
+          "execution_velocity": 0.72
+        }
+      },
+      "selected_dimensions": {
+        "scenario_key": "B",
+        "selected_dimension_keys": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "selection_rationale": [
+          "Prioritize defense dimensions under planned hard-constraint pressure",
+          "Constraint focus: Must address customer concerns about paying for unusable systems during migration, Must overcome low customer familiarity with BDC (83% of DSAG members)",
+          "Selected highest-capability dimensions: execution_velocity, ecosystem_control"
+        ]
+      },
+      "actor_derivation": {
+        "scenario_key": "B",
+        "actor_profile_ref": "actor_profile_v1",
+        "decision_style": "defense_resilience",
+        "dominant_capability": "execution_velocity",
+        "selected_dimensions": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "objective_alignment": "Reduce customer-reported migration pain points by 80% while maintaining BDC revenue stability.",
+        "constraint_focus": [
+          "Must address customer concerns about paying for unusable systems during migration",
+          "Must overcome low customer familiarity with BDC (83% of DSAG members)"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene B",
+          "Capability fit level: medium",
+          "Primary capability anchor: execution_velocity"
+        ]
+      },
+      "resistance": {
+        "structural_conflict": 0.4,
+        "resource_reallocation_drag": 0.3,
+        "cultural_misalignment": 0.5,
+        "veto_node_intensity": 0.7,
+        "aggregate_resistance": 0.48
+      },
+      "scenario_conditions": {
+        "required": [
+          "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+        ],
+        "warning": [
+          "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed."
+        ],
+        "blocking": []
+      },
+      "derivation_trace": {
+        "scenario_key": "B",
+        "ontology_refs": [
+          "objective",
+          "constraints",
+          "tradeoff_pressure",
+          "resistance_assumptions"
+        ],
+        "selected_dimensions": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "actor_derivation_refs": [
+          "actor_derivation::B"
+        ],
+        "derivation_steps": [
+          "Scene objective aligned: Reduce customer-reported migration pain points by 80% while maintaining BDC revenue stability.",
+          "Scene constraints interpreted: Must address customer concerns about paying for unusable systems during migration, Must overcome low customer familiarity with BDC (83% of DSAG members)",
+          "Actor derivation selected dimensions: execution_velocity, ecosystem_control",
+          "Actor derivation fields observed: actor_profile_ref, constraint_focus, decision_style",
+          "Strategic condition projection: Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+        ],
+        "missing_evidence_reasons": []
+      },
+      "evidence_refs": [
+        {
+          "evidence_id": "required_1",
+          "bucket": "required",
+          "summary": "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction.",
+          "reason_step_ids": [
+            "step_5"
+          ],
+          "activation_step_ids": []
+        },
+        {
+          "evidence_id": "warning_1",
+          "bucket": "warning",
+          "summary": "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed.",
+          "reason_step_ids": [
+            "step_5"
+          ],
+          "activation_step_ids": []
+        }
+      ],
+      "confidence_level": "full-confidence"
+    },
+    {
+      "scenario_key": "C",
+      "capability_dilemma_fit": {
+        "scenario_key": "C",
+        "fit": "medium",
+        "capability_scores": {
+          "ecosystem_control": 0.4,
+          "execution_velocity": 0.65
+        }
+      },
+      "selected_dimensions": {
+        "scenario_key": "C",
+        "selected_dimension_keys": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "selection_rationale": [
+          "Prioritize confrontation dimensions under direct rivalry tradeoff pressure",
+          "Tradeoff focus: Standalone product focus may undermine BDC integration narrative, Aggressive pricing in MDM market may cannibalize SAP's higher-margin applications",
+          "Selected highest-capability dimensions: execution_velocity, ecosystem_control"
+        ]
+      },
+      "actor_derivation": {
+        "scenario_key": "C",
+        "actor_profile_ref": "actor_profile_v1",
+        "decision_style": "confrontation_competition",
+        "dominant_capability": "execution_velocity",
+        "selected_dimensions": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "objective_alignment": "Achieve 20% market share in standalone AI-MDM solutions within 36 months.",
+        "constraint_focus": [
+          "Must integrate data from outside SAP's broad application portfolio",
+          "Must leverage Reltio's AI-based entity resolution system for golden records"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene C",
+          "Capability fit level: medium",
+          "Primary capability anchor: execution_velocity"
+        ]
+      },
+      "resistance": {
+        "structural_conflict": 0.8,
+        "resource_reallocation_drag": 0.7,
+        "cultural_misalignment": 0.6,
+        "veto_node_intensity": 0.4,
+        "aggregate_resistance": 0.63
+      },
+      "scenario_conditions": {
+        "required": [
+          "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months.",
+          "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+        ],
+        "warning": [
+          "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1."
+        ],
+        "blocking": []
+      },
+      "derivation_trace": {
+        "scenario_key": "C",
+        "ontology_refs": [
+          "objective",
+          "constraints",
+          "tradeoff_pressure",
+          "resistance_assumptions"
+        ],
+        "selected_dimensions": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "actor_derivation_refs": [
+          "actor_derivation::C"
+        ],
+        "derivation_steps": [
+          "Scene objective aligned: Achieve 20% market share in standalone AI-MDM solutions within 36 months.",
+          "Scene constraints interpreted: Must integrate data from outside SAP's broad application portfolio, Must leverage Reltio's AI-based entity resolution system for golden records",
+          "Actor derivation selected dimensions: execution_velocity, ecosystem_control",
+          "Actor derivation fields observed: actor_profile_ref, constraint_focus, decision_style",
+          "Strategic condition projection: Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months., Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+        ],
+        "missing_evidence_reasons": []
+      },
+      "evidence_refs": [
+        {
+          "evidence_id": "required_1",
+          "bucket": "required",
+          "summary": "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months.",
+          "reason_step_ids": [
+            "step_5"
+          ],
+          "activation_step_ids": []
+        },
+        {
+          "evidence_id": "required_2",
+          "bucket": "required",
+          "summary": "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months.",
+          "reason_step_ids": [
+            "step_5"
+          ],
+          "activation_step_ids": []
+        },
+        {
+          "evidence_id": "warning_1",
+          "bucket": "warning",
+          "summary": "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1.",
+          "reason_step_ids": [
+            "step_5"
+          ],
+          "activation_step_ids": []
+        }
+      ],
+      "confidence_level": "full-confidence"
+    }
+  ],
+  "scenario_comparison": {
+    "order": [
+      "A",
+      "B",
+      "C"
+    ],
+    "executed": [
+      "A",
+      "B",
+      "C"
+    ]
+  },
+  "comparability": {
+    "comparable": true,
+    "blocking_reasons": [],
+    "actor_profile_version": "actor_profile_v1",
+    "scenario_pack_version": "1.0.0",
+    "calculation_policy_version": "deterministic_v1"
+  },
+  "export_status": "success",
+  "reason_chain_ref": "data/scenarios/sap/traces/reason_chain.json",
+  "actor_derivation_ref": "data/scenarios/sap/traces/actor_derivation.json"
+}

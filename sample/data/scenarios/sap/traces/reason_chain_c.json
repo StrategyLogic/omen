@@ -1,0 +1,360 @@
+{
+  "artifact_type": "reason_chain",
+  "version": "reason_chain_v1",
+  "run_id": "det-0385b830a8f5",
+  "scenario_pack_ref": "sap",
+  "scenario_chains": [
+    {
+      "run_id": "det-0385b830a8f5",
+      "scenario_key": "C",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_1",
+            "step_type": "seed_inference",
+            "summary": "Mapped scenario variables to Space dimensions using pattern matching. 'Competitive pricing aggressiveness' maps to competitive_pressure. 'Sales channel conflict management' maps to ecosystem_lockin. 'Reltio product independence' is ambiguous and unmapped. No prior signals exist, so values were inferred from variable descriptions. Competitive pressure is high (0.7). Ecosystem lock-in is low due to conflict (0.3).",
+            "inputs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ],
+            "intermediate": {
+              "dimension_mapping": [
+                {
+                  "variable": "Competitive pricing aggressiveness",
+                  "pattern": "competition_*",
+                  "space": "MarketSpace",
+                  "dimension": "competitive_pressure",
+                  "confidence": 0.8
+                },
+                {
+                  "variable": "Sales channel conflict management",
+                  "pattern": "ecosystem_*",
+                  "space": "MarketSpace",
+                  "dimension": "ecosystem_lockin",
+                  "confidence": 0.7
+                },
+                {
+                  "variable": "Reltio product independence",
+                  "pattern": "unclear",
+                  "space": "unmapped",
+                  "dimension": null,
+                  "reason": "Description relates to product positioning, not a clear tech or market dimension pattern."
+                }
+              ],
+              "value_calculation": [
+                {
+                  "dimension": "competitive_pressure",
+                  "rule": "B",
+                  "reason": "Variable description implies direct competition with major vendors, indicating high pressure.",
+                  "value": 0.7,
+                  "confidence": 0.6
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "rule": "B",
+                  "reason": "Variable description indicates channel conflict, which weakens ecosystem cohesion and lock-in.",
+                  "value": 0.3,
+                  "confidence": 0.6
+                }
+              ]
+            },
+            "outputs": {
+              "tech_space_seed": [],
+              "market_space_seed": [
+                {
+                  "dimension": "competitive_pressure",
+                  "value": 0.7,
+                  "confidence": 0.6
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "value": 0.3,
+                  "confidence": 0.6
+                }
+              ]
+            },
+            "confidence": 0.6,
+            "input_refs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ]
+          },
+          {
+            "step_id": "step_2",
+            "step_type": "constraint_activation",
+            "summary": "All three scenario constraints are activated due to the scenario's explicit tradeoff pressures, which indicate tension. No binding conditions from signals exist. All constraints are considered active with default binding strength, as they are fundamental to the scenario's execution.",
+            "inputs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ],
+            "intermediate": {
+              "activation_decisions": [
+                {
+                  "constraint": "Must integrate data from outside SAP's broad application portfolio",
+                  "condition_check": "No signal condition. Present in scenario.constraints and tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must leverage Reltio's AI-based entity resolution system for golden records",
+                  "condition_check": "No signal condition. Present in scenario.constraints and tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must maintain Reltio's cloud-native approach to data integration and MDM",
+                  "condition_check": "No signal condition. Present in scenario.constraints and tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                }
+              ]
+            },
+            "outputs": {
+              "activated_constraints": [
+                {
+                  "constraint": "Must integrate data from outside SAP's broad application portfolio",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must leverage Reltio's AI-based entity resolution system for golden records",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must maintain Reltio's cloud-native approach to data integration and MDM",
+                  "binding_strength": 0.7
+                }
+              ],
+              "blocking_constraints": []
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ]
+          },
+          {
+            "step_id": "step_3",
+            "step_type": "target_derivation",
+            "summary": "Parsed the objective to capture 20% market share, targeting the market_share dimension at 0.20. Variables imply targets: 'Competitive pricing aggressiveness' (disruptive level) targets competitive_pressure upward (0.75). 'Sales channel conflict management' (effectiveness) targets ecosystem_lockin upward (0.75) to reduce conflict. Resolved to the more aggressive target for ecosystem_lockin.",
+            "inputs": [
+              "scenario.objective",
+              "scenario.variables"
+            ],
+            "intermediate": {
+              "parsed_targets": [
+                {
+                  "source": "scenario.objective",
+                  "text": "Achieve 20% market share in standalone AI-MDM solutions within 36 months.",
+                  "pattern": "capture X% market share",
+                  "target_dimension": "market_share",
+                  "target_value": 0.2,
+                  "confidence": 0.9
+                },
+                {
+                  "source": "variable: Competitive pricing aggressiveness",
+                  "description": "Pricing strategy relative to competitors.",
+                  "implied_direction": "up",
+                  "target_dimension": "competitive_pressure",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                },
+                {
+                  "source": "variable: Sales channel conflict management",
+                  "description": "Effectiveness in managing conflicts...",
+                  "implied_direction": "up",
+                  "target_dimension": "ecosystem_lockin",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                }
+              ]
+            },
+            "outputs": {
+              "target_profile": [
+                {
+                  "dimension": "market_share",
+                  "target_value": 0.2,
+                  "confidence": 0.9
+                },
+                {
+                  "dimension": "competitive_pressure",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                }
+              ]
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.objective",
+              "scenario.variables"
+            ]
+          },
+          {
+            "step_id": "step_4",
+            "step_type": "gap_analysis",
+            "summary": "Calculated raw gaps between seed and target values. The ecosystem_lockin gap is large (0.45). Checked activated constraints: the constraint to integrate outside data and maintain cloud-native approach may limit ecosystem_lockin movement, but binding strength (0.7) is not >0.6 for a hard block. No gaps are definitively blocked by constraints alone at this stage.",
+            "inputs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ],
+            "intermediate": {
+              "raw_gaps": [
+                {
+                  "dimension": "market_share",
+                  "current_value": null,
+                  "target_value": 0.2,
+                  "raw_gap": 0.2,
+                  "note": "No current seed value for market_share; gap is target value."
+                },
+                {
+                  "dimension": "competitive_pressure",
+                  "current_value": 0.7,
+                  "target_value": 0.75,
+                  "raw_gap": 0.05
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "current_value": 0.3,
+                  "target_value": 0.75,
+                  "raw_gap": 0.45
+                }
+              ],
+              "constraint_adjustments": [
+                {
+                  "dimension": "ecosystem_lockin",
+                  "relevant_constraints": [
+                    "Must integrate data from outside SAP's broad application portfolio",
+                    "Must maintain Reltio's cloud-native approach"
+                  ],
+                  "binding_strength": 0.7,
+                  "max_reachable_calc": "Not applied. Binding strength is 0.7, which is >0.6, but constraint does not explicitly forbid increasing lock-in; it may just make it harder.",
+                  "blocked": false,
+                  "reason": "Constraint limits movement but does not make target unreachable."
+                }
+              ]
+            },
+            "outputs": {
+              "dimension_gaps": [
+                {
+                  "dimension": "market_share",
+                  "gap": 0.2,
+                  "feasibility": "feasible"
+                },
+                {
+                  "dimension": "competitive_pressure",
+                  "gap": 0.05,
+                  "feasibility": "feasible"
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "gap": 0.45,
+                  "feasibility": "challenging"
+                }
+              ],
+              "blocking_gaps": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ]
+          },
+          {
+            "step_id": "step_5",
+            "step_type": "strategic_conditions",
+            "summary": "Derived conditions from gaps. The large ecosystem_lockin gap requires a condition to resolve channel conflict. The market share target requires a condition for customer acquisition. High aggregate resistance from the actor profile creates a warning condition about execution velocity. No non-negotiable conflicts create blocking conditions.",
+            "inputs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ],
+            "intermediate": {
+              "condition_derivations": [
+                {
+                  "source": "blocking_gaps",
+                  "derivation": "No blocking gaps, so no required conditions from that source."
+                },
+                {
+                  "source": "high_gap: ecosystem_lockin (0.45)",
+                  "derivation": "Large gap indicates need for decisive action to improve ecosystem cohesion.",
+                  "condition_type": "required",
+                  "text": "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months."
+                },
+                {
+                  "source": "target: market_share (0.2)",
+                  "derivation": "Achieving new market share requires displacing incumbents.",
+                  "condition_type": "required",
+                  "text": "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+                },
+                {
+                  "source": "actor_profile.resistance.aggregate_resistance (0.63)",
+                  "derivation": "High structural and cultural resistance could slow execution.",
+                  "condition_type": "warning",
+                  "text": "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1."
+                }
+              ]
+            },
+            "outputs": {
+              "required": [
+                "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months.",
+                "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+              ],
+              "warning": [
+                "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1."
+              ],
+              "blocking": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ]
+          }
+        ],
+        "intermediate": {},
+        "conclusions": {
+          "strategic_freedom": {
+            "required": [
+              "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months.",
+              "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+            ],
+            "warning": [
+              "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1."
+            ],
+            "blocking": []
+          },
+          "gap_summary": {
+            "dimensions": [
+              {
+                "dimension": "market_share",
+                "gap": 0.2,
+                "feasibility": "feasible"
+              },
+              {
+                "dimension": "competitive_pressure",
+                "gap": 0.05,
+                "feasibility": "feasible"
+              },
+              {
+                "dimension": "ecosystem_lockin",
+                "gap": 0.45,
+                "feasibility": "challenging"
+              }
+            ],
+            "blocking": []
+          }
+        }
+      },
+      "llm_status": "ok"
+    }
+  ],
+  "prompt_token": "base.scenario_reason_chain_prompt@1.0.0"
+}

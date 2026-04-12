@@ -1,0 +1,29 @@
+{
+  "query": {
+    "type": "persona",
+    "case_id": "sap_reltio_acquisition"
+  },
+  "run_meta": {
+    "timestamp": "2026-04-12T11:22:53.912503",
+    "prompt_version": "base.persona_insight@1.0.0",
+    "mode": "skeleton-deterministic"
+  },
+  "persona_insight": {
+    "narrative": "Muhammad Alam shows a strategy persona anchored in execution feasibility and platform-level coherence. The dominant decision style is platform-centric acquisition. The recurring value proposition is accelerating core platform adoption through strategic data asset integration. Observed preferences include alliances with complementary data/AI players, cloud-native technology migrations, addressing non-SAP data integration gaps. Non-negotiables include must strengthen SAP's AI platform data foundation, must maintain cloud architecture standards. Key event trajectory: 2026-03: SAP announces acquisition of Reltio. This aligns with the case strategy context: acquisition_to_overcome_adoption_resistance.",
+    "key_traits": [
+      {
+        "trait": "Decision Style",
+        "evidence_summary": "platform-centric acquisition"
+      },
+      {
+        "trait": "Decision Preferences",
+        "evidence_summary": "alliances with complementary data/AI players; cloud-native technology migrations; addressing non-SAP data integration gaps"
+      },
+      {
+        "trait": "Non-negotiables",
+        "evidence_summary": "must strengthen SAP's AI platform data foundation; must maintain cloud architecture standards"
+      }
+    ],
+    "consistency_score": 0.72
+  }
+}

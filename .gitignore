@@ -54,5 +54,5 @@ config/llm.toml
 .local.md
 data/ingest/source/
 data/scenarios/*/
-output/
+/output/*
 *legacy*

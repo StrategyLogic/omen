@@ -1,0 +1,580 @@
+{
+  "meta": {
+    "version": "1.0",
+    "case_id": "sap_reltio_acquisition",
+    "domain": "enterprise_software_ai_platforms",
+    "strategy": "acquisition_to_overcome_adoption_resistance",
+    "known_outcome": "SAP acquires Reltio to address Business Data Cloud adoption resistance through enhanced external data integration"
+  },
+  "tbox": {
+    "concepts": [
+      {
+        "name": "Actor",
+        "description": "Generic actor in the strategic landscape",
+        "category": "actor"
+      },
+      {
+        "name": "StrategicActor",
+        "description": "Actor capable of making strategic decisions and investments",
+        "category": "actor"
+      },
+      {
+        "name": "EnterpriseSoftwareVendor",
+        "description": "Company providing large-scale business application software",
+        "category": "actor"
+      },
+      {
+        "name": "MasterDataManagementVendor",
+        "description": "Company specializing in master data management and data integration solutions",
+        "category": "actor"
+      },
+      {
+        "name": "DataPlatformVendor",
+        "description": "Company providing data lake, analytics, and AI platform services",
+        "category": "actor"
+      },
+      {
+        "name": "UserGroup",
+        "description": "Organization representing the interests of software users",
+        "category": "actor"
+      },
+      {
+        "name": "Consultancy",
+        "description": "Firm providing strategic and implementation advisory services",
+        "category": "actor"
+      },
+      {
+        "name": "Customer",
+        "description": "Organization that purchases and uses software products",
+        "category": "actor"
+      },
+      {
+        "name": "external_data_integration",
+        "description": "Capability to harmonize and integrate data from sources outside a vendor's own portfolio",
+        "category": "capability"
+      },
+      {
+        "name": "ai_platform_data_context",
+        "description": "Capability to provide cleansed, harmonized data with business context for AI applications",
+        "category": "capability"
+      },
+      {
+        "name": "master_data_management",
+        "description": "Capability to create and maintain a single, trusted view of key business entities (golden records)",
+        "category": "capability"
+      },
+      {
+        "name": "cloud_native_mdm",
+        "description": "Capability to deliver master data management using cloud-native architectures",
+        "category": "capability"
+      },
+      {
+        "name": "market_awareness",
+        "description": "Capability to generate familiarity and understanding of a product in the target market",
+        "category": "capability"
+      },
+      {
+        "name": "migration_execution",
+        "description": "Capability to successfully transition customers from old to new systems",
+        "category": "capability"
+      },
+      {
+        "name": "AdoptionResistance",
+        "description": "Market constraint where potential customers are unfamiliar with or hesitant to adopt a new product",
+        "category": "constraint"
+      },
+      {
+        "name": "MidMigrationStalemate",
+        "description": "Constraint where customers are stuck during migration, paying for a system they cannot use",
+        "category": "constraint"
+      },
+      {
+        "name": "DataFragmentation",
+        "description": "Constraint where business data is scattered across different systems, platforms, and domains without connection",
+        "category": "constraint"
+      },
+      {
+        "name": "AcquisitionEvent",
+        "description": "Strategic event where one company purchases another",
+        "category": "event"
+      },
+      {
+        "name": "PlatformLaunch",
+        "description": "Event where a new software platform or service is introduced to the market",
+        "category": "event"
+      },
+      {
+        "name": "AdoptionBoost",
+        "description": "Potential outcome where product adoption increases significantly",
+        "category": "outcome"
+      },
+      {
+        "name": "SalesDeckHaunting",
+        "description": "Negative outcome where a damaging finding persistently undermines sales narratives",
+        "category": "outcome"
+      },
+      {
+        "name": "PlatformAdoptionGame",
+        "description": "Strategic game where vendors compete for platform adoption in a market with high switching costs and integration barriers",
+        "category": "game"
+      },
+      {
+        "name": "OneDomainModel",
+        "description": "SAP's strategic construct for creating a common data model across all SAP applications",
+        "category": "other"
+      },
+      {
+        "name": "BusinessDataCloud",
+        "description": "SAP's cloud service for building insight apps with analytics and AI on real-time application data",
+        "category": "other"
+      },
+      {
+        "name": "EntityResolutionSystem",
+        "description": "AI-based system to find and merge related records into a golden record",
+        "category": "other"
+      }
+    ],
+    "relations": [
+      {
+        "name": "inherits_from",
+        "source": "StrategicActor",
+        "target": "Actor",
+        "description": "Indicates a subtype relationship between actor types"
+      },
+      {
+        "name": "has_capability",
+        "source": "EnterpriseSoftwareVendor",
+        "target": "external_data_integration",
+        "description": "Vendor possesses the ability to integrate external data"
+      },
+      {
+        "name": "has_capability",
+        "source": "MasterDataManagementVendor",
+        "target": "master_data_management",
+        "description": "Vendor possesses master data management capabilities"
+      },
+      {
+        "name": "has_capability",
+        "source": "MasterDataManagementVendor",
+        "target": "cloud_native_mdm",
+        "description": "Vendor possesses cloud-native MDM capabilities"
+      },
+      {
+        "name": "has_capability",
+        "source": "EnterpriseSoftwareVendor",
+        "target": "market_awareness",
+        "description": "Vendor possesses ability to generate product awareness"
+      },
+      {
+        "name": "has_capability",
+        "source": "EnterpriseSoftwareVendor",
+        "target": "migration_execution",
+        "description": "Vendor possesses ability to execute customer migrations"
+      },
+      {
+        "name": "addresses",
+        "source": "external_data_integration",
+        "target": "DataFragmentation",
+        "description": "Capability works to solve the data fragmentation problem"
+      },
+      {
+        "name": "addresses",
+        "source": "ai_platform_data_context",
+        "target": "AdoptionResistance",
+        "description": "Capability works to reduce adoption resistance by providing better data context for AI"
+      },
+      {
+        "name": "exacerbates",
+        "source": "MidMigrationStalemate",
+        "target": "AdoptionResistance",
+        "description": "Constraint makes adoption resistance worse"
+      },
+      {
+        "name": "leads_to",
+        "source": "AcquisitionEvent",
+        "target": "AdoptionBoost",
+        "description": "Acquisition event may lead to increased adoption"
+      },
+      {
+        "name": "causes",
+        "source": "MidMigrationStalemate",
+        "target": "SalesDeckHaunting",
+        "description": "Migration problems create persistent negative sales narrative"
+      },
+      {
+        "name": "competes_with",
+        "source": "EnterpriseSoftwareVendor",
+        "target": "DataPlatformVendor",
+        "description": "Vendors compete in overlapping platform markets"
+      },
+      {
+        "name": "depends_on",
+        "source": "BusinessDataCloud",
+        "target": "external_data_integration",
+        "description": "BDC's success depends on external data integration capability"
+      },
+      {
+        "name": "influences",
+        "source": "UserGroup",
+        "target": "AdoptionResistance",
+        "description": "User group research findings influence market adoption resistance"
+      },
+      {
+        "name": "substitutes",
+        "source": "master_data_management",
+        "target": "DataFragmentation",
+        "description": "MDM capability substitutes for/replaces data fragmentation"
+      }
+    ],
+    "axioms": [
+      {
+        "id": "AX-1",
+        "statement": "Low market_awareness directly increases AdoptionResistance",
+        "type": "activation"
+      },
+      {
+        "id": "AX-2",
+        "statement": "MidMigrationStalemate occurrence severely increases AdoptionResistance and creates SalesDeckHaunting",
+        "type": "propagation"
+      },
+      {
+        "id": "AX-3",
+        "statement": "Acquisition of a MasterDataManagementVendor by an EnterpriseSoftwareVendor transfers external_data_integration and master_data_management capabilities",
+        "type": "activation"
+      },
+      {
+        "id": "AX-4",
+        "statement": "Enhanced external_data_integration capability reduces DataFragmentation constraint",
+        "type": "propagation"
+      },
+      {
+        "id": "AX-5",
+        "statement": "Reduced DataFragmentation increases ai_platform_data_context capability",
+        "type": "propagation"
+      },
+      {
+        "id": "AX-6",
+        "statement": "Increased ai_platform_data_context capability decreases AdoptionResistance",
+        "type": "propagation"
+      },
+      {
+        "id": "AX-7",
+        "statement": "If market_awareness < 0.2 AND MidMigrationStalemate exists, then AdoptionResistance > 0.8",
+        "type": "counterfactual"
+      },
+      {
+        "id": "AX-8",
+        "statement": "Successful migration_execution capability prevents MidMigrationStalemate",
+        "type": "counterfactual"
+      }
+    ]
+  },
+  "abox": {
+    "actors": [
+      {
+        "actor_id": "sap",
+        "actor_type": "StrategicActor",
+        "role": "enterprise software vendor",
+        "shared_id": "SAP",
+        "labels": [
+          "public_company",
+          "erp_market_leader"
+        ],
+        "profile": {
+          "background_facts": {
+            "founded": 1972,
+            "headquarters": "Walldorf, Germany"
+          },
+          "strategic_style": {
+            "risk_tolerance": "medium",
+            "innovation_focus": "high",
+            "acquisition_aggressiveness": "medium"
+          }
+        }
+      },
+      {
+        "actor_id": "reltio",
+        "actor_type": "Actor",
+        "role": "master data management vendor",
+        "shared_id": "Reltio",
+        "labels": [
+          "private_company",
+          "cloud_native_mdm"
+        ]
+      },
+      {
+        "actor_id": "databricks",
+        "actor_type": "Actor",
+        "role": "data and AI platform vendor",
+        "shared_id": "Databricks",
+        "labels": [
+          "private_company",
+          "data_lakehouse"
+        ]
+      },
+      {
+        "actor_id": "dsag",
+        "actor_type": "Actor",
+        "role": "user group",
+        "shared_id": "DSAG",
+        "labels": [
+          "non_profit",
+          "german_speaking"
+        ]
+      },
+      {
+        "actor_id": "protera",
+        "actor_type": "Actor",
+        "role": "consultancy",
+        "shared_id": "Protera",
+        "labels": [
+          "sap_specialist"
+        ]
+      },
+      {
+        "actor_id": "pfizer",
+        "actor_type": "Actor",
+        "role": "customer",
+        "shared_id": "Pfizer",
+        "labels": [
+          "pharmaceutical",
+          "enterprise"
+        ]
+      },
+      {
+        "actor_id": "warner_bros",
+        "actor_type": "Actor",
+        "role": "customer",
+        "shared_id": "Warner Bros",
+        "labels": [
+          "entertainment",
+          "enterprise"
+        ]
+      }
+    ],
+    "capabilities": [
+      {
+        "actor_id": "sap",
+        "name": "market_awareness",
+        "score": 0.17
+      },
+      {
+        "actor_id": "sap",
+        "name": "migration_execution",
+        "score": 0.6
+      },
+      {
+        "actor_id": "sap",
+        "name": "external_data_integration",
+        "score": 0.4
+      },
+      {
+        "actor_id": "reltio",
+        "name": "master_data_management",
+        "score": 0.9
+      },
+      {
+        "actor_id": "reltio",
+        "name": "cloud_native_mdm",
+        "score": 0.85
+      },
+      {
+        "actor_id": "databricks",
+        "name": "external_data_integration",
+        "score": 0.8
+      }
+    ],
+    "constraints": [
+      {
+        "name": "AdoptionResistance",
+        "value": 0.83
+      },
+      {
+        "name": "MidMigrationStalemate",
+        "value": 1
+      },
+      {
+        "name": "DataFragmentation",
+        "value": 0.7
+      }
+    ],
+    "events": [
+      {
+        "event_id": "event_1",
+        "time": "2024",
+        "event": "other",
+        "description": "Reltio migrated its underlying database from Cassandra to Spanner on Google Cloud.",
+        "evidence_refs": [
+          "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+        ],
+        "confidence": 0.9,
+        "is_strategy_related": false
+      },
+      {
+        "event_id": "event_2",
+        "time": "2025-02",
+        "event": "launch",
+        "description": "SAP launched its Business Data Cloud (BDC) service in alliance with Databricks.",
+        "evidence_refs": [
+          "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+        ],
+        "confidence": 1.0,
+        "is_strategy_related": true
+      },
+      {
+        "event_id": "event_3",
+        "time": "2025-12",
+        "event": "other",
+        "description": "Research from DSAG found 83% of its members were only slightly familiar with or not familiar at all with BDC, and that customers stuck mid-migration were paying full cloud fees for an unusable system.",
+        "evidence_refs": [
+          "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+        ],
+        "confidence": 1.0,
+        "is_strategy_related": true
+      },
+      {
+        "event_id": "event_4",
+        "time": "2026-03",
+        "event": "acquisition",
+        "description": "SAP announced its acquisition of master data management and data integration specialist Reltio to integrate non-SAP data into its AI platform and boost BDC adoption.",
+        "evidence_refs": [
+          "data/ingest/source/www-theregister-com-2026-03-30-sap-reltio.txt"
+        ],
+        "confidence": 1.0,
+        "is_strategy_related": true
+      }
+    ]
+  },
+  "reasoning_profile": {
+    "activation_rules": [
+      "AX-1",
+      "AX-3"
+    ],
+    "propagation_rules": [
+      "AX-2",
+      "AX-4",
+      "AX-5",
+      "AX-6"
+    ],
+    "counterfactual_rules": [
+      "AX-7",
+      "AX-8"
+    ]
+  },
+  "tech_space_ontology": {
+    "actors": [
+      "sap",
+      "reltio",
+      "databricks",
+      "pfizer",
+      "warner_bros"
+    ],
+    "capabilities": [
+      {
+        "name": "external_data_integration",
+        "score": 0.4
+      },
+      {
+        "name": "master_data_management",
+        "score": 0.9
+      },
+      {
+        "name": "cloud_native_mdm",
+        "score": 0.85
+      },
+      {
+        "name": "ai_platform_data_context",
+        "score": 0.5
+      }
+    ],
+    "axioms": [
+      {
+        "id": "T-AX-1",
+        "statement": "EntityResolutionSystem improves master_data_management capability by 0.3"
+      },
+      {
+        "id": "T-AX-2",
+        "statement": "cloud_native_mdm enables integration with modern data lakes like Databricks"
+      },
+      {
+        "id": "T-AX-3",
+        "statement": "Migration from Cassandra to Spanner improves data scalability and reliability"
+      }
+    ]
+  },
+  "market_space_ontology": {
+    "actors": [
+      "sap",
+      "dsag",
+      "protera",
+      "pfizer",
+      "warner_bros"
+    ],
+    "market_attributes": {
+      "adoption_resistance": 0.83,
+      "market_familiarity": 0.17,
+      "competitive_intensity": 0.7
+    },
+    "axioms": [
+      {
+        "id": "M-AX-1",
+        "statement": "adoption_resistance = 1 - market_familiarity when migration_problems exist"
+      },
+      {
+        "id": "M-AX-2",
+        "statement": "SalesDeckHaunting reduces sales_effectiveness by 40% for 12 months"
+      },
+      {
+        "id": "M-AX-3",
+        "statement": "Alliance with DataPlatformVendor (Databricks) reduces adoption_resistance by 0.2"
+      },
+      {
+        "id": "M-AX-4",
+        "statement": "Customer references (Pfizer, Warner Bros) reduce adoption_resistance by 0.15"
+      }
+    ]
+  },
+  "shared_actors": [
+    "sap",
+    "pfizer",
+    "warner_bros"
+  ],
+  "case_package": {
+    "ontology_presence": true,
+    "runtime_support": {
+      "activation": true,
+      "propagation": true,
+      "counterfactual": true,
+      "simulation": true,
+      "visualization": true
+    }
+  },
+  "scenario_id": "sap_bdc_adoption_challenge_2026",
+  "name": "SAP Reltio Acquisition: Overcoming BDC Adoption Resistance",
+  "time_steps": 24,
+  "seed": 20260330,
+  "user_overlap_threshold": 0.3,
+  "actors": [
+    "sap",
+    "reltio",
+    "databricks",
+    "dsag",
+    "protera",
+    "pfizer",
+    "warner_bros"
+  ],
+  "capabilities": [
+    "external_data_integration",
+    "master_data_management",
+    "cloud_native_mdm",
+    "market_awareness",
+    "migration_execution",
+    "ai_platform_data_context"
+  ],
+  "actor_ref": {
+    "path": "actor_ontology.json",
+    "version": "v0.1.0-actor",
+    "hash": "sha256:1ad21e6d3eab1201d5ca35a1c17974ae7a9a6f14ad3fa1ce11ad0264da2f54c3",
+    "identity_map": {}
+  }
+}

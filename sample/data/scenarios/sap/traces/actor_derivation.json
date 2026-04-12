@@ -1,0 +1,117 @@
+{
+  "artifact_type": "actor_derivation",
+  "version": "actor_derivation_v1",
+  "run_id": "det-0385b830a8f5",
+  "actor_profile_ref": "actor_profile_v1",
+  "scenario_pack_ref": "sap",
+  "scenario_derivations": [
+    {
+      "scenario_key": "A",
+      "actor_derivation": {
+        "scenario_key": "A",
+        "actor_profile_ref": "actor_profile_v1",
+        "decision_style": "offense_breakthrough",
+        "dominant_capability": "ecosystem_control",
+        "selected_dimensions": [
+          "ecosystem_control",
+          "execution_velocity"
+        ],
+        "objective_alignment": "Achieve >50% market share in AI-ready master data management within SAP's customer base within 24 months.",
+        "constraint_focus": [
+          "Must maintain Reltio's cloud-native approach to data integration and MDM",
+          "Must leverage Reltio's AI-based entity resolution system for golden records"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene A",
+          "Capability fit level: medium",
+          "Primary capability anchor: ecosystem_control"
+        ]
+      },
+      "selected_dimensions": {
+        "scenario_key": "A",
+        "selected_dimension_keys": [
+          "ecosystem_control",
+          "execution_velocity"
+        ],
+        "selection_rationale": [
+          "Prioritize offense dimensions from planned scene objective and constraints",
+          "Objective alignment: Achieve >50% market share in AI-ready master data management within SAP's customer base within 24 months.",
+          "Selected highest-capability dimensions: ecosystem_control, execution_velocity"
+        ]
+      },
+      "reason_chain_ref": "traces/reason_chain_a.json"
+    },
+    {
+      "scenario_key": "B",
+      "actor_derivation": {
+        "scenario_key": "B",
+        "actor_profile_ref": "actor_profile_v1",
+        "decision_style": "defense_resilience",
+        "dominant_capability": "execution_velocity",
+        "selected_dimensions": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "objective_alignment": "Reduce customer-reported migration pain points by 80% while maintaining BDC revenue stability.",
+        "constraint_focus": [
+          "Must address customer concerns about paying for unusable systems during migration",
+          "Must overcome low customer familiarity with BDC (83% of DSAG members)"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene B",
+          "Capability fit level: medium",
+          "Primary capability anchor: execution_velocity"
+        ]
+      },
+      "selected_dimensions": {
+        "scenario_key": "B",
+        "selected_dimension_keys": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "selection_rationale": [
+          "Prioritize defense dimensions under planned hard-constraint pressure",
+          "Constraint focus: Must address customer concerns about paying for unusable systems during migration, Must overcome low customer familiarity with BDC (83% of DSAG members)",
+          "Selected highest-capability dimensions: execution_velocity, ecosystem_control"
+        ]
+      },
+      "reason_chain_ref": "traces/reason_chain_b.json"
+    },
+    {
+      "scenario_key": "C",
+      "actor_derivation": {
+        "scenario_key": "C",
+        "actor_profile_ref": "actor_profile_v1",
+        "decision_style": "confrontation_competition",
+        "dominant_capability": "execution_velocity",
+        "selected_dimensions": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "objective_alignment": "Achieve 20% market share in standalone AI-MDM solutions within 36 months.",
+        "constraint_focus": [
+          "Must integrate data from outside SAP's broad application portfolio",
+          "Must leverage Reltio's AI-based entity resolution system for golden records"
+        ],
+        "derivation_notes": [
+          "Derive actor path from planned scene C",
+          "Capability fit level: medium",
+          "Primary capability anchor: execution_velocity"
+        ]
+      },
+      "selected_dimensions": {
+        "scenario_key": "C",
+        "selected_dimension_keys": [
+          "execution_velocity",
+          "ecosystem_control"
+        ],
+        "selection_rationale": [
+          "Prioritize confrontation dimensions under direct rivalry tradeoff pressure",
+          "Tradeoff focus: Standalone product focus may undermine BDC integration narrative, Aggressive pricing in MDM market may cannibalize SAP's higher-margin applications",
+          "Selected highest-capability dimensions: execution_velocity, ecosystem_control"
+        ]
+      },
+      "reason_chain_ref": "traces/reason_chain_c.json"
+    }
+  ]
+}

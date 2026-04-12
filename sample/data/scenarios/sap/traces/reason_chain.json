@@ -1,0 +1,1026 @@
+{
+  "artifact_type": "reason_chain",
+  "version": "reason_chain_v1",
+  "run_id": "det-0385b830a8f5",
+  "scenario_pack_ref": "sap",
+  "scenario_chains": [
+    {
+      "run_id": "det-0385b830a8f5",
+      "scenario_key": "A",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_1",
+            "step_type": "seed_inference",
+            "summary": "Mapped scenario variables to TechSpace and MarketSpace dimensions using pattern matching. 'Reltio integration speed' maps to capability frontier shift. 'Migration risk guarantee adoption' maps to adoption friction. 'External ecosystem partnerships' maps to ecosystem lockin. No prior signals exist, so values were inferred from variable descriptions, resulting in moderate to high seed values.",
+            "inputs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ],
+            "intermediate": {
+              "dimension_mapping": [
+                {
+                  "variable": "Reltio integration speed",
+                  "pattern_match": "capability_*",
+                  "space": "TechSpace",
+                  "dimension": "capability_frontier_shift",
+                  "reason": "Variable describes embedding AI-native capabilities, indicating a shift in the technology frontier."
+                },
+                {
+                  "variable": "Migration risk guarantee adoption",
+                  "pattern_match": "migration_*",
+                  "space": "MarketSpace",
+                  "dimension": "adoption_friction",
+                  "reason": "Variable is about reducing migration risk, directly impacting customer adoption friction."
+                },
+                {
+                  "variable": "External ecosystem partnerships",
+                  "pattern_match": "ecosystem_*",
+                  "space": "MarketSpace",
+                  "dimension": "ecosystem_lockin",
+                  "reason": "Variable describes strategic alliances, which influence ecosystem lock-in dynamics."
+                }
+              ],
+              "value_calculation": [
+                {
+                  "dimension": "capability_frontier_shift",
+                  "rule_applied": "B",
+                  "inference": "Variable implies high speed/capability embedding. Assigned high value.",
+                  "value": 0.7,
+                  "confidence": 0.6
+                },
+                {
+                  "dimension": "adoption_friction",
+                  "rule_applied": "B",
+                  "inference": "Variable is about implementing guarantees to reduce friction. Assigned moderate value.",
+                  "value": 0.5,
+                  "confidence": 0.5
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "rule_applied": "B",
+                  "inference": "Variable levels range from minimal to extensive. No clear default, assigned moderate value.",
+                  "value": 0.5,
+                  "confidence": 0.4
+                }
+              ]
+            },
+            "outputs": {
+              "tech_space_seed": [
+                {
+                  "dimension": "capability_frontier_shift",
+                  "value": 0.7,
+                  "confidence": 0.6,
+                  "validation_needed": false
+                }
+              ],
+              "market_space_seed": [
+                {
+                  "dimension": "adoption_friction",
+                  "value": 0.5,
+                  "confidence": 0.5,
+                  "validation_needed": false
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "value": 0.5,
+                  "confidence": 0.4,
+                  "validation_needed": true
+                }
+              ]
+            },
+            "confidence": 0.5,
+            "input_refs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ]
+          },
+          {
+            "step_id": "step_2",
+            "step_type": "constraint_activation",
+            "summary": "Both hard constraints from the scenario are activated due to their explicit presence and the associated tradeoff pressures. No binding conditions from signals exist. Both constraints are assigned a default binding strength as they are core scenario assumptions.",
+            "inputs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ],
+            "intermediate": {
+              "activation_decisions": [
+                {
+                  "constraint": "Must maintain Reltio's cloud-native approach to data integration and MDM",
+                  "check": "Exists in scenario.constraints AND scenario has tradeoff_pressure",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must leverage Reltio's AI-based entity resolution system for golden records",
+                  "check": "Exists in scenario.constraints AND scenario has tradeoff_pressure",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                }
+              ]
+            },
+            "outputs": {
+              "activated_constraints": [
+                {
+                  "description": "Must maintain Reltio's cloud-native approach to data integration and MDM",
+                  "binding_strength": 0.7,
+                  "source": "scenario"
+                },
+                {
+                  "description": "Must leverage Reltio's AI-based entity resolution system for golden records",
+                  "binding_strength": 0.7,
+                  "source": "scenario"
+                }
+              ],
+              "blocking_constraints": []
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ]
+          },
+          {
+            "step_id": "step_3",
+            "step_type": "target_derivation",
+            "summary": "Parsed the objective for >50% market share, targeting the 'ecosystem_lockin' dimension. Variables imply targets for 'capability_frontier_shift' (up) and 'adoption_friction' (down). Resolved to specific target values, with the most aggressive market share target taking precedence.",
+            "inputs": [
+              "scenario.objective",
+              "scenario.variables"
+            ],
+            "intermediate": {
+              "parsed_targets": [
+                {
+                  "source": "objective",
+                  "text": "Achieve >50% market share in AI-ready master data management within SAP's customer base within 24 months.",
+                  "pattern": "capture X% market share",
+                  "target_dimension": "ecosystem_lockin",
+                  "implied_value": 0.51,
+                  "reason": "Market share dominance directly strengthens ecosystem lock-in."
+                },
+                {
+                  "source": "variable",
+                  "name": "Reltio integration speed",
+                  "direction": "up",
+                  "target_dimension": "capability_frontier_shift",
+                  "default_value": 0.75,
+                  "reason": "High integration speed pushes the capability frontier."
+                },
+                {
+                  "source": "variable",
+                  "name": "Migration risk guarantee adoption",
+                  "direction": "down",
+                  "target_dimension": "adoption_friction",
+                  "default_value": 0.35,
+                  "reason": "Adoption of risk guarantees aims to reduce friction."
+                }
+              ]
+            },
+            "outputs": {
+              "target_profile": [
+                {
+                  "dimension": "ecosystem_lockin",
+                  "target_value": 0.51,
+                  "source": "scenario.objective",
+                  "confidence": 0.9
+                },
+                {
+                  "dimension": "capability_frontier_shift",
+                  "target_value": 0.75,
+                  "source": "scenario.variables",
+                  "confidence": 0.7
+                },
+                {
+                  "dimension": "adoption_friction",
+                  "target_value": 0.35,
+                  "source": "scenario.variables",
+                  "confidence": 0.7
+                }
+              ]
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.objective",
+              "scenario.variables"
+            ]
+          },
+          {
+            "step_id": "step_4",
+            "step_type": "gap_analysis",
+            "summary": "Calculated raw gaps between seed and target values. Adjusted for activated constraints, which limit movement on 'capability_frontier_shift' and 'adoption_friction' due to binding strength. No gaps were found to be fully blocked, as targets remain reachable within the constrained movement allowance.",
+            "inputs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ],
+            "intermediate": {
+              "raw_gaps": [
+                {
+                  "dimension": "ecosystem_lockin",
+                  "current_value": 0.5,
+                  "target_value": 0.51,
+                  "raw_gap": 0.01
+                },
+                {
+                  "dimension": "capability_frontier_shift",
+                  "current_value": 0.7,
+                  "target_value": 0.75,
+                  "raw_gap": 0.05
+                },
+                {
+                  "dimension": "adoption_friction",
+                  "current_value": 0.5,
+                  "target_value": 0.35,
+                  "raw_gap": -0.15
+                }
+              ],
+              "constraint_adjustments": [
+                {
+                  "dimension": "capability_frontier_shift",
+                  "constraint_applied": "Must leverage Reltio's AI-based entity resolution system",
+                  "binding_strength": 0.7,
+                  "allowed_movement_factor": 0.3,
+                  "max_reachable": "0.7 + (0.05 * 0.3)",
+                  "target_reachable": true,
+                  "reason": "Constraint binds to the core technology but does not fully block incremental improvement."
+                },
+                {
+                  "dimension": "adoption_friction",
+                  "constraint_applied": "Must maintain Reltio's cloud-native approach",
+                  "binding_strength": 0.7,
+                  "allowed_movement_factor": 0.3,
+                  "max_reachable": "0.5 - (0.15 * 0.3)",
+                  "target_reachable": true,
+                  "reason": "Constraint defines the architectural approach but allows for pricing/model innovation to reduce friction."
+                }
+              ]
+            },
+            "outputs": {
+              "dimension_gaps": [
+                {
+                  "dimension": "ecosystem_lockin",
+                  "gap": 0.01,
+                  "feasibility": "feasible",
+                  "constraint_impact": "none"
+                },
+                {
+                  "dimension": "capability_frontier_shift",
+                  "gap": 0.05,
+                  "feasibility": "constrained_feasible",
+                  "constraint_impact": "movement_limited"
+                },
+                {
+                  "dimension": "adoption_friction",
+                  "gap": -0.15,
+                  "feasibility": "constrained_feasible",
+                  "constraint_impact": "movement_limited"
+                }
+              ],
+              "blocking_gaps": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ]
+          },
+          {
+            "step_id": "step_5",
+            "step_type": "strategic_conditions",
+            "summary": "Derived conditions from gaps and actor profile. No blocking gaps exist. The significant gap in reducing adoption friction generates a warning condition. The actor's 'ecosystem_control' capability aligns with the required condition for partnership execution. No non-negotiable conflicts were found.",
+            "inputs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ],
+            "intermediate": {
+              "condition_derivations": [
+                {
+                  "source": "gap",
+                  "dimension": "ecosystem_lockin",
+                  "gap_magnitude": 0.01,
+                  "type": "required",
+                  "derivation": "Small gap but core to objective; requires deliberate partnership action."
+                },
+                {
+                  "source": "gap",
+                  "dimension": "adoption_friction",
+                  "gap_magnitude": 0.15,
+                  "type": "warning",
+                  "derivation": "Largest magnitude gap; if not addressed, could jeopardize adoption goal."
+                }
+              ]
+            },
+            "outputs": {
+              "required": [
+                "Must secure 'extensive' level external ecosystem partnerships within 18 months to drive market share from 0.5 to 0.51."
+              ],
+              "warning": [
+                "Risk of missing adoption targets if success-based migration pricing models are not fully implemented and marketed within 12 months."
+              ],
+              "blocking": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ]
+          }
+        ],
+        "intermediate": {},
+        "conclusions": {
+          "strategic_freedom": {
+            "required": [
+              "Must secure 'extensive' level external ecosystem partnerships within 18 months to drive market share from 0.5 to 0.51."
+            ],
+            "warning": [
+              "Risk of missing adoption targets if success-based migration pricing models are not fully implemented and marketed within 12 months."
+            ],
+            "blocking": []
+          },
+          "gap_summary": {
+            "dimensions": [
+              {
+                "dimension": "ecosystem_lockin",
+                "gap": 0.01,
+                "status": "feasible"
+              },
+              {
+                "dimension": "capability_frontier_shift",
+                "gap": 0.05,
+                "status": "constrained"
+              },
+              {
+                "dimension": "adoption_friction",
+                "gap": -0.15,
+                "status": "constrained"
+              }
+            ],
+            "blocking": []
+          }
+        }
+      },
+      "llm_status": "ok"
+    },
+    {
+      "run_id": "det-0385b830a8f5",
+      "scenario_key": "B",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_1",
+            "step_type": "seed_inference",
+            "summary": "Mapped scenario variables to TechSpace and MarketSpace dimensions using pattern matching. 'Migration guarantee scope' maps to adoption_friction (MarketSpace). 'Reltio feature integration prioritization' is unmapped as it describes a strategic choice, not a market/tech state. 'Customer communication intensity' maps to adoption_friction (MarketSpace). Inferred current values from variable descriptions, assigning moderate levels due to the focus on addressing existing friction.",
+            "inputs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ],
+            "intermediate": {
+              "dimension_mapping": [
+                {
+                  "variable": "Migration guarantee scope",
+                  "pattern": "migration_*",
+                  "space": "MarketSpace",
+                  "dimension": "adoption_friction",
+                  "reason": "Variable describes contractual protections against migration pain, directly related to friction."
+                },
+                {
+                  "variable": "Reltio feature integration prioritization",
+                  "pattern": "none",
+                  "space": "unmapped",
+                  "dimension": "N/A",
+                  "reason": "Describes a prioritization strategy; does not fit a clear market or technology state dimension pattern."
+                },
+                {
+                  "variable": "Customer communication intensity",
+                  "pattern": "none",
+                  "space": "MarketSpace",
+                  "dimension": "adoption_friction",
+                  "reason": "Transparent updates aim to reduce uncertainty and perceived risk during migration, thus reducing friction."
+                }
+              ],
+              "value_calculation": [
+                {
+                  "dimension": "adoption_friction",
+                  "rule_applied": "B",
+                  "reason": "No direct signals. Scenario goal is to reduce migration pain points, implying current friction is high. However, the variable descriptions focus on mitigations, not stating current level. Using moderate baseline.",
+                  "value": 0.5,
+                  "confidence": 0.4
+                }
+              ]
+            },
+            "outputs": {
+              "tech_space_seed": [],
+              "market_space_seed": [
+                {
+                  "dimension": "adoption_friction",
+                  "value": 0.5,
+                  "confidence": 0.4,
+                  "validation_needed": true
+                }
+              ]
+            },
+            "confidence": 0.4,
+            "input_refs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ]
+          },
+          {
+            "step_id": "step_2",
+            "step_type": "constraint_activation",
+            "summary": "All three scenario constraints are activated as they are explicitly listed and the scenario has tradeoff_pressure, indicating they are binding assumptions. No signal conditions were provided to override this. Binding strength is set to default 0.7 for scenario assumptions.",
+            "inputs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ],
+            "intermediate": {
+              "activation_decisions": [
+                {
+                  "constraint": "Must address customer concerns about paying for unusable systems during migration",
+                  "condition_check": "No binding_condition signal. Present in scenario.constraints and scenario has tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must overcome low customer familiarity with BDC (83% of DSAG members)",
+                  "condition_check": "No binding_condition signal. Present in scenario.constraints and scenario has tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must integrate data from outside SAP's broad application portfolio",
+                  "condition_check": "No binding_condition signal. Present in scenario.constraints and scenario has tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                }
+              ]
+            },
+            "outputs": {
+              "activated_constraints": [
+                {
+                  "description": "Must address customer concerns about paying for unusable systems during migration",
+                  "binding_strength": 0.7,
+                  "reason": "scenario_assumption"
+                },
+                {
+                  "description": "Must overcome low customer familiarity with BDC (83% of DSAG members)",
+                  "binding_strength": 0.7,
+                  "reason": "scenario_assumption"
+                },
+                {
+                  "description": "Must integrate data from outside SAP's broad application portfolio",
+                  "binding_strength": 0.7,
+                  "reason": "scenario_assumption"
+                }
+              ],
+              "blocking_constraints": []
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ]
+          },
+          {
+            "step_id": "step_3",
+            "step_type": "target_derivation",
+            "summary": "Parsed the objective 'Reduce customer-reported migration pain points by 80% while maintaining BDC revenue stability.' This implies a target to significantly reduce adoption_friction. An 80% reduction suggests moving from a high pain state to a low one. Using the pattern 'resolve X% of...' maps to adoption_friction with a target value of 0.30. Variables also support reducing friction.",
+            "inputs": [
+              "scenario.objective",
+              "scenario.variables"
+            ],
+            "intermediate": {
+              "parsed_targets": [
+                {
+                  "source": "objective",
+                  "text": "Reduce customer-reported migration pain points by 80%",
+                  "pattern": "resolve 100% of ...",
+                  "interpretation": "80% reduction in pain points equates to resolving most friction.",
+                  "dimension": "adoption_friction",
+                  "direction": "down",
+                  "target_value": 0.3,
+                  "reason": "Target is to move friction from high towards low. 0.3 represents low friction (70% reduction from baseline 0.5 approximates 80% goal)."
+                },
+                {
+                  "source": "variable",
+                  "variable": "Migration guarantee scope",
+                  "interpretation": "Increasing scope reduces friction.",
+                  "dimension": "adoption_friction",
+                  "direction": "down",
+                  "target_value": 0.35,
+                  "reason": "Default for 'down' direction."
+                },
+                {
+                  "source": "variable",
+                  "variable": "Customer communication intensity",
+                  "interpretation": "Increasing communication reduces friction.",
+                  "dimension": "adoption_friction",
+                  "direction": "down",
+                  "target_value": 0.35,
+                  "reason": "Default for 'down' direction."
+                }
+              ]
+            },
+            "outputs": {
+              "target_profile": [
+                {
+                  "dimension": "adoption_friction",
+                  "target_value": 0.3,
+                  "reason": "Aggressive target from objective (80% reduction) overrides variable defaults.",
+                  "confidence": 0.7
+                }
+              ]
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "scenario.objective",
+              "scenario.variables"
+            ]
+          },
+          {
+            "step_id": "step_4",
+            "step_type": "gap_analysis",
+            "summary": "Calculated raw gap for adoption_friction: target 0.3 - current 0.5 = -0.2. All activated constraints have binding_strength 0.7. The constraints about addressing payment concerns and low familiarity directly limit friction reduction by imposing requirements (guarantees, education) that may be costly or slow, potentially restricting the speed/magnitude of improvement. Adjusted max reachable is current_value + (allowed_movement * (1 - 0.7)) = 0.5 + (-0.2 * 0.3) = 0.44. Target 0.3 is less than 0.44, so the gap is BLOCKED by constraints.",
+            "inputs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ],
+            "intermediate": {
+              "raw_gaps": [
+                {
+                  "dimension": "adoption_friction",
+                  "current_value": 0.5,
+                  "target_value": 0.3,
+                  "raw_gap": -0.2
+                }
+              ],
+              "constraint_adjustments": [
+                {
+                  "dimension": "adoption_friction",
+                  "constraints_applied": [
+                    "Must address customer concerns...",
+                    "Must overcome low customer familiarity..."
+                  ],
+                  "binding_strength": 0.7,
+                  "allowed_movement_factor": 0.3,
+                  "max_reachable": 0.44,
+                  "target_reachable": false,
+                  "reason": "High binding strength from scenario constraints limits the feasible reduction in friction. Target value 0.3 is beyond the constrained reachable limit of 0.44."
+                }
+              ]
+            },
+            "outputs": {
+              "dimension_gaps": [
+                {
+                  "dimension": "adoption_friction",
+                  "current_value": 0.5,
+                  "target_value": 0.3,
+                  "raw_gap": -0.2,
+                  "feasible_gap": -0.06,
+                  "max_reachable": 0.44,
+                  "is_blocked": true,
+                  "blocking_reason": "Activated constraints with high binding strength (0.7) limit the maximum feasible reduction in adoption_friction."
+                }
+              ],
+              "blocking_gaps": [
+                "adoption_friction"
+              ]
+            },
+            "confidence": 0.6,
+            "input_refs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ]
+          },
+          {
+            "step_id": "step_5",
+            "step_type": "strategic_conditions",
+            "summary": "From the blocked adoption_friction gap, derived a REQUIRED condition to relax the binding constraints, specifically the financial/legal risk from migration guarantees. Also derived a WARNING condition about the risk of missing the 80% reduction goal if execution is suboptimal on communication and integration. No actor non-negotiable conflicts were identified.",
+            "inputs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ],
+            "intermediate": {
+              "condition_derivations": [
+                {
+                  "source": "blocking_gap",
+                  "gap": "adoption_friction",
+                  "analysis": "To achieve target friction of 0.3, the constraints limiting financial risk (from tradeoff_pressure) and requiring customer education must be mitigated.",
+                  "derived_condition": "required",
+                  "text": "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+                },
+                {
+                  "source": "high_gap",
+                  "gap": "adoption_friction",
+                  "raw_gap_magnitude": 0.2,
+                  "analysis": "Even if unblocked, a 0.2 point reduction is significant. Suboptimal execution on communication or external data integration could prevent goal achievement.",
+                  "derived_condition": "warning",
+                  "text": "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed."
+                }
+              ]
+            },
+            "outputs": {
+              "required": [
+                "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+              ],
+              "warning": [
+                "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed."
+              ],
+              "blocking": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ]
+          }
+        ],
+        "intermediate": {},
+        "conclusions": {
+          "strategic_freedom": {
+            "required": [
+              "Must secure legal/financial approval for expansive migration guarantees within Q1 to unblock friction reduction."
+            ],
+            "warning": [
+              "Risk of failing to achieve 80% pain point reduction if customer communication is inconsistent or external data integration is delayed."
+            ],
+            "blocking": []
+          },
+          "gap_summary": {
+            "dimensions": [
+              {
+                "dimension": "adoption_friction",
+                "status": "blocked",
+                "gap": -0.2
+              }
+            ],
+            "blocking": [
+              "adoption_friction"
+            ]
+          }
+        }
+      },
+      "llm_status": "ok"
+    },
+    {
+      "run_id": "det-0385b830a8f5",
+      "scenario_key": "C",
+      "reason_chain": {
+        "steps": [
+          {
+            "step_id": "step_1",
+            "step_type": "seed_inference",
+            "summary": "Mapped scenario variables to Space dimensions using pattern matching. 'Competitive pricing aggressiveness' maps to competitive_pressure. 'Sales channel conflict management' maps to ecosystem_lockin. 'Reltio product independence' is ambiguous and unmapped. No prior signals exist, so values were inferred from variable descriptions. Competitive pressure is high (0.7). Ecosystem lock-in is low due to conflict (0.3).",
+            "inputs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ],
+            "intermediate": {
+              "dimension_mapping": [
+                {
+                  "variable": "Competitive pricing aggressiveness",
+                  "pattern": "competition_*",
+                  "space": "MarketSpace",
+                  "dimension": "competitive_pressure",
+                  "confidence": 0.8
+                },
+                {
+                  "variable": "Sales channel conflict management",
+                  "pattern": "ecosystem_*",
+                  "space": "MarketSpace",
+                  "dimension": "ecosystem_lockin",
+                  "confidence": 0.7
+                },
+                {
+                  "variable": "Reltio product independence",
+                  "pattern": "unclear",
+                  "space": "unmapped",
+                  "dimension": null,
+                  "reason": "Description relates to product positioning, not a clear tech or market dimension pattern."
+                }
+              ],
+              "value_calculation": [
+                {
+                  "dimension": "competitive_pressure",
+                  "rule": "B",
+                  "reason": "Variable description implies direct competition with major vendors, indicating high pressure.",
+                  "value": 0.7,
+                  "confidence": 0.6
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "rule": "B",
+                  "reason": "Variable description indicates channel conflict, which weakens ecosystem cohesion and lock-in.",
+                  "value": 0.3,
+                  "confidence": 0.6
+                }
+              ]
+            },
+            "outputs": {
+              "tech_space_seed": [],
+              "market_space_seed": [
+                {
+                  "dimension": "competitive_pressure",
+                  "value": 0.7,
+                  "confidence": 0.6
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "value": 0.3,
+                  "confidence": 0.6
+                }
+              ]
+            },
+            "confidence": 0.6,
+            "input_refs": [
+              "scenario.variables",
+              "planning_query.signals"
+            ]
+          },
+          {
+            "step_id": "step_2",
+            "step_type": "constraint_activation",
+            "summary": "All three scenario constraints are activated due to the scenario's explicit tradeoff pressures, which indicate tension. No binding conditions from signals exist. All constraints are considered active with default binding strength, as they are fundamental to the scenario's execution.",
+            "inputs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ],
+            "intermediate": {
+              "activation_decisions": [
+                {
+                  "constraint": "Must integrate data from outside SAP's broad application portfolio",
+                  "condition_check": "No signal condition. Present in scenario.constraints and tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must leverage Reltio's AI-based entity resolution system for golden records",
+                  "condition_check": "No signal condition. Present in scenario.constraints and tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must maintain Reltio's cloud-native approach to data integration and MDM",
+                  "condition_check": "No signal condition. Present in scenario.constraints and tradeoff_pressure.",
+                  "activated": true,
+                  "reason": "scenario_assumption",
+                  "binding_strength": 0.7
+                }
+              ]
+            },
+            "outputs": {
+              "activated_constraints": [
+                {
+                  "constraint": "Must integrate data from outside SAP's broad application portfolio",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must leverage Reltio's AI-based entity resolution system for golden records",
+                  "binding_strength": 0.7
+                },
+                {
+                  "constraint": "Must maintain Reltio's cloud-native approach to data integration and MDM",
+                  "binding_strength": 0.7
+                }
+              ],
+              "blocking_constraints": []
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.constraints",
+              "step_1.outputs"
+            ]
+          },
+          {
+            "step_id": "step_3",
+            "step_type": "target_derivation",
+            "summary": "Parsed the objective to capture 20% market share, targeting the market_share dimension at 0.20. Variables imply targets: 'Competitive pricing aggressiveness' (disruptive level) targets competitive_pressure upward (0.75). 'Sales channel conflict management' (effectiveness) targets ecosystem_lockin upward (0.75) to reduce conflict. Resolved to the more aggressive target for ecosystem_lockin.",
+            "inputs": [
+              "scenario.objective",
+              "scenario.variables"
+            ],
+            "intermediate": {
+              "parsed_targets": [
+                {
+                  "source": "scenario.objective",
+                  "text": "Achieve 20% market share in standalone AI-MDM solutions within 36 months.",
+                  "pattern": "capture X% market share",
+                  "target_dimension": "market_share",
+                  "target_value": 0.2,
+                  "confidence": 0.9
+                },
+                {
+                  "source": "variable: Competitive pricing aggressiveness",
+                  "description": "Pricing strategy relative to competitors.",
+                  "implied_direction": "up",
+                  "target_dimension": "competitive_pressure",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                },
+                {
+                  "source": "variable: Sales channel conflict management",
+                  "description": "Effectiveness in managing conflicts...",
+                  "implied_direction": "up",
+                  "target_dimension": "ecosystem_lockin",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                }
+              ]
+            },
+            "outputs": {
+              "target_profile": [
+                {
+                  "dimension": "market_share",
+                  "target_value": 0.2,
+                  "confidence": 0.9
+                },
+                {
+                  "dimension": "competitive_pressure",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "target_value": 0.75,
+                  "confidence": 0.7
+                }
+              ]
+            },
+            "confidence": 0.8,
+            "input_refs": [
+              "scenario.objective",
+              "scenario.variables"
+            ]
+          },
+          {
+            "step_id": "step_4",
+            "step_type": "gap_analysis",
+            "summary": "Calculated raw gaps between seed and target values. The ecosystem_lockin gap is large (0.45). Checked activated constraints: the constraint to integrate outside data and maintain cloud-native approach may limit ecosystem_lockin movement, but binding strength (0.7) is not >0.6 for a hard block. No gaps are definitively blocked by constraints alone at this stage.",
+            "inputs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ],
+            "intermediate": {
+              "raw_gaps": [
+                {
+                  "dimension": "market_share",
+                  "current_value": null,
+                  "target_value": 0.2,
+                  "raw_gap": 0.2,
+                  "note": "No current seed value for market_share; gap is target value."
+                },
+                {
+                  "dimension": "competitive_pressure",
+                  "current_value": 0.7,
+                  "target_value": 0.75,
+                  "raw_gap": 0.05
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "current_value": 0.3,
+                  "target_value": 0.75,
+                  "raw_gap": 0.45
+                }
+              ],
+              "constraint_adjustments": [
+                {
+                  "dimension": "ecosystem_lockin",
+                  "relevant_constraints": [
+                    "Must integrate data from outside SAP's broad application portfolio",
+                    "Must maintain Reltio's cloud-native approach"
+                  ],
+                  "binding_strength": 0.7,
+                  "max_reachable_calc": "Not applied. Binding strength is 0.7, which is >0.6, but constraint does not explicitly forbid increasing lock-in; it may just make it harder.",
+                  "blocked": false,
+                  "reason": "Constraint limits movement but does not make target unreachable."
+                }
+              ]
+            },
+            "outputs": {
+              "dimension_gaps": [
+                {
+                  "dimension": "market_share",
+                  "gap": 0.2,
+                  "feasibility": "feasible"
+                },
+                {
+                  "dimension": "competitive_pressure",
+                  "gap": 0.05,
+                  "feasibility": "feasible"
+                },
+                {
+                  "dimension": "ecosystem_lockin",
+                  "gap": 0.45,
+                  "feasibility": "challenging"
+                }
+              ],
+              "blocking_gaps": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_1.outputs",
+              "step_2.outputs",
+              "step_3.outputs"
+            ]
+          },
+          {
+            "step_id": "step_5",
+            "step_type": "strategic_conditions",
+            "summary": "Derived conditions from gaps. The large ecosystem_lockin gap requires a condition to resolve channel conflict. The market share target requires a condition for customer acquisition. High aggregate resistance from the actor profile creates a warning condition about execution velocity. No non-negotiable conflicts create blocking conditions.",
+            "inputs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ],
+            "intermediate": {
+              "condition_derivations": [
+                {
+                  "source": "blocking_gaps",
+                  "derivation": "No blocking gaps, so no required conditions from that source."
+                },
+                {
+                  "source": "high_gap: ecosystem_lockin (0.45)",
+                  "derivation": "Large gap indicates need for decisive action to improve ecosystem cohesion.",
+                  "condition_type": "required",
+                  "text": "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months."
+                },
+                {
+                  "source": "target: market_share (0.2)",
+                  "derivation": "Achieving new market share requires displacing incumbents.",
+                  "condition_type": "required",
+                  "text": "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+                },
+                {
+                  "source": "actor_profile.resistance.aggregate_resistance (0.63)",
+                  "derivation": "High structural and cultural resistance could slow execution.",
+                  "condition_type": "warning",
+                  "text": "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1."
+                }
+              ]
+            },
+            "outputs": {
+              "required": [
+                "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months.",
+                "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+              ],
+              "warning": [
+                "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1."
+              ],
+              "blocking": []
+            },
+            "confidence": 0.7,
+            "input_refs": [
+              "step_4.outputs",
+              "actor_profile.non_negotiables"
+            ]
+          }
+        ],
+        "intermediate": {},
+        "conclusions": {
+          "strategic_freedom": {
+            "required": [
+              "Must establish a clear governance model to resolve SAP vs. Reltio sales channel conflicts within 12 months.",
+              "Must secure at least 5 major reference customers from outside SAP's installed base within 24 months."
+            ],
+            "warning": [
+              "Risk of missing velocity targets if internal alignment on the standalone GTM motion is not achieved by Q1."
+            ],
+            "blocking": []
+          },
+          "gap_summary": {
+            "dimensions": [
+              {
+                "dimension": "market_share",
+                "gap": 0.2,
+                "feasibility": "feasible"
+              },
+              {
+                "dimension": "competitive_pressure",
+                "gap": 0.05,
+                "feasibility": "feasible"
+              },
+              {
+                "dimension": "ecosystem_lockin",
+                "gap": 0.45,
+                "feasibility": "challenging"
+              }
+            ],
+            "blocking": []
+          }
+        }
+      },
+      "llm_status": "ok"
+    }
+  ],
+  "prompt_token": "base.scenario_reason_chain_prompt@1.0.0"
+}

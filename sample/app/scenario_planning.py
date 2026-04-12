@@ -37,9 +37,35 @@ def _read_json_file(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
+def _load_sample_actor_payloads(pack_id: str) -> dict[str, Any]:
+    actor_dir = Path("sample/data/actors") / str(pack_id).strip()
+    actor_profile_path = actor_dir / "actor_ontology.json"
+    persona_path = actor_dir / "analyze_persona.json"
+    status_path = actor_dir / "analyze_status.json"
+
+    return {
+        "paths": {
+            "actor_profile": str(actor_profile_path),
+            "persona": str(persona_path),
+            "actor_status": str(status_path),
+        },
+        "payloads": {
+            "actor_profile": _read_json_file(actor_profile_path),
+            "persona": _read_json_file(persona_path),
+            "actor_status": _read_json_file(status_path),
+        },
+    }
+
+
 def _load_scenario_slot_labels() -> dict[str, str]:
-    template_path = Path(__file__).resolve().parents[1] / "config" / "templates" / "planning.yaml"
-    if not template_path.exists():
+    file_path = Path(__file__).resolve()
+    candidate_paths = [
+        file_path.parents[1] / "config" / "templates" / "planning.yaml",
+        file_path.parents[2] / "config" / "templates" / "planning.yaml",
+    ]
+
+    template_path = next((path for path in candidate_paths if path.exists()), None)
+    if template_path is None:
         return {}
 
     try:
@@ -202,7 +228,7 @@ def _compact_brief_markdown(markdown_text: str) -> str:
         prefix_len = len(line) - len(stripped)
         prefix = line[:prefix_len]
 
-        if stripped.startswith("**ID:**") or stripped.startswith("**Version:**") or stripped.startswith("**Source:**") or stripped.startswith("**Core Topic:**"):
+        if stripped.startswith("**ID:**") or stripped.startswith("**Version:**") or stripped.startswith("**Core Topic:**"):
             continue
 
         if stripped.startswith("**Generated:**"):
@@ -508,13 +534,15 @@ st.markdown(
 )
 
 with st.sidebar:
-    st.header("Data Source")
-    data_root = st.text_input("Data root", value="data/scenarios")
-    output_root = st.text_input("Output root", value="output")
+    st.header("Sample Data Source")
+    st.warning("Demo mode: this app reads bundled sample artifacts only.")
+    data_root = "sample/data/scenarios"
+    output_root = "sample/output"
+    st.caption(f"Data root: {data_root}")
+    st.caption(f"Output root: {output_root}")
 
     candidates = discover_spec8_pack_candidates(data_root=data_root, output_root=output_root)
     selected_pack = st.selectbox("Pack ID", options=candidates or [""], index=0)
-    output_pack_override = st.text_input("Output pack override (optional)", value="")
 
 if not selected_pack:
     st.info("No candidate pack found. Generate artifacts first via analyze/scenario/simulate/explain.")
@@ -524,11 +552,15 @@ bundle = load_spec8_flow_artifacts(
     pack_id=selected_pack,
     data_root=data_root,
     output_root=output_root,
-    output_pack_id=output_pack_override.strip() or None,
+    output_pack_id=None,
 )
 paths = dict(bundle.get("paths") or {})
 payloads = dict(bundle.get("payloads") or {})
 slot_labels = _load_scenario_slot_labels()
+
+sample_actor = _load_sample_actor_payloads(selected_pack)
+paths.update(dict(sample_actor.get("paths") or {}))
+payloads.update(dict(sample_actor.get("payloads") or {}))
 
 st.markdown(
     """

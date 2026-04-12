@@ -1,0 +1,39 @@
+{
+  "case_id": "sap_reltio_acquisition",
+  "strategy_ontology_path": "/mnt/ssd/projects/opensource/omen/output/actors/sap_reltio_acquisition/strategy_ontology.json",
+  "actor_ontology_path": "/mnt/ssd/projects/opensource/omen/output/actors/sap_reltio_acquisition/actor_ontology.json",
+  "validation_passed": false,
+  "validation_issues": [
+    {
+      "code": "actor_naming_violation",
+      "message": "actor concept should end with 'Actor': EnterpriseSoftwareVendor",
+      "path": "tbox.concepts"
+    },
+    {
+      "code": "actor_naming_violation",
+      "message": "actor concept should end with 'Actor': MasterDataManagementVendor",
+      "path": "tbox.concepts"
+    },
+    {
+      "code": "actor_naming_violation",
+      "message": "actor concept should end with 'Actor': DataPlatformVendor",
+      "path": "tbox.concepts"
+    },
+    {
+      "code": "actor_naming_violation",
+      "message": "actor concept should end with 'Actor': UserGroup",
+      "path": "tbox.concepts"
+    },
+    {
+      "code": "actor_naming_violation",
+      "message": "actor concept should end with 'Actor': Consultancy",
+      "path": "tbox.concepts"
+    },
+    {
+      "code": "actor_naming_violation",
+      "message": "actor concept should end with 'Actor': Customer",
+      "path": "tbox.concepts"
+    }
+  ],
+  "reused_existing": false
+}

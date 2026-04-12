@@ -17,6 +17,7 @@ from omen.ui.actor_graph import build_actor_graph_figure
 
 
 st.set_page_config(page_title="Omen Strategic Reasoning", layout="wide")
+WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _render_json(path: str, payload: dict[str, Any] | None) -> None:
@@ -27,11 +28,42 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
     st.json(payload, expanded=False)
 
 
-def _read_json_file(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
+def _read_json_file(path: Path, *, allowed_roots: list[Path]) -> dict[str, Any] | None:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        resolved_path = path.resolve(strict=False)
+        resolved_workspace = WORKSPACE_ROOT.resolve(strict=False)
+    except Exception:
+        return None
+
+    try:
+        resolved_path.relative_to(resolved_workspace)
+    except ValueError:
+        return None
+
+    root_candidates: list[Path] = []
+    for root in allowed_roots:
+        try:
+            root_candidates.append(root.resolve(strict=False))
+        except Exception:
+            continue
+
+    if not root_candidates:
+        return None
+
+    is_in_allowed_root = False
+    for root in root_candidates:
+        try:
+            resolved_path.relative_to(root)
+            is_in_allowed_root = True
+            break
+        except ValueError:
+            continue
+
+    if not is_in_allowed_root or not resolved_path.exists() or not resolved_path.is_file():
+        return None
+
+    try:
+        payload = json.loads(resolved_path.read_text(encoding="utf-8"))
     except Exception:
         return None
     return payload if isinstance(payload, dict) else None
@@ -520,6 +552,8 @@ if not selected_pack:
     st.info("No candidate pack found. Generate artifacts first via analyze/scenario/simulate/explain.")
     st.stop()
 
+allowed_artifact_roots = [Path(data_root), Path(output_root)]
+
 bundle = load_spec8_flow_artifacts(
     pack_id=selected_pack,
     data_root=data_root,
@@ -628,7 +662,10 @@ with tab_scenario:
 
     scenario_pack_path = Path(paths.get("scenario_pack") or "")
     if scenario_pack_payload is None and str(scenario_pack_path):
-        scenario_pack_payload = _read_json_file(scenario_pack_path)
+        scenario_pack_payload = _read_json_file(
+            scenario_pack_path,
+            allowed_roots=allowed_artifact_roots,
+        )
 
     scenario_rows = _build_scenario_rows(scenario_pack_payload, slot_labels=slot_labels)
     if scenario_rows:

@@ -57,13 +57,23 @@ pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
-### Run Example
+### View Example
 
-We have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. The case document is `cases/sap_reltio_acquisition.md`, and it can be run end-to-end with the following commands:
+If you want to quickly see Omen in action, a visualized sample case and its results are available in the `sample` directory. Run:
+
+```bash
+streamlit run sample/app/scenario_planning.py
+```
+
+Then open `http://localhost:8501` in your browser to explore the full strategic reasoning flow.
+
+### Run Built-in Case
+
+If you want to run a complete end-to-end workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. The case document is `cases/sap_reltio_acquisition.md`, and it can be run end-to-end with the following commands:
 
 #### Step 1. Analyze
 
-Omen's Analyze module combines strategy methodology and the data pipeline, allowing you to generate strategic insights and machine input artifacts from the source document at the single command line.
+Omen's Analyze module combines strategy methodology and the data pipeline, allowing you to generate strategic insights and machine input artifacts from the source document with a single command.
 
 ##### Situation Analysis
 

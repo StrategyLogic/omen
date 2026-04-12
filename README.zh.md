@@ -58,9 +58,19 @@ pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
+### 查看示例
+
+如果你希望快速查看 Omen 的运行效果，`sample` 目录中提供了可视化案例及其结果。运行：
+
+```bash
+streamlit run sample/app/scenario_planning.py
+```
+
+然后在浏览器中打开 `http://localhost:8501`，即可查看完整的战略推演流程。
+
 ### 运行示例
 
-我们准备了一个内置案例，用于模拟 2026 年 3 月 SAP 收购 Reltio 的情境。案例文档位于 `cases/sap_reltio_acquisition.md`，可以通过以下步骤端到端运行。
+如果你希望亲自运行一遍完整的流程，请使用我们准备的内置案例，用于模拟 2026 年 3 月 SAP 收购 Reltio 的情境。案例文档位于 `cases/sap_reltio_acquisition.md`，可以通过以下步骤端到端运行。
 
 #### 第一步：分析
 

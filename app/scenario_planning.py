@@ -603,17 +603,17 @@ with tab_actor:
 
     has_persona_content = _render_persona_panel(persona_payload)
     persona_path = Path(paths.get("persona") or "")
-    persona_exists = persona_path.exists()
+    PERSONA_EXISTS = persona_path.exists()
     persona_payload_loaded = isinstance(persona_payload, dict) and bool(persona_payload)
 
     if not has_persona_content and actor_profile:
-        if persona_exists and persona_payload_loaded:
+        if PERSONA_EXISTS and persona_payload_loaded:
             st.warning(
                 "Persona artifact exists, but insight content is empty or unusable. "
                 "Run `omen analyze situation --doc <name> --force` to regenerate, "
                 "or run `omen analyze actor --doc <name> persona` directly."
             )
-        elif persona_exists and not persona_payload_loaded:
+        elif PERSONA_EXISTS and not persona_payload_loaded:
             st.warning("Persona artifact file exists but JSON is invalid/unreadable.")
         else:
             st.info("Persona insight artifact not found yet. Run `omen analyze situation --doc <name>` again to auto-generate it after actor enhancement.")

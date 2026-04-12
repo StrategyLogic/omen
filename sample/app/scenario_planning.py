@@ -536,12 +536,12 @@ st.markdown(
 with st.sidebar:
     st.header("Sample Data Source")
     st.warning("Demo mode: this app reads bundled sample artifacts only.")
-    data_root = "sample/data/scenarios"
-    output_root = "sample/output"
-    st.caption(f"Data root: {data_root}")
-    st.caption(f"Output root: {output_root}")
+    DATA_ROOT = "sample/data/scenarios"
+    OUTPUT_ROOT = "sample/output"
+    st.caption(f"Data root: {DATA_ROOT}")
+    st.caption(f"Output root: {OUTPUT_ROOT}")
 
-    candidates = discover_spec8_pack_candidates(data_root=data_root, output_root=output_root)
+    candidates = discover_spec8_pack_candidates(data_root=DATA_ROOT, output_root=OUTPUT_ROOT)
     selected_pack = st.selectbox("Pack ID", options=candidates or [""], index=0)
 
 if not selected_pack:
@@ -550,8 +550,8 @@ if not selected_pack:
 
 bundle = load_spec8_flow_artifacts(
     pack_id=selected_pack,
-    data_root=data_root,
-    output_root=output_root,
+    data_root=DATA_ROOT,
+    output_root=OUTPUT_ROOT,
     output_pack_id=None,
 )
 paths = dict(bundle.get("paths") or {})
@@ -635,17 +635,17 @@ with tab_actor:
 
     has_persona_content = _render_persona_panel(persona_payload)
     persona_path = Path(paths.get("persona") or "")
-    persona_exists = persona_path.exists()
+    PERSONA_EXISTS = persona_path.exists()
     persona_payload_loaded = isinstance(persona_payload, dict) and bool(persona_payload)
 
     if not has_persona_content and actor_profile:
-        if persona_exists and persona_payload_loaded:
+        if PERSONA_EXISTS and persona_payload_loaded:
             st.warning(
                 "Persona artifact exists, but insight content is empty or unusable. "
                 "Run `omen analyze situation --doc <name> --force` to regenerate, "
                 "or run `omen analyze actor --doc <name> persona` directly."
             )
-        elif persona_exists and not persona_payload_loaded:
+        elif PERSONA_EXISTS and not persona_payload_loaded:
             st.warning("Persona artifact file exists but JSON is invalid/unreadable.")
         else:
             st.info("Persona insight artifact not found yet. Run `omen analyze situation --doc <name>` again to auto-generate it after actor enhancement.")

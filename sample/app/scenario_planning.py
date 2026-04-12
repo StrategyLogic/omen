@@ -37,33 +37,27 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
 
 def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str, Any] | None:
     try:
-        workspace_real = os.path.realpath(str(WORKSPACE_ROOT))
-        base_real = os.path.realpath(str(base_dir))
-        if os.path.commonpath([workspace_real, base_real]) != workspace_real:
+        workspace_base = os.path.normpath(str(WORKSPACE_ROOT))
+        base_path = os.path.normpath(str(base_dir))
+        if not base_path.startswith(workspace_base):
             return None
 
         safe_pack_id = _normalize_pack_id(pack_id)
         if not safe_pack_id:
             return None
 
-        target_real = os.path.realpath(str(Path(base_real) / safe_pack_id / filename))
-    except Exception:
-        return None
+        fullpath = os.path.normpath(os.path.join(base_path, safe_pack_id, filename))
+        if not fullpath.startswith(base_path):
+            return None
 
-    if os.path.commonpath([workspace_real, target_real]) != workspace_real:
-        return None
-    if os.path.commonpath([base_real, target_real]) != base_real:
-        return None
+        resolved_path = Path(fullpath)
+        if not resolved_path.exists() or not resolved_path.is_file():
+            return None
 
-    resolved_path = Path(target_real)
-    if not resolved_path.exists() or not resolved_path.is_file():
-        return None
-
-    try:
         payload = json.loads(resolved_path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else None
     except Exception:
         return None
-    return payload if isinstance(payload, dict) else None
 
 
 def _load_sample_actor_payloads(pack_id: str) -> dict[str, Any]:

@@ -44,9 +44,11 @@ A complete reasoning session typically answers the following questions:
 *   **Strategy Effectiveness?** Under what circumstances is an "open ecosystem" superior to "vertical integration"?
 *   **Endgame Form?** Does it move towards monopoly, oligarchic balance, or fragmented coexistence?
 
+---
+
 ## 🚀 Quick Start
 
-### Installation
+### 🏗️ Installation
 
 Environment requirements: Python 3.12+ with `pip` package manager.
 
@@ -57,7 +59,7 @@ pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
-### View Example
+### 🌰 View Example
 
 If you want to quickly see Omen in action, a visualized sample case and its results are available in the `sample` directory. Run:
 
@@ -67,7 +69,7 @@ streamlit run sample/app/scenario_planning.py
 
 Then open `http://localhost:8501` in your browser to explore the full strategic reasoning flow.
 
-### Run Built-in Case
+### 🎵 Run Built-in Case
 
 If you want to run a complete end-to-end workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. The case document is `cases/sap_reltio_acquisition.md`, and it can be run end-to-end with the following commands:
 

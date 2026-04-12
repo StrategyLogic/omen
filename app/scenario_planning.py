@@ -662,13 +662,6 @@ with tab_actor:
     actor_profile = payloads.get("actor_profile")
     actor_status = payloads.get("actor_status")
     persona_payload = payloads.get("persona") or {}
-    if actor_profile:
-        profile = _primary_actor_profile(actor_profile)
-        strategic_style = dict(profile.get("strategic_style") or {})
-        action_prefs = list(profile.get("action_preferences") or [])
-    else:
-        st.info("Actor profile artifact unavailable. Showing derivation from simulation output.")
-
     has_persona_content = _render_persona_panel(persona_payload)
     persona_path = Path(paths.get("persona") or "")
     PERSONA_EXISTS = persona_path.exists()

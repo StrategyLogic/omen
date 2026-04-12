@@ -376,14 +376,18 @@ def handle_situation_analyze_command(args: Any) -> int:
     print("Situation analysis started")
     try:
         run_situation_analysis(
-            doc=args.doc,
-            input_alias=args.input,
-            url=args.url,
-            actor=args.actor,
-            output=args.output,
-            pack_id=str(args.pack_id) if args.pack_id else None,
-            pack_version=str(args.pack_version),
-            force=bool(args.force),
+            doc=getattr(args, "doc", None),
+            input_alias=getattr(args, "input", None),
+            url=getattr(args, "url", None),
+            actor=getattr(args, "actor", None),
+            output=getattr(args, "output", None),
+            pack_id=(
+                str(getattr(args, "pack_id"))
+                if getattr(args, "pack_id", None)
+                else None
+            ),
+            pack_version=str(getattr(args, "pack_version", "1.0.0")),
+            force=bool(getattr(args, "force", False)),
         )
         print("Situation analysis completed")
         return 0

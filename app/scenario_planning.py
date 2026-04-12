@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from pathlib import Path
 import textwrap
 from typing import Any
@@ -20,6 +21,60 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
         st.warning("Artifact not found or invalid JSON")
         return
     st.json(payload, expanded=False)
+
+
+def _compact_brief_markdown(markdown_text: str) -> str:
+    def _format_generated_value(raw: str) -> str:
+        value = str(raw or "").strip()
+        if not value:
+            return ""
+
+        candidates = [value]
+        if value.endswith("Z"):
+            candidates.append(f"{value[:-1]}+00:00")
+
+        for candidate in candidates:
+            try:
+                parsed = datetime.datetime.fromisoformat(candidate)
+                return parsed.strftime("%Y-%m-%d %H:%M")
+            except ValueError:
+                continue
+
+        return value
+
+    def _extract_generated_line(line: str) -> str:
+        marker = "**Generated:**"
+        raw = line.split(marker, 1)[1].strip()
+        if not raw:
+            return ""
+        raw_value = raw.split()[0]
+        formatted = _format_generated_value(raw_value)
+        return f"**Generated:** {formatted}" if formatted else ""
+
+    lines = str(markdown_text or "").splitlines()
+    compact_lines: list[str] = []
+    for line in lines:
+        stripped = line.lstrip()
+        prefix_len = len(line) - len(stripped)
+        prefix = line[:prefix_len]
+
+        if stripped.startswith("**ID:**") or stripped.startswith("**Version:**") or stripped.startswith("**Source:**") or stripped.startswith("**Core Topic:**"):
+            continue
+
+        if stripped.startswith("**Generated:**"):
+            generated_line = _extract_generated_line(stripped)
+            if generated_line:
+                compact_lines.append(f"{prefix}{generated_line}")
+            continue
+
+        if stripped.startswith("# "):
+            # Hide document H1 in UI to avoid overlapping with Streamlit section title.
+            continue
+        if stripped.startswith("## "):
+            compact_lines.append(f"{prefix}#### {stripped[3:]}")
+            continue
+        compact_lines.append(line)
+    return "\n".join(compact_lines)
 
 
 def _build_scenario_rows(
@@ -234,18 +289,18 @@ st.caption(
 
 tab_source, tab_actor, tab_scenario, tab_reason, tab_explain = st.tabs(
     [
-        "1) Source & Brief",
-        "2) Actor Profile",
-        "3) Scenario Planning + A/B/C",
-        "4) Reason Chain",
-        "5) Explanation",
+        "📝 Source & Brief",
+        "👤 Actor Profile",
+        "🔀 Scenario Planning + A/B/C",
+        "🧩 Reason Chain",
+        "🗣️ Explanation",
     ]
 )
 
 with tab_source:
     situation = payloads.get("situation")
     context = dict((situation or {}).get("context") or {})
-    st.subheader("Situation Brief")
+    st.subheader("Summary")
     st.write(str(context.get("title") or ""))
     st.markdown(f"**Core Question**: {str(context.get('core_question') or '')}")
     st.markdown(f"**Key Decision Point**: {str(context.get('key_decision_point') or '')}")
@@ -259,8 +314,8 @@ with tab_source:
 
     situation_md = Path(paths.get("situation_md") or "")
     if situation_md.exists():
-        st.subheader("Human-readable brief")
-        st.markdown(situation_md.read_text(encoding="utf-8"))
+        st.subheader("Context Details")
+        st.markdown(_compact_brief_markdown(situation_md.read_text(encoding="utf-8")))
 
 with tab_actor:
     st.subheader("Actor Profile & Action Preferences")

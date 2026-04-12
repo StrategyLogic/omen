@@ -5,7 +5,9 @@ from __future__ import annotations
 import datetime
 import html
 import json
+import os
 from pathlib import Path
+import re
 import textwrap
 from typing import Any
 
@@ -21,7 +23,8 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _normalize_pack_id(value: Any) -> str:
-    return Path(str(value or "")).stem.strip()
+    raw = Path(str(value or "")).stem.strip()
+    return re.sub(r"[^A-Za-z0-9_.-]", "", raw)
 
 
 def _render_json(path: str, payload: dict[str, Any] | None) -> None:
@@ -34,23 +37,25 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
 
 def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str, Any] | None:
     try:
-        base = base_dir.resolve(strict=False)
-        resolved_workspace = WORKSPACE_ROOT.resolve(strict=False)
+        workspace_real = os.path.realpath(str(WORKSPACE_ROOT))
+        base_real = os.path.realpath(str(base_dir))
+        if os.path.commonpath([workspace_real, base_real]) != workspace_real:
+            return None
+
         safe_pack_id = _normalize_pack_id(pack_id)
-        resolved_path = (base / safe_pack_id / filename).resolve(strict=False)
+        if not safe_pack_id:
+            return None
+
+        target_real = os.path.realpath(str(Path(base_real) / safe_pack_id / filename))
     except Exception:
         return None
 
-    try:
-        resolved_path.relative_to(resolved_workspace)
-    except ValueError:
+    if os.path.commonpath([workspace_real, target_real]) != workspace_real:
+        return None
+    if os.path.commonpath([base_real, target_real]) != base_real:
         return None
 
-    try:
-        resolved_path.relative_to(base)
-    except ValueError:
-        return None
-
+    resolved_path = Path(target_real)
     if not resolved_path.exists() or not resolved_path.is_file():
         return None
 
@@ -365,6 +370,30 @@ def _render_actor_graph(status_payload: dict[str, Any] | None, actor_payload: di
     st.plotly_chart(figure, use_container_width=True)
 
 
+def _primary_actor_profile(actor_payload: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(actor_payload, dict):
+        return {}
+
+    direct_profile = actor_payload.get("profile")
+    if isinstance(direct_profile, dict) and direct_profile:
+        return direct_profile
+
+    actors = actor_payload.get("actors")
+    if isinstance(actors, list):
+        for item in actors:
+            if not isinstance(item, dict):
+                continue
+            actor_type = str(item.get("type") or "").strip().lower()
+            profile = item.get("profile")
+            if actor_type == "strategicactor" and isinstance(profile, dict):
+                return profile
+        for item in actors:
+            if isinstance(item, dict) and isinstance(item.get("profile"), dict):
+                return dict(item.get("profile") or {})
+
+    return {}
+
+
 def _count_condition_items(items: Any) -> int:
     if not isinstance(items, list):
         return 0
@@ -648,16 +677,9 @@ with tab_actor:
     actor_status = payloads.get("actor_status")
     persona_payload = payloads.get("persona") or {}
     if actor_profile:
-        profile = dict(actor_profile.get("profile") or {})
+        profile = _primary_actor_profile(actor_profile)
         strategic_style = dict(profile.get("strategic_style") or {})
         action_prefs = list(profile.get("action_preferences") or [])
-
-        if strategic_style:
-            st.write("Strategic style")
-            st.json(strategic_style, expanded=False)
-        if action_prefs:
-            st.write("Action preferences")
-            st.json(action_prefs, expanded=False)
     else:
         st.info("Actor profile artifact unavailable. Showing derivation from simulation output.")
 

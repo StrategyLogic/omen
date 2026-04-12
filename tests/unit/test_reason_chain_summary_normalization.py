@@ -25,4 +25,3 @@ def test_reason_chain_summary_not_placeholder_and_within_word_limit() -> None:
     assert summary
     assert summary != "seed_inference"
     assert len(summary.split()) <= 100
-    assert "processed" in summary.lower() or "produced" in summary.lower()

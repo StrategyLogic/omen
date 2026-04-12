@@ -166,7 +166,6 @@ def _build_flow_dot(payloads: dict[str, Any]) -> str:
         )
 
     title = str(context.get("title") or "Strategic Situation").replace('"', "'")
-    decision = str(context.get("key_decision_point") or "Key decision point").replace('"', "'")
     unknown_count = len(list(context.get("known_unknowns") or []))
     rec = str(explanation.get("recommendation_summary") or "Pending explanation").replace('"', "'")
     brief_label = _auto_wrap_text(title, width=36, max_lines=3)
@@ -359,14 +358,14 @@ with tab_actor:
         st.dataframe(derivation_rows, use_container_width=True, hide_index=True)
 
     persona_insight = dict(persona_payload.get("persona_insight") or {})
-    narrative = str(persona_insight.get("narrative") or "").strip()
+    NARRATIVE = str(persona_insight.get("narrative") or "").strip()
     key_traits = [item for item in list(persona_insight.get("key_traits") or []) if isinstance(item, dict)]
     consistency_score = persona_insight.get("consistency_score")
 
-    if narrative or key_traits:
+    if NARRATIVE or key_traits:
         st.subheader("Persona Insight")
-        if narrative:
-            st.markdown(narrative)
+        if NARRATIVE:
+            st.markdown(NARRATIVE)
         if key_traits:
             st.markdown("**Key Traits**")
             for item in key_traits:

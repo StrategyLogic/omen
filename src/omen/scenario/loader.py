@@ -25,12 +25,12 @@ def discover_spec8_pack_candidates(
     output_base = Path(output_root)
     ids: set[str] = set()
 
-    if data_base.exists():
+    if data_base.exists() and data_base.is_dir():
         for entry in data_base.iterdir():
             if entry.is_dir() and (entry / "situation.json").exists():
                 ids.add(entry.name)
 
-    if output_base.exists():
+    if output_base.exists() and output_base.is_dir():
         for entry in output_base.iterdir():
             if entry.is_dir() and (entry / "result.json").exists():
                 ids.add(entry.name)
@@ -39,7 +39,7 @@ def discover_spec8_pack_candidates(
 
 
 def _find_output_pack_by_result_ref(output_root: Path, scenario_pack_ref: str) -> str | None:
-    for entry in output_root.iterdir() if output_root.exists() else []:
+    for entry in output_root.iterdir() if output_root.exists() and output_root.is_dir() else []:
         if not entry.is_dir():
             continue
         payload = _read_json(entry / "result.json")

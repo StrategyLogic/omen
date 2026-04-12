@@ -9,6 +9,7 @@ import textwrap
 from typing import Any
 
 import streamlit as st
+import yaml
 
 from omen.scenario.loader import discover_spec8_pack_candidates, load_spec8_flow_artifacts
 from omen.ui.actor_graph import build_actor_graph_figure
@@ -33,6 +34,56 @@ def _read_json_file(path: Path) -> dict[str, Any] | None:
     except Exception:
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _load_scenario_slot_labels() -> dict[str, str]:
+    template_path = Path(__file__).resolve().parents[1] / "config" / "templates" / "planning.yaml"
+    if not template_path.exists():
+        return {}
+
+    try:
+        payload = yaml.safe_load(template_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+
+    labels: dict[str, str] = {}
+    for row in list(payload.get("slot_policy") or []):
+        if not isinstance(row, dict):
+            continue
+        key = str(row.get("scenario_key") or "").strip()
+        label = str(row.get("label") or "").strip()
+        if key and label:
+            labels[key] = label
+    return labels
+
+
+def _scenario_display_key(scenario_key: Any, slot_labels: dict[str, str]) -> str:
+    key = str(scenario_key or "").strip()
+    if not key:
+        return ""
+    label = str(slot_labels.get(key) or "").strip()
+    return f"{key} - {label}" if label else key
+
+
+def _render_wrapped_dataframe(rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+
+    st.markdown(
+        """
+        <style>
+        [data-testid="stDataFrame"] div[role="gridcell"] {
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            word-break: break-word !important;
+            line-height: 1.3 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 def _compact_brief_markdown(markdown_text: str) -> str:
@@ -88,17 +139,21 @@ def _compact_brief_markdown(markdown_text: str) -> str:
     return "\n".join(compact_lines)
 
 
-def _build_scenario_rows(scenario_pack: dict[str, Any] | None) -> list[dict[str, Any]]:
+def _build_scenario_rows(
+    scenario_pack: dict[str, Any] | None,
+    *,
+    slot_labels: dict[str, str],
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for scenario in list((scenario_pack or {}).get("scenarios") or []):
         if not isinstance(scenario, dict):
             continue
         rows.append(
             {
-                "Scenario": str(scenario.get("scenario_key") or ""),
+                "Scenario": _scenario_display_key(scenario.get("scenario_key"), slot_labels),
                 "Title": str(scenario.get("title") or ""),
-                "Goal": str(scenario.get("goal") or ""),
-                "Objective": str(scenario.get("objective") or ""),
+                "Long-term Goal": str(scenario.get("goal") or ""),
+                "Short-term Objective": str(scenario.get("objective") or ""),
                 "Constraints": len(list(scenario.get("constraints") or [])),
                 "Tradeoffs": len(list(scenario.get("tradeoff_pressure") or [])),
             }
@@ -364,6 +419,7 @@ bundle = load_spec8_flow_artifacts(
 )
 paths = dict(bundle.get("paths") or {})
 payloads = dict(bundle.get("payloads") or {})
+slot_labels = _load_scenario_slot_labels()
 
 st.markdown(
     """
@@ -465,29 +521,39 @@ with tab_scenario:
     if scenario_pack_payload is None and str(scenario_pack_path):
         scenario_pack_payload = _read_json_file(scenario_pack_path)
 
-    scenario_rows = _build_scenario_rows(scenario_pack_payload)
+    scenario_rows = _build_scenario_rows(scenario_pack_payload, slot_labels=slot_labels)
     if scenario_rows:
-        st.dataframe(scenario_rows, use_container_width=True, hide_index=True)
+        _render_wrapped_dataframe(scenario_rows)
     else:
         st.warning("Scenario pack artifact missing or invalid.")
 
     result_payload = payloads.get("result") if isinstance(payloads.get("result"), dict) else None
+    prior_snapshot_payload = payloads.get("prior_snapshot")
+    prior_snapshot: dict[str, Any] = dict(prior_snapshot_payload or {}) if isinstance(prior_snapshot_payload, dict) else {}
+    prior_rows = list(prior_snapshot.get("normalized_priors") or prior_snapshot.get("raw_prior_scores") or [])
+    prior_map: dict[str, dict[str, Any]] = {
+        str(item.get("scenario_key") or ""): item
+        for item in prior_rows
+        if isinstance(item, dict)
+    }
     derivation_rows: list[dict[str, Any]] = []
     for row in list((result_payload or {}).get("scenario_results") or []):
         if not isinstance(row, dict):
             continue
+        scenario_key = str(row.get("scenario_key") or "")
+        prior_item = dict(prior_map.get(scenario_key) or {})
         derivation = dict(row.get("actor_derivation") or {})
         derivation_rows.append(
             {
-                "Scenario": row.get("scenario_key"),
-                "Decision Style": derivation.get("decision_style"),
+                "Scenario": _scenario_display_key(scenario_key, slot_labels),
                 "Dominant Capability": derivation.get("dominant_capability"),
-                "Selected Dimensions": ", ".join(list(derivation.get("selected_dimensions") or [])),
+                "Action Prior Probabilities": prior_item.get("score"),
+                "Explain": prior_item.get("explain"),
             }
         )
     if derivation_rows:
         st.markdown("### Decision Style Derivation")
-        st.dataframe(derivation_rows, use_container_width=True, hide_index=True)
+        _render_wrapped_dataframe(derivation_rows)
 
 with tab_reason:
     st.subheader("Reason Chain Trace")
@@ -496,9 +562,11 @@ with tab_reason:
     if not chains:
         st.warning("reason_chain.json missing under data/scenarios/<pack>/traces/.")
     else:
+        chain_option_keys = [str(row.get("scenario_key") or "") for row in chains]
         selected_key = st.selectbox(
             "Scenario chain",
-            options=[str(row.get("scenario_key") or "") for row in chains],
+            options=chain_option_keys,
+            format_func=lambda key: _scenario_display_key(key, slot_labels),
             key="reason_chain_key",
         )
         row = next((item for item in chains if str(item.get("scenario_key") or "") == selected_key), {})

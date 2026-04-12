@@ -27,6 +27,71 @@ REASONING_ORDER: tuple[str, ...] = (
 )
 
 
+def _truncate_words(text: str, *, max_words: int = 100) -> str:
+    tokens = str(text or "").strip().split()
+    if len(tokens) <= max_words:
+        return " ".join(tokens)
+    return " ".join(tokens[:max_words])
+
+
+def _normalize_text_token(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(text or "").strip().lower())
+
+
+def _is_placeholder_summary(summary: str, step_type: str) -> bool:
+    token = _normalize_text_token(summary)
+    step_token = _normalize_text_token(step_type)
+    return not token or token == step_token
+
+
+def _describe_step_value(value: Any) -> str:
+    if isinstance(value, list):
+        return f"{len(value)} items"
+    if isinstance(value, dict):
+        keys = [str(item).strip() for item in list(value.keys())[:3] if str(item).strip()]
+        return f"keys: {', '.join(keys)}" if keys else "object"
+    text = " ".join(str(value or "").strip().split())
+    if not text:
+        return "empty"
+    return _truncate_words(text, max_words=12)
+
+
+def _derive_step_summary(raw_step: dict[str, Any], *, step_type: str, input_refs: list[Any]) -> str:
+    explicit = str(raw_step.get("summary") or raw_step.get("description") or "").strip()
+    if explicit and not _is_placeholder_summary(explicit, step_type):
+        return _truncate_words(explicit, max_words=100)
+
+    step_label = str(step_type or "unknown").replace("_", " ").strip() or "reasoning step"
+    outputs = raw_step.get("outputs")
+    output_bits: list[str] = []
+    if isinstance(outputs, dict):
+        for key, value in list(outputs.items())[:3]:
+            output_bits.append(f"{key} ({_describe_step_value(value)})")
+
+    if output_bits:
+        synthesized = (
+            f"{step_label}: processed {len(input_refs)} input refs and produced "
+            f"{'; '.join(output_bits)} for downstream conclusions."
+        )
+        return _truncate_words(synthesized, max_words=100)
+
+    intermediate = raw_step.get("intermediate")
+    if isinstance(intermediate, dict) and intermediate:
+        intermediate_keys = [str(key).strip() for key in list(intermediate.keys())[:3] if str(key).strip()]
+        if intermediate_keys:
+            synthesized = (
+                f"{step_label}: evaluated {', '.join(intermediate_keys)} and prepared evidence "
+                "for subsequent condition conclusions."
+            )
+            return _truncate_words(synthesized, max_words=100)
+
+    synthesized = (
+        f"{step_label}: completed deterministic processing and produced evidence for "
+        "scenario condition conclusions."
+    )
+    return _truncate_words(synthesized, max_words=100)
+
+
 def build_hierarchical_step_id(major: int, minor: int) -> str:
     if major < 1 or minor < 1:
         raise ValueError("step id major/minor must be >= 1")
@@ -437,8 +502,8 @@ def _normalize_llm_reason_chain(llm_chain: dict[str, Any]) -> dict[str, Any] | N
             continue
         step_id = str(raw.get("step_id") or "").strip() or f"step_{index}"
         step_type = str(raw.get("step_type") or "unknown").strip() or "unknown"
-        summary = str(raw.get("summary") or raw.get("description") or step_type).strip() or step_type
         input_refs = list(raw.get("input_refs") or raw.get("inputs") or [])
+        summary = _derive_step_summary(raw, step_type=step_type, input_refs=input_refs)
         normalized_steps.append(
             {
                 **raw,

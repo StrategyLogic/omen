@@ -2,7 +2,7 @@
   "pack_id": "sap",
   "pack_version": "1.0.0",
   "situation_id": "sap_reltio_acquisition",
-  "actor_ref": "/mnt/ssd/projects/opensource/omen/output/actors/sap_reltio_acquisition/actor_ontology.json",
+  "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
   "raw_prior_scores": [
     {
       "scenario_key": "A",

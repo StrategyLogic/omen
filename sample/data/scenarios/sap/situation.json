@@ -28,7 +28,7 @@
       "How effectively Reltio's system will integrate data across SAP and non-SAP applications",
       "Whether the acquisition will address the fundamental adoption barriers of BDC"
     ],
-    "actor_ref": "/mnt/ssd/projects/opensource/omen/output/actors/sap_reltio_acquisition/actor_ontology.json"
+    "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json"
   },
   "signals": [
     {
@@ -197,6 +197,6 @@
     "generated_at": "2026-04-12T12:23:29.498395",
     "pack_id": "sap",
     "pack_version": "1.0.0",
-    "actor_ref": "/mnt/ssd/projects/opensource/omen/output/actors/sap_reltio_acquisition/actor_ontology.json"
+    "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json"
   }
 }

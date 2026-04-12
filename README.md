@@ -48,7 +48,7 @@ A complete reasoning session typically answers the following questions:
 
 ### Installation
 
-Requirements: Python 3.12+, `pip` package manager.
+Environment requirements: Python 3.12+ with `pip` package manager.
 
 ```bash
 git clone https://github.com/StrategyLogic/omen.git
@@ -139,9 +139,19 @@ Omen is built for the following roles:
 
 ## 🎬 Showcase
 
-We include built-in classic reasoning cases:
-*   [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
-*   [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
+### Strategic Actor Analyze
+
+*  [👤 Elon Musk](cases/actors/elon-musk.md)
+*  [👤 Jeff Bezos](cases/actors/jeff-bezos.md)
+*  [👤 Steve Jobs](cases/actors/steve-jobs.md)
+*  [👤 Jack Ma](cases/actors/jack-ma.md)
+*  [👤 Chen Jiaxing (me)](cases/actors/chen-jiaxing.md)
+
+### Strategic Reasoning Cases
+
+*  [🧩 Acquisition: SAP vs Reltio](cases/situations/sap_reltio_acquisition.md)
+*  [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
+*  [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
 
 More scenarios are under development (contributions welcome):
 *   `Agent Infrastructure` vs `Workflow Platforms`

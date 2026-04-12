@@ -138,7 +138,17 @@ Omen 专为以下角色打造：
 
 ## 🎬 案例展示
 
-我们已内置经典推演案例：
+### 战略主体分析
+
+*  [👤 Elon Musk](cases/actors/elon-musk.md)
+*  [👤 Jeff Bezos](cases/actors/jeff-bezos.md)
+*  [👤 Steve Jobs](cases/actors/steve-jobs.md)
+*  [👤 Jack Ma](cases/actors/jack-ma.md)
+*  [👤 Chen Jiaxing (me)](cases/actors/chen-jiaxing.md)
+
+### 战略推演案例
+
+*   [🧩 SAP 收购 Reltio：主数据迷雾](cases/situations/sap_reltio_acquisition.md)
 *   [🗺️ 本体论博弈：数据库 vs AI 记忆](cases/ontology.md)
 *   [⚔️ 向量数据库 vs AI 记忆](cases/vector-memory.md)
 

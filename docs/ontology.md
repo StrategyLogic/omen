@@ -45,9 +45,9 @@ Strategy Ontology Schema 包含 TBox/ABox + 推理配置：
 
 ## 战略本体案例
 
-[Ontology之战](cases/ontology.md)：`data/scenarios/ontology.json`
+[Ontology之战](../cases/ontology.md)：`data/scenarios/ontology.json`
 
-[向量 vs. 记忆](cases/vector-memory.md)：`data/scenarios/vector-memory.json`
+[向量 vs. 记忆](../cases/vector-memory.md)：`data/scenarios/vector-memory.json`
 
 ### TBox 概念体系
 
@@ -199,7 +199,7 @@ omen compare --scenario data/scenarios/ontology.json --overrides '{"user_overlap
 
 ### 本体复用
 
-你也可以直接复用同一工作流运行[第二个案例](cases/vector-memory.md)：
+你也可以直接复用同一工作流运行[第二个案例](../cases/vector-memory.md)：
 
 ```bash
 omen simulate --scenario data/scenarios/vector-memory.json

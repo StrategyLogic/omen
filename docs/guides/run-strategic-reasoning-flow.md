@@ -130,9 +130,8 @@ omen/
 
 ## 📚 阅读更多
 
-- 术语与边界： [concepts.md](concepts.md)
-- 战场输入结构： [ontology.md](ontology.md)
-- 精度评估与门禁： [precision.md](precision.md)
-- 数据摄取工作区： [ingest.md](ingest.md)
+- 术语与边界： [concepts.md](../concepts.md)
+- 战场输入结构： [ontology.md](../ontology.md)
+- 精度评估与门禁： [precision.md](../precision.md)
 
 *Simulate the Signs. Reveal the Chaos.*

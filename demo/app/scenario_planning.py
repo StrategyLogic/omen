@@ -63,8 +63,8 @@ def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str,
 
 def _load_sample_actor_payloads(pack_id: str) -> dict[str, Any]:
     safe_pack_id = _normalize_pack_id(pack_id)
-    actor_dir = Path("sample/data/actors") / safe_pack_id
-    actor_base = Path("sample/data/actors")
+    actor_dir = Path("demo/data/actors") / safe_pack_id
+    actor_base = Path("demo/data/actors")
     actor_profile_path = actor_dir / "actor_ontology.json"
     persona_path = actor_dir / "analyze_persona.json"
     status_path = actor_dir / "analyze_status.json"
@@ -585,9 +585,9 @@ st.markdown(
 
 with st.sidebar:
     st.header("Sample Data Source")
-    st.warning("Demo mode: this app reads bundled sample artifacts only.")
-    DATA_ROOT = "sample/data/scenarios"
-    OUTPUT_ROOT = "sample/output"
+    st.warning("Demo mode: this app reads bundled demo artifacts only.")
+    DATA_ROOT = "demo/data/scenarios"
+    OUTPUT_ROOT = "demo/output"
     st.caption(f"Data root: {DATA_ROOT}")
     st.caption(f"Output root: {OUTPUT_ROOT}")
 

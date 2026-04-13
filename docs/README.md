@@ -8,8 +8,7 @@
 2. 阅读 [Core Concepts](concepts.md) 理解术语与边界
 3. 阅读 [Ontology Input](ontology.md) 理解战场输入结构
 4. 阅读 [Precision Guide](precision.md) 理解精度评估与门禁
-5. 阅读 [Ingest Workspace](ingest.md) 理解数据摄取目录与流程
-6. 参考 [Roadmap](roadmap.md) 查看阶段演进
+5. 参考 [Roadmap](roadmap.md) 查看阶段演进
 
 ## Documents
 
@@ -18,7 +17,6 @@
 - [Roadmap](roadmap.md)
 - [Quick Start](quick-start.md)
 - [Precision Guide](precision.md)
-- [Ingest Workspace](ingest.md)
 
 ## Core Concepts
 
@@ -35,5 +33,5 @@
 
 - `cases/` 下的案例文件必须使用**场景名称**命名，而不是通用名。
 - 使用小写英文文件名，必要时用连字符连接。
-- 示例：`ontology.md`、`vector-memory.md`、`workflow-agents.md`
+- 示例：`ontology.md`、`vector-memory.md`、`nokia-elop-2010.md`
 - 不使用：`case.md`、`demo.md`、`example.md`

@@ -233,15 +233,13 @@ Omen 默认输出多种路径类型：
 
 避免使用会误导为确定性预测的表达。
 
-## Precision & Ingest Terms
+## Precision Terms
 
 为保持外部文档一致性，新增以下统一术语：
 
 - **Precision Evaluation**：用于度量重复性、方向正确性、证据链完整性
 - **Precision Gate**：基于阈值的通过/未通过判定
-- **Ingest Workspace**：`data/ingest/` 下的标准目录（`sources/extracted/knowledge/graph`）
 
 相关文档：
 
 - [精度评估](precision.md)
-- [数据摄取](ingest.md)

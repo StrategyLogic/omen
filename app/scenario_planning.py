@@ -33,8 +33,8 @@ def _normalize_pack_id(value: Any) -> str:
 def _resolve_workspace_path(candidate: Path) -> Path | None:
     try:
         workspace_root = WORKSPACE_ROOT.resolve()
-        raw_path = candidate if candidate.is_absolute() else (workspace_root / candidate)
-        resolved = raw_path.resolve(strict=False)
+        raw_path = os.path.normpath(str(candidate if candidate.is_absolute() else (workspace_root / candidate)))
+        resolved = Path(raw_path).resolve(strict=False)
         resolved.relative_to(workspace_root)
         return resolved
     except (OSError, RuntimeError, ValueError):

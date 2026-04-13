@@ -20,6 +20,10 @@ from omen.ui.actor_graph import build_actor_graph_figure
 
 st.set_page_config(page_title="Omen Strategic Reasoning", layout="wide")
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+DEMO_ROOT = WORKSPACE_ROOT / "demo"
+DEMO_DATA_ROOT = DEMO_ROOT / "data" / "scenarios"
+DEMO_OUTPUT_ROOT = DEMO_ROOT / "output"
+DEMO_ACTOR_ROOT = DEMO_ROOT / "data" / "actors"
 
 
 def _normalize_pack_id(value: Any) -> str:
@@ -63,8 +67,8 @@ def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str,
 
 def _load_sample_actor_payloads(pack_id: str) -> dict[str, Any]:
     safe_pack_id = _normalize_pack_id(pack_id)
-    actor_dir = Path("demo/data/actors") / safe_pack_id
-    actor_base = Path("demo/data/actors")
+    actor_dir = DEMO_ACTOR_ROOT / safe_pack_id
+    actor_base = DEMO_ACTOR_ROOT
     actor_profile_path = actor_dir / "actor_ontology.json"
     persona_path = actor_dir / "analyze_persona.json"
     status_path = actor_dir / "analyze_status.json"
@@ -586,10 +590,10 @@ st.markdown(
 with st.sidebar:
     st.header("Sample Data Source")
     st.warning("Demo mode: this app reads bundled demo artifacts only.")
-    DATA_ROOT = "demo/data/scenarios"
-    OUTPUT_ROOT = "demo/output"
-    st.caption(f"Data root: {DATA_ROOT}")
-    st.caption(f"Output root: {OUTPUT_ROOT}")
+    DATA_ROOT = str(DEMO_DATA_ROOT)
+    OUTPUT_ROOT = str(DEMO_OUTPUT_ROOT)
+    st.caption(f"Data root: {DEMO_DATA_ROOT.relative_to(WORKSPACE_ROOT)}")
+    st.caption(f"Output root: {DEMO_OUTPUT_ROOT.relative_to(WORKSPACE_ROOT)}")
 
     candidates = discover_spec8_pack_candidates(data_root=DATA_ROOT, output_root=OUTPUT_ROOT)
     selected_pack = st.selectbox("Pack ID", options=candidates or [""], index=0)

@@ -95,7 +95,7 @@ streamlit run demo/app/scenario_planning.py
 
 Then open `http://localhost:8501` in your browser to explore the full strategic reasoning flow.
 
-### 🎵 Run built-in Case
+### 🎵 Run Built-in Case
 
 If you want to run a complete **Analyze - Simulate - Explain** workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. 
 

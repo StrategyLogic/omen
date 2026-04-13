@@ -95,9 +95,9 @@ streamlit run demo/app/scenario_planning.py
 
 在浏览器中打开 `http://localhost:8501`，即可查看完整的战略推演流程。
 
-### 🎵 亲自运行
+### 🎵 跑流程
 
-如果你希望亲自运行一遍完整的**分析——模拟——解释**流程，请使用我们准备的内置案例，用于模拟 2026 年 3 月 SAP 收购 Reltio 的情境。
+如果你希望亲自跑一遍完整的**分析——模拟——解释**流程，请使用我们准备的内置案例，用于模拟 2026 年 3 月 SAP 收购 Reltio 的情境。
 
 案例文档位于 `cases/situations/sap_reltio_acquisition.md`，可以通过以下步骤端到端运行。
 

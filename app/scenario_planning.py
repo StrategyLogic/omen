@@ -30,22 +30,28 @@ def _normalize_pack_id(value: Any) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]", "", raw)
 
 
+def _resolve_workspace_path(candidate: Path) -> Path | None:
+    try:
+        workspace_root = WORKSPACE_ROOT.resolve()
+        raw_path = candidate if candidate.is_absolute() else (workspace_root / candidate)
+        resolved = raw_path.resolve(strict=False)
+        resolved.relative_to(workspace_root)
+        return resolved
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
 def _resolve_safe_root(raw_value: str, default_path: Path) -> Path:
-    workspace_base = os.path.normpath(str(WORKSPACE_ROOT.resolve()))
-    default_root = Path(default_path).resolve()
+    default_root = _resolve_workspace_path(default_path)
+    if default_root is None:
+        return WORKSPACE_ROOT.resolve()
 
     raw = str(raw_value or "").strip()
     if not raw:
         return default_root
 
-    if not os.path.isabs(raw):
-        fullpath = os.path.normpath(os.path.join(workspace_base, raw))
-    else:
-        fullpath = os.path.normpath(raw)
-
-    if os.path.commonpath([workspace_base, fullpath]) != workspace_base:
-        return default_root
-    return Path(fullpath)
+    resolved = _resolve_workspace_path(Path(raw))
+    return resolved or default_root
 
 
 def _render_json(path: str, payload: dict[str, Any] | None) -> None:
@@ -58,21 +64,20 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
 
 def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str, Any] | None:
     try:
-        workspace_base = os.path.normpath(str(WORKSPACE_ROOT.resolve()))
-        base_path_obj = base_dir if base_dir.is_absolute() else (WORKSPACE_ROOT / base_dir)
-        base_path = os.path.normpath(str(base_path_obj.resolve()))
-        if os.path.commonpath([workspace_base, base_path]) != workspace_base:
+        base_path = _resolve_workspace_path(base_dir)
+        if base_path is None:
             return None
 
         safe_pack_id = _normalize_pack_id(pack_id)
         if not safe_pack_id:
             return None
 
-        fullpath = os.path.normpath(os.path.join(base_path, safe_pack_id, filename))
-        if os.path.commonpath([base_path, fullpath]) != base_path:
+        resolved_path = (base_path / safe_pack_id / filename).resolve(strict=False)
+        try:
+            resolved_path.relative_to(base_path)
+        except ValueError:
             return None
 
-        resolved_path = Path(fullpath)
         if not resolved_path.exists() or not resolved_path.is_file():
             return None
 

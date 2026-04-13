@@ -33,21 +33,8 @@ def _normalize_pack_id(value: Any) -> str:
 def _resolve_workspace_path(candidate: Path) -> Path | None:
     try:
         workspace_root = WORKSPACE_ROOT.resolve()
-        base_str = os.path.abspath(str(workspace_root))
-        if not base_str.endswith(os.sep):
-            base_str += os.sep
-
-        raw_str = str(candidate)
-        if os.path.isabs(raw_str):
-            target_str = os.path.abspath(raw_str)
-        else:
-            target_str = os.path.abspath(os.path.join(base_str, raw_str))
-
-        if not target_str.startswith(base_str) and target_str != base_str.rstrip(os.sep):
-            return None
-
-        # Fully contained lexically, now safe to resolve symlinks
-        resolved = Path(target_str).resolve(strict=False)
+        raw_path = candidate if candidate.is_absolute() else (workspace_root / candidate)
+        resolved = raw_path.resolve(strict=False)
         resolved.relative_to(workspace_root)
         return resolved
     except (OSError, RuntimeError, ValueError):
@@ -85,8 +72,10 @@ def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str,
         if not safe_pack_id:
             return None
 
-        resolved_path = _resolve_workspace_path(base_path / safe_pack_id / filename)
-        if resolved_path is None:
+        resolved_path = (base_path / safe_pack_id / filename).resolve(strict=False)
+        try:
+            resolved_path.relative_to(base_path)
+        except ValueError:
             return None
 
         if not resolved_path.exists() or not resolved_path.is_file():
@@ -614,7 +603,7 @@ bundle = load_spec8_flow_artifacts(
     data_root=data_root,
     output_root=output_root,
     output_pack_id=_normalize_pack_id(output_pack_override.strip()) or None,
-) or {}
+)
 paths = dict(bundle.get("paths") or {})
 payloads = dict(bundle.get("payloads") or {})
 slot_labels = _load_scenario_slot_labels()

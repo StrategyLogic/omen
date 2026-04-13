@@ -40,6 +40,9 @@ dev = [
   "twine>=6.1.0",
 ]
 
+[tool.poetry]
+packages = [{ include = "omen", from = "src" }]
+
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"

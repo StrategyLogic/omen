@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -16,17 +15,6 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     except Exception:
         return None
     return payload if isinstance(payload, dict) else None
-
-
-def _is_safe_subpath(base: Path, subpath: str) -> bool:
-    """Validate that the given subpath resolves strictly within the base directory."""
-    if not subpath:
-        return False
-    base_str = os.path.abspath(str(base))
-    if not base_str.endswith(os.sep):
-        base_str += os.sep
-    target_str = os.path.abspath(os.path.join(base_str, str(subpath)))
-    return target_str.startswith(base_str)
 
 
 def discover_spec8_pack_candidates(
@@ -68,13 +56,9 @@ def load_spec8_flow_artifacts(
     data_root: str | Path = "data/scenarios",
     output_root: str | Path = "output",
     output_pack_id: str | None = None,
-) -> dict[str, Any] | None:
+) -> dict[str, Any]:
     data_base = Path(data_root)
     output_base = Path(output_root)
-    
-    if not _is_safe_subpath(data_base, pack_id):
-        return None
-        
     data_pack = data_base / pack_id
 
     situation = _read_json(data_pack / "situation.json")
@@ -85,8 +69,6 @@ def load_spec8_flow_artifacts(
     generation_trace = _read_json(data_pack / "generation" / "log.json")
 
     resolved_output_pack = output_pack_id or pack_id
-    if not _is_safe_subpath(output_base, resolved_output_pack):
-        return None
     result = _read_json(output_base / resolved_output_pack / "result.json")
     explanation = _read_json(output_base / resolved_output_pack / "explanation.json")
 

@@ -85,7 +85,7 @@ pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
-### 🌰 Run Demo
+### 🌰 View Demo
 
 If you want to quickly see Omen in action, a visualized sample case and its results are available in the `demo` directory. Run:
 
@@ -95,7 +95,7 @@ streamlit run demo/app/scenario_planning.py
 
 Then open `http://localhost:8501` in your browser to explore the full strategic reasoning flow.
 
-### 🎵 Run Built-in Case
+### 🎵 Run built-in Case
 
 If you want to run a complete **Analyze - Simulate - Explain** workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. 
 

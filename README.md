@@ -55,7 +55,7 @@ If you are a:
 - Product Manager
 - Other non-technical users
 
-Want to quickly experience Omen without local installation? Please visit our online demo deployed on Streamlit Cloud to quickly see the effect.
+Want to quickly experience Omen without local installation? Please visit our online demo deployed on Streamlit Cloud.
 
 You can explore the strategic reasoning flow directly online:
 

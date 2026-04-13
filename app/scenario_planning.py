@@ -20,6 +20,8 @@ from omen.ui.actor_graph import build_actor_graph_figure
 
 st.set_page_config(page_title="Omen Strategic Reasoning", layout="wide")
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
+APP_DATA_ROOT = WORKSPACE_ROOT / "data" / "scenarios"
+APP_OUTPUT_ROOT = WORKSPACE_ROOT / "output"
 
 
 def _normalize_pack_id(value: Any) -> str:
@@ -28,21 +30,21 @@ def _normalize_pack_id(value: Any) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]", "", raw)
 
 
-def _resolve_safe_root(raw_value: str, default_rel: str) -> Path:
-    workspace_base = os.path.normpath(str(WORKSPACE_ROOT))
-    default_path = Path(os.path.normpath(os.path.join(workspace_base, default_rel)))
+def _resolve_safe_root(raw_value: str, default_path: Path) -> Path:
+    workspace_base = os.path.normpath(str(WORKSPACE_ROOT.resolve()))
+    default_root = Path(default_path).resolve()
 
     raw = str(raw_value or "").strip()
     if not raw:
-        return default_path
+        return default_root
 
     if not os.path.isabs(raw):
         fullpath = os.path.normpath(os.path.join(workspace_base, raw))
     else:
         fullpath = os.path.normpath(raw)
 
-    if not fullpath.startswith(workspace_base):
-        return default_path
+    if os.path.commonpath([workspace_base, fullpath]) != workspace_base:
+        return default_root
     return Path(fullpath)
 
 
@@ -56,9 +58,10 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
 
 def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str, Any] | None:
     try:
-        workspace_base = os.path.normpath(str(WORKSPACE_ROOT))
-        base_path = os.path.normpath(str(base_dir))
-        if not base_path.startswith(workspace_base):
+        workspace_base = os.path.normpath(str(WORKSPACE_ROOT.resolve()))
+        base_path_obj = base_dir if base_dir.is_absolute() else (WORKSPACE_ROOT / base_dir)
+        base_path = os.path.normpath(str(base_path_obj.resolve()))
+        if os.path.commonpath([workspace_base, base_path]) != workspace_base:
             return None
 
         safe_pack_id = _normalize_pack_id(pack_id)
@@ -66,7 +69,7 @@ def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str,
             return None
 
         fullpath = os.path.normpath(os.path.join(base_path, safe_pack_id, filename))
-        if not fullpath.startswith(base_path):
+        if os.path.commonpath([base_path, fullpath]) != base_path:
             return None
 
         resolved_path = Path(fullpath)
@@ -577,8 +580,8 @@ with st.sidebar:
     st.header("Data Source")
     data_root_raw = st.text_input("Data root", value="data/scenarios")
     output_root_raw = st.text_input("Output root", value="output")
-    data_root = _resolve_safe_root(data_root_raw, "data/scenarios")
-    output_root = _resolve_safe_root(output_root_raw, "output")
+    data_root = _resolve_safe_root(data_root_raw, APP_DATA_ROOT)
+    output_root = _resolve_safe_root(output_root_raw, APP_OUTPUT_ROOT)
 
     candidates = discover_spec8_pack_candidates(data_root=data_root, output_root=output_root)
     selected_pack = st.selectbox("Pack ID", options=candidates or [""], index=0)

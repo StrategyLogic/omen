@@ -71,7 +71,7 @@
   "scenario_planner": {
     "actor_style_enhancement": {
       "stage": "scenario_enhance_prompt",
-      "actor_ref": "output/actors/sap_reltio_acquisition/actor_ontology.json",
+      "actor_ref": "data/actors/sap/actor_ontology.json",
       "admissible_before": true,
       "enhanced": false,
       "status": "noop",

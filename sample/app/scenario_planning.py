@@ -37,9 +37,10 @@ def _render_json(path: str, payload: dict[str, Any] | None) -> None:
 
 def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str, Any] | None:
     try:
-        workspace_base = os.path.normpath(str(WORKSPACE_ROOT))
-        base_path = os.path.normpath(str(base_dir))
-        if not base_path.startswith(workspace_base):
+        workspace_base = os.path.normpath(str(WORKSPACE_ROOT.resolve()))
+        base_path_obj = base_dir if base_dir.is_absolute() else (WORKSPACE_ROOT / base_dir)
+        base_path = os.path.normpath(str(base_path_obj.resolve()))
+        if os.path.commonpath([workspace_base, base_path]) != workspace_base:
             return None
 
         safe_pack_id = _normalize_pack_id(pack_id)
@@ -47,7 +48,7 @@ def _read_json_file(*, base_dir: Path, pack_id: str, filename: str) -> dict[str,
             return None
 
         fullpath = os.path.normpath(os.path.join(base_path, safe_pack_id, filename))
-        if not fullpath.startswith(base_path):
+        if os.path.commonpath([base_path, fullpath]) != base_path:
             return None
 
         resolved_path = Path(fullpath)

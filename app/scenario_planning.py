@@ -34,7 +34,7 @@ def _resolve_workspace_path(candidate: Path) -> Path | None:
     workspace_root = WORKSPACE_ROOT.resolve()
     raw_path = os.path.normpath(str(candidate if candidate.is_absolute() else (workspace_root / candidate)))
     if not raw_path.startswith(str(workspace_root)):
-        raise Exception("not allowed")
+        raise PermissionError("not allowed")
     resolved = Path(raw_path).resolve(strict=False)
     resolved.relative_to(workspace_root)
     return resolved

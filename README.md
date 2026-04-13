@@ -46,7 +46,33 @@ A complete reasoning session typically answers the following questions:
 
 ---
 
+## 🫧 Online Demo
+
+If you are a:
+- Strategy Consultant
+- C-level Executive
+- Industry Analyst
+- Product Manager
+- Other non-technical users
+
+Want to quickly experience Omen without local installation? Please visit our online demo deployed on Streamlit Cloud to quickly see the effect.
+
+You can explore the strategic reasoning flow directly online:
+
+[👉 Explore Omen on Streamlit Cloud](https://omen-demo.streamlit.app/)
+
+---
+
 ## 🚀 Quick Start
+
+If you are:
+
+- Data Scientist
+- AI Researcher
+- Strategy Analyst
+- Other technical users
+
+Want to run Omen in your local environment? Please follow the installation and running guide below.
 
 ### 🏗️ Installation
 
@@ -59,19 +85,21 @@ pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
-### 🌰 View Example
+### 🌰 Run Demo
 
-If you want to quickly see Omen in action, a visualized sample case and its results are available in the `sample` directory. Run:
+If you want to quickly see Omen in action, a visualized sample case and its results are available in the `demo` directory. Run:
 
 ```bash
-streamlit run sample/app/scenario_planning.py
+streamlit run demo/app/scenario_planning.py
 ```
 
 Then open `http://localhost:8501` in your browser to explore the full strategic reasoning flow.
 
 ### 🎵 Run Built-in Case
 
-If you want to run a complete end-to-end workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. The case document is `cases/sap_reltio_acquisition.md`, and it can be run end-to-end with the following commands:
+If you want to run a complete **Analyze - Simulate - Explain** workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. 
+
+The case document is `cases/situations/sap_reltio_acquisition.md`, and it can be run end-to-end with the following commands:
 
 #### Step 1. Analyze
 
@@ -153,17 +181,17 @@ Omen is built for the following roles:
 
 ### Strategic Actor Analyze
 
-*  [👤 Elon Musk](cases/actors/elon-musk.md)
-*  [👤 Jeff Bezos](cases/actors/jeff-bezos.md)
-*  [👤 Steve Jobs](cases/actors/steve-jobs.md)
-*  [👤 Jack Ma](cases/actors/jack-ma.md)
-*  [👤 Chen Jiaxing (me)](cases/actors/chen-jiaxing.md)
+*  👤 [Elon Musk](cases/actors/elon-musk.md)
+*  👤 [Jeff Bezos](cases/actors/jeff-bezos.md)
+*  👤 [Steve Jobs](cases/actors/steve-jobs.md)
+*  👤 [Jack Ma](cases/actors/jack-ma.md)
+*  👤 [Chen Jiaxing (me)](cases/actors/chen-jiaxing.md)
 
 ### Strategic Reasoning Cases
 
-*  [🧩 Acquisition: SAP vs Reltio](cases/situations/sap_reltio_acquisition.md)
-*  [🗺️ Ontology Games: Database vs AI Memory](cases/ontology.md)
-*  [⚔️ Vector Database vs AI Memory](cases/vector-memory.md)   
+*  🧩 [Acquisition: SAP vs Reltio](cases/situations/sap_reltio_acquisition.md)
+*  🗺️ [Ontology Games: Database vs AI Memory](cases/ontology.md)
+*  ⚔️ [Vector Database vs AI Memory](cases/vector-memory.md)   
 
 More scenarios are under development (contributions welcome):
 *   `Agent Infrastructure` vs `Workflow Platforms`

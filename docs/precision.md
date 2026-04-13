@@ -84,4 +84,3 @@ omen precision-gate --profile-json path/to/profile.json --precision-json output/
 
 - [快速开始](quick-start.md) 
 - [战略本体](ontology.md) 
-- [数据摄取](ingest.md)

@@ -138,7 +138,7 @@ Omen 将 `known_unknowns` 定义为“已经识别到、但尚未被证据充分
 
 #### 示例片段
 
-摘自 SAP 收购 Reltio 的[情势模型](../../sample/data/scenarios/sap/situation.json)：
+摘自 SAP 收购 Reltio 的[情势模型](../../data/scenarios/sap/situation.json)：
 
 ```json
 "known_unknowns": [
@@ -161,7 +161,7 @@ Omen 将 `assumptions_explicit` 定义为针对关键未知给出的可检验假
 
 #### 示例片段
 
-摘自 SAP 收购 Reltio 的[情势模型](../../sample/data/scenarios/sap/situation.json)：
+摘自 SAP 收购 Reltio 的[情势模型](../../data/scenarios/sap/situation.json)：
 
 ```json
 "assumptions_explicit": [
@@ -205,8 +205,8 @@ if "founder/ceo/strategic" in actor_id:
 
 ### 参考样例
 - [情势案例：SAP 收购 Reltio](../../cases/situations/sap_reltio_acquisition.md)
-- [情势简报：SAP 收购 Reltio](../../sample/data/scenarios/sap/situation.md)
-- [情势模型：SAP 收购 Reltio](../../sample/data/scenarios/sap/situation.json)
+- [情势简报：SAP 收购 Reltio](../../data/scenarios/sap/situation.md)
+- [情势模型：SAP 收购 Reltio](../../data/scenarios/sap/situation.json)
 
 ## 相关文档
 

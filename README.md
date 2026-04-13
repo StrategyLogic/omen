@@ -59,7 +59,7 @@ Want to quickly experience Omen without local installation? Please visit our onl
 
 You can explore the strategic reasoning flow directly online:
 
-[👉 Explore Omen on Streamlit Cloud](https://omen-demo.streamlit.app/)
+👉 [Explore Omen on Streamlit Cloud](https://omen-demo.streamlit.app/)
 
 ---
 

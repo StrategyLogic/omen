@@ -61,11 +61,13 @@ You can explore the strategic reasoning flow directly online:
 
 👉 [Explore Omen on Streamlit Cloud](https://omen-demo.streamlit.app/)
 
+👉 [Explore Omen Pro on Streamlit Cloud](https://omen-pro.streamlit.app/)
+
 ---
 
 ## 🚀 Quick Start
 
-If you are:
+If you are a:
 
 - Data Scientist
 - AI Researcher
@@ -85,7 +87,7 @@ pip install --upgrade pip setuptools wheel
 pip install -e .
 ```
 
-### 🌰 View Demo
+### 🌰 Run Demo
 
 If you want to quickly see Omen in action, a visualized sample case and its results are available in the `demo` directory. Run:
 
@@ -95,17 +97,29 @@ streamlit run demo/app/scenario_planning.py
 
 Then open `http://localhost:8501` in your browser to explore the full strategic reasoning flow.
 
-### 🎵 Run Built-in Case
+#### End-to-End Flow
+
+![End-to-End Flow](docs/assets/images/streamlit-strategic-reason-flow.png)
+
+#### More details
+
+You can click on each panel on the page to inspect the full chain of outputs from source document to situation artifact, scenario artifact, simulation result, and explanation artifact.
+
+![Scenario Planning](docs/assets/images/streamlit-scenario-planning.png)
+
+---
+
+## 🎵 Run Built-in Case
 
 If you want to run a complete **Analyze - Simulate - Explain** workflow, we have prepared a built-in case simulating SAP's acquisition of Reltio in March 2026. 
 
 The case document is `cases/situations/sap_reltio_acquisition.md`, and it can be run end-to-end with the following commands:
 
-#### Step 1. Analyze
+### Step 1. Analyze
 
 Omen's Analyze module combines strategy methodology and the data pipeline, allowing you to generate strategic insights and machine input artifacts from the source document with a single command.
 
-##### Situation Analysis
+#### Situation Analysis
 
 ```bash
 # analyze the built-in case and pack it as "sap" alias
@@ -114,7 +128,7 @@ omen analyze situation --doc sap_reltio_acquisition --pack-id sap
 
 This step generates the Situation Artifact and creates a package named `sap` for consistent use in subsequent steps.
 
-##### Scenario Planning
+#### Scenario Planning
 
 Omen `v0.1.9` provides deterministic A/B/C scenario planning capabilities.
 
@@ -130,7 +144,7 @@ omen scenario --situation sap
 
 This step generates the scenario pack artifact under `data/scenarios/sap/` for simulation.
 
-#### Step 2. Simulate
+### Step 2. Simulate
 
 Omen's simulation engine can reason across different scenarios. Use the scenario pack generated in the previous step to run simulation:
 
@@ -140,7 +154,7 @@ omen simulate --scenario data/scenarios/sap/scenario_pack.json
 
 This step generates reasoning traces and writes the deterministic result to `output/sap/result.json`.
 
-#### Step 3. Explain
+### Step 3. Explain
 
 Omen's explanation module interprets simulation outcomes and traces back key decision points and risk items (known unknowns) from the situation artifact to generate decision-ready insights and recommendations:
 
@@ -152,40 +166,31 @@ This step generates a structured explanation artifact at `output/sap/explanation
 
 ### Launch UI
 
-Omen also provides a Streamlit-based UI application for visualizing the full strategic reasoning flow.
+The Streamlit application for visualizing the full strategic reasoning flow.
 
 ```bash
 streamlit run app/scenario_planning.py
 ```
 
-#### End-to-End Flow
-
-![End-to-End Flow](docs/assets/images/streamlit-strategic-reason-flow.png)
-
-#### More details
-
-You can click on each panel on the page to inspect the full chain of outputs from source document to situation artifact, scenario artifact, simulation result, and explanation artifact.
-
-![Scenario Planning](docs/assets/images/streamlit-scenario-planning.png)
-
-## 👥 Target Audience
-
-Omen is built for the following roles:
-*   Technology Strategy Teams
-*   Product & Platform Leads
-*   AI Infrastructure Researchers
-*   Open Source Ecosystem Observers
-*   Investors & Industry Analysts
+Then open `http://localhost:8501` in your browser to explore the results.
 
 ## 🎬 Showcase
 
 ### Strategic Actor Analyze
+
+We have built-in samples of five strategic actors:
 
 *  👤 [Elon Musk](cases/actors/elon-musk.md)
 *  👤 [Jeff Bezos](cases/actors/jeff-bezos.md)
 *  👤 [Steve Jobs](cases/actors/steve-jobs.md)
 *  👤 [Jack Ma](cases/actors/jack-ma.md)
 *  👤 [Chen Jiaxing (me)](cases/actors/chen-jiaxing.md)
+
+Run the following command to build strategic actors and gain insights into their profiles, behavior patterns, and influence relationship graphs:
+
+```bash
+streamlit run app/strategic_actor.py
+```
 
 ### Strategic Reasoning Cases
 

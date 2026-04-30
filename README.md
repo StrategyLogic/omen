@@ -166,7 +166,7 @@ This step generates a structured explanation artifact at `output/sap/explanation
 
 ### Launch UI
 
-The Streamlit application for visualizing the full strategic reasoning flow.
+Run the Streamlit application for visualizing the full strategic reasoning flow.
 
 ```bash
 streamlit run app/scenario_planning.py
